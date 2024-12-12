@@ -1,1 +1,10 @@
-{}
+{
+  "hosting": {
+    "public": "dist/prestige-ape-references/browser",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ]
+  }
+}

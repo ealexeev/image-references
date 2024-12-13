@@ -39,7 +39,7 @@ export class LoginFormComponent {
   doLogin() {
     signInWithEmailAndPassword(this.auth, this.email, this.password).then(
       (something) => {
-        console.log(`Returned: ${JSON.stringify(something)}`);
+        console.log(`signInWithEmailAndPassword returned: ${JSON.stringify(something)}`);
         this.dialogRef.close();
       },
       (error) => {this.error_text.set(error.message);});

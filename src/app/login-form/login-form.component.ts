@@ -45,4 +45,7 @@ export class LoginFormComponent {
     event.stopPropagation();
   }
 
+  icon(): string {
+    return this.hide() ? 'visibility': 'visibility_off';
+  }
 }

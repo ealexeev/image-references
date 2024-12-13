@@ -36,7 +36,10 @@ export class AppComponent implements OnDestroy {
       this.user = aUser;
     });
     if ( this.user == null ) {
-      this.dialog.open(LoginFormComponent);
+      this.dialog.open(LoginFormComponent, {
+        disableClose: true,
+        
+      });
     }
   }
 

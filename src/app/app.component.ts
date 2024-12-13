@@ -1,6 +1,6 @@
 import { Component, inject, OnDestroy, Signal, signal } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
-import { Auth, authState, User, signInWithEmailAndPassword } from '@angular/fire/auth';
+import { Auth, authState, User, signInWithEmailAndPassword, signOut } from '@angular/fire/auth';
 import { MatButtonModule } from '@angular/material/button';
 import { FormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -55,6 +55,10 @@ export class AppComponent implements OnDestroy {
 
   doLogin() {
     signInWithEmailAndPassword(this.auth, this.username, this.password);
+  }
+
+  doLogOut() {
+    signOut(this.auth);
   }
 
   title = 'prestige-ape-references';

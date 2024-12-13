@@ -1,4 +1,11 @@
-User is {{ getUserInfo() }};
-<div>
-<button mat-raised-button color="primary" (click)="doLogOut()">Log Out</button>
-</div>
+<p>
+  <mat-toolbar>
+    <span class="app-name">Image Reference</span>
+    <span class="toolbar-spacer"></span>
+    <button mat-raised-button color="primary" (click)="doLogOut()">Log Out</button>    
+  </mat-toolbar>
+</p>
+
+@if ( user != null ) {
+  User is {{ getUserInfo() }}
+}

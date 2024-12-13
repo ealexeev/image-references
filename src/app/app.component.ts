@@ -3,6 +3,7 @@ import { RouterOutlet } from '@angular/router';
 import { Auth, authState, User, signOut } from '@angular/fire/auth';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatToolbarModule } from '@angular/material/toolbar';
 import { Subscription } from 'rxjs';
 import { MatDialog } from '@angular/material/dialog';
 
@@ -10,6 +11,7 @@ import { LoginFormComponent } from './login-form/login-form.component';
 
 // Don't show UI to users with a UID other than this.  Storage and Firebase APIs are also gated by this requirement.
 const permittedUid = "***REDACTED UID***";
+const authRequired = false;
 
 @Component({
   selector: 'app-root',
@@ -17,6 +19,7 @@ const permittedUid = "***REDACTED UID***";
   imports: [
     MatButtonModule,
     MatIconModule,
+    MatToolbarModule,
     RouterOutlet
   ],
   templateUrl: './app.component.html',
@@ -34,7 +37,7 @@ export class AppComponent implements OnDestroy {
   constructor() {
     this.authStateSubscription = this.authState$.subscribe(( aUser: User | null) => {
       this.user = aUser;
-      if ( this.user == null ) {
+      if ( this.user == null && authRequired ) {
         this.dialog.open(LoginFormComponent, {disableClose: true});
       }
     });

@@ -14,9 +14,15 @@
       [attr.aria-label]="'Hide password'"
       [attr.aria-pressed]="hide()"
     >
-      <mat-icon fontSet="material-symbols-outlined">{{ hide() ? 'visibility' : 'visibility_off' }}</mat-icon>
+      <mat-icon>{{ hide() ? 'visibility' : 'visibility_off' }}</mat-icon>
     </button>
   </mat-form-field>
+  @if ( error_text() != '' ) {
+  	<div class="error">
+  		<mat-icon fontIcon="error"></mat-icon>
+  		<span>{{ error_text() }}</span>
+  	</div>
+  }
 </mat-dialog-content>
 <mat-dialog-actions>
 	<button mat-button (click)="doLogin()" cdkFocusInitial>Login</button>

@@ -9,10 +9,10 @@ mat-form-field {
   width: 100%;
 }
 
-// // Customize the entire app. Change :root to your selector if you want to scope the styles.
-// :root {
-//   @include mat.dialog-overrides((
-//     container-color: orange,
-//     subhead-color: red,
-//   ));
-// }
+.error {
+  color: red;
+  mat-icon {
+    vertical-align: middle;
+    margin-right: 10px;
+  }
+}

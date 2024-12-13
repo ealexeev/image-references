@@ -34,10 +34,15 @@ export class LoginFormComponent {
   email = '';
   password = '';
   hide = signal(true);
+  error_text = signal('');
 
   doLogin() {
-    signInWithEmailAndPassword(this.auth, this.email, this.password);
-    this.dialogRef.close();
+    signInWithEmailAndPassword(this.auth, this.email, this.password).then(
+      (something) => {
+        console.log('Returned: ${something}');
+        this.dialogRef.close();
+      },
+      (error) => {this.error_text.set(error.message);});
   }
   
   clickEvent(event: MouseEvent) {

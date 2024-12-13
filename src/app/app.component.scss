@@ -8,12 +8,16 @@ mat-toolbar {
 	}
 
 	.app-name {
-		font-size: 200%;
+		font-size: 250%;
 	  	font-family: "Teko", serif;
 	  	font-optical-sizing: auto;
 	  	font-weight: 400;
 	  	font-style: normal;
-	}	
+	}
+
+	.key-status {
+		vertical-align: middle;
+	}
 
 	button {
 		--mdc-protected-button-label-text-color: #ff4081bf;

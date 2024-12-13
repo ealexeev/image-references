@@ -33,6 +33,8 @@ export class AppComponent implements OnDestroy {
   user: User|null = null;
   username = '';
   password = '';
+  // PBKDF2 derived key.
+  key: any = null;
 
   constructor() {
     this.authStateSubscription = this.authState$.subscribe(( aUser: User | null) => {

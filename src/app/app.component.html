@@ -1,6 +1,15 @@
 <p>
   <mat-toolbar>
     <span class="app-name">Image Reference</span>
+    <span class="key-status">
+      @if ( key == null ) {
+        <button mat-icon-button class="key-status-button">
+          <mat-icon fontIcon="lock"></mat-icon>
+        </button>
+      } @else {
+        <mat-icon fontIcon="lock_open"></mat-icon>
+      }
+    </span>
     <span class="toolbar-spacer"></span>
     <button mat-raised-button color="primary" (click)="doLogOut()">Log Out</button>    
   </mat-toolbar>

@@ -33,14 +33,17 @@ export class AppComponent implements OnDestroy {
 
   constructor() {
     this.authStateSubscription = this.authState$.subscribe(( aUser: User | null) => {
+      console.log(`Got user: ${JSON.stringify(aUser)}`);
       this.user = aUser;
+      if ( this.user == null ) {
+        console.log('Opening login dialog');
+        this.openLoginDialog();
+      }
     });
-    if ( this.user == null ) {
-      this.dialog.open(LoginFormComponent, {
-        disableClose: true,
-        
-      });
-    }
+  }
+
+  openLoginDialog() {
+    this.dialog.open(LoginFormComponent, {disableClose: true});
   }
 
   ngOnDestroy() {
@@ -50,7 +53,6 @@ export class AppComponent implements OnDestroy {
   getUserInfo(): string {
     return JSON.stringify(this.user || {});
   }
-
 
   doLogOut() {
     signOut(this.auth);

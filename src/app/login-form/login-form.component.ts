@@ -27,7 +27,7 @@ export class LoginFormComponent {
 
   // Remove eventually
   constructor() {
-    connectAuthEmulator(this.auth, "http://127.0.0.1:9099");  
+    connectAuthEmulator(this.auth, "http://127.0.0.1:9099");
   }
 
   readonly dialogRef = inject(MatDialogRef<LoginFormComponent>);
@@ -39,7 +39,7 @@ export class LoginFormComponent {
   doLogin() {
     signInWithEmailAndPassword(this.auth, this.email, this.password).then(
       (something) => {
-        console.log('Returned: ${something}');
+        console.log(`Returned: ${JSON.stringify(something)}`);
         this.dialogRef.close();
       },
       (error) => {this.error_text.set(error.message);});

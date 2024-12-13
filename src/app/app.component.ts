@@ -1,12 +1,12 @@
-import { Component, inject, OnDestroy, Signal, signal } from '@angular/core';
+import { Component, inject, OnDestroy, signal } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
-import { Auth, authState, User, signInWithEmailAndPassword, signOut } from '@angular/fire/auth';
+import { Auth, authState, User, signOut } from '@angular/fire/auth';
 import { MatButtonModule } from '@angular/material/button';
-import { FormsModule } from '@angular/forms';
-import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
 import { Subscription } from 'rxjs';
+import { MatDialog } from '@angular/material/dialog';
+
+import { LoginFormComponent } from './login-form/login-form.component';
 
 // Don't show UI to users with a UID other than this.  Storage and Firebase APIs are also gated by this requirement.
 const permittedUid = "***REDACTED UID***";
@@ -15,11 +15,8 @@ const permittedUid = "***REDACTED UID***";
   selector: 'app-root',
   standalone: true,
   imports: [
-    FormsModule,
     MatButtonModule,
-    MatFormFieldModule,
     MatIconModule,
-    MatInputModule,
     RouterOutlet
   ],
   templateUrl: './app.component.html',
@@ -27,22 +24,20 @@ const permittedUid = "***REDACTED UID***";
 })
 export class AppComponent implements OnDestroy {
   private auth = inject(Auth);
+  readonly dialog = inject(MatDialog);
   authState$ = authState(this.auth);
   authStateSubscription: Subscription;
   user: User|null = null;
   username = '';
   password = '';
 
-  hide = signal(true);
-  clickEvent(event: MouseEvent) {
-    this.hide.set(!this.hide());
-    event.stopPropagation();
-  }
-
   constructor() {
     this.authStateSubscription = this.authState$.subscribe(( aUser: User | null) => {
       this.user = aUser;
     });
+    if ( this.user == null ) {
+      this.dialog.open(LoginFormComponent);
+    }
   }
 
   ngOnDestroy() {
@@ -53,9 +48,6 @@ export class AppComponent implements OnDestroy {
     return JSON.stringify(this.user || {});
   }
 
-  doLogin() {
-    signInWithEmailAndPassword(this.auth, this.username, this.password);
-  }
 
   doLogOut() {
     signOut(this.auth);

@@ -1,1 +1,24 @@
-<p>login-form works!</p>
+<h2 mat-dialog-title>Login</h2>
+<mat-dialog-content>
+  <mat-form-field>
+    <input matInput placeholder="Email" [(ngModel)]="email"/>
+  </mat-form-field>
+  <p>
+  <mat-form-field>
+    <mat-label>Enter your password</mat-label>
+    <input matInput [type]="hide() ? 'password' : 'text'" [(ngModel)]="password"/>
+    <button
+      mat-icon-button
+      matSuffix
+      (click)="clickEvent($event)"
+      [attr.aria-label]="'Hide password'"
+      [attr.aria-pressed]="hide()"
+    >
+      <mat-icon fontIcon="visibility">{{hide() ? 'visibility_off' : 'visibility'}}</mat-icon>
+    </button>
+  </mat-form-field>
+</mat-dialog-content>
+<mat-dialog-actions>
+	<button mat-button (click)="doLogin()" cdkFocusInitial>Login</button>
+	<button mat-button mat-dialog-close>Cancel</button>
+</mat-dialog-actions>

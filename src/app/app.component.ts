@@ -2,10 +2,11 @@ import { Component, inject, OnDestroy, signal } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { Auth, authState, User, signOut } from '@angular/fire/auth';
 import { MatButtonModule } from '@angular/material/button';
+import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatToolbarModule } from '@angular/material/toolbar';
+
 import { Subscription } from 'rxjs';
-import { MatDialog } from '@angular/material/dialog';
 
 import { LoginFormComponent } from './login-form/login-form.component';
 
@@ -20,7 +21,7 @@ const authRequired = false;
     MatButtonModule,
     MatIconModule,
     MatToolbarModule,
-    RouterOutlet
+    RouterOutlet,
   ],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'

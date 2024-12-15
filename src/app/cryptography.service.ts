@@ -1,13 +1,37 @@
-import { Injectable } from '@angular/core';
+import { Injectable, signal } from '@angular/core';
 import { WindowRef } from './window-ref.service';
 import { EmptyError } from 'rxjs';
 
 const HMAC_ITERATIONS = 100;
+const HMAC_KEY_INFO = 'Prestige Ape HMC Key Info';
+
+function _makeHmacInfo(): DataView {
+  const encoder = new TextEncoder();
+  const encoded = encoder.encode(HMAC_KEY_INFO);
+  return new DataView(encoded.buffer);
+}
+
 const saltValues = [1, 3, 3, 7, 1, 3, 3, 7, 1, 3, 3, 7, 1, 3, 3, 7];
 const keyExportFormat = "jwk";
 const localStorageHMACKey = "prestige-ape-hmac-key";
 const localStroageAESKey = "presetige-ape-aes-key";
 const hmacParams = {name: "HMAC", hash: {name: "SHA-256"}};
+
+
+const pbkdf2Params = {
+  name: 'PBKDF2',
+  hash: 'SHA-512',
+  salt: new Uint8Array(saltValues),
+  iterations: 1000,
+};
+
+const hkdfParams = {
+  name: 'HKDF',
+  hash: 'SHA-512',
+  salt: new Uint8Array(saltValues.reverse()),
+  info: _makeHmacInfo(),
+}
+
 
 @Injectable({
   providedIn: 'root'
@@ -16,26 +40,34 @@ export class CryptographyService {
   crypto: any = null;
   hmac_salt = new Uint8Array(saltValues);
   enc_salt = new Uint8Array(saltValues.reverse());
-  hmac_key: any = null;
+  wrap_key: CryptoKey | null = null;
+  hmac_key: CryptoKey | null = null;
+  ready = signal(false);
 
   constructor(private windowRef: WindowRef) {
     this.crypto = this.windowRef.nativeWindow?.crypto.subtle;
     if ( !this.crypto ) {
       throw new ReferenceError("Could not get crypto reference!");
     }
-    this.hmac_key = localStorage.getItem(localStorageHMACKey);
-    if ( this.hmac_key === null ){
-      this.crypto.generateKey(hmacParams, true, ["sign", "verify"]).then(
-        (k: any) => {
-          this.hmac_key = k;
-          const exported = this.crypto.exportKey(keyExportFormat, k);
-          localStorage.setItem(localStorageHMACKey, JSON.stringify(exported));
-        }
-      );      
-    } else {
-      this.hmac_key = this.crypto.importKey(keyExportFormat, this.hmac_key, hmacParams, true, ["sign", "verify"]);
-    }
+  }
 
+  async initialize(passphrase: string): Promise<boolean> {
+    return new Promise( (resolve, reject) => {
+      this.crypto.deriveKey(pbkdf2Params, passphrase, pbkdf2Params, false, ['deriveKey', 'wrapKey', 'unwrapKey'])
+      .then((k: CryptoKey) => { this.wrap_key = k; })
+      .then(() => {this.crypto.deriveKey(hkdfParams, this.wrap_key, hkdfParams, true, ['sign']);})
+      .then((k: CryptoKey) => { this.hmac_key = k; })
+      .then(() => {
+        this.ready.set(true);
+        resolve(true);
+      })
+      .catch((err: Error) => reject(err));
+    });
+  }
+
+  clear() {
+    this.wrap_key = null;
+    this.hmac_key = null;
   }
 
   GetHMAC(blob: Blob, key: any): Promise<ArrayBuffer|null> {

@@ -15,8 +15,8 @@ const saltValues = [1, 3, 3, 7, 1, 3, 3, 7, 1, 3, 3, 7, 1, 3, 3, 7];
 const keyExportFormat = "jwk";
 const localStorageHMACKey = "prestige-ape-hmac-key";
 const localStroageAESKey = "presetige-ape-aes-key";
-const hmacParams = {name: "HMAC", hash: {name: "SHA-256"}};
 
+const hmacParams = {name: "HMAC", hash: {name: "SHA-256"}};
 
 const pbkdf2Params = {
   name: 'PBKDF2',
@@ -25,11 +25,16 @@ const pbkdf2Params = {
   iterations: 1000,
 };
 
-const hkdfParams = {
-  name: 'HKDF',
-  hash: 'SHA-512',
-  salt: new Uint8Array(saltValues.reverse()),
-  info: _makeHmacInfo(),
+
+const aesGcmParams = {
+  name: 'AES-GCM',
+  length: 128,
+  iv: new Uint8Array(saltValues),
+}
+
+function stringToArrayBuffer(input: string): ArrayBuffer {
+  const encoder = new TextEncoder()
+  return encoder.encode(input);
 }
 
 
@@ -42,27 +47,30 @@ export class CryptographyService {
   enc_salt = new Uint8Array(saltValues.reverse());
   wrap_key: CryptoKey | null = null;
   hmac_key: CryptoKey | null = null;
-  ready = signal(false);
+  hmac_ready = signal(false);
+  encryption_ready = signal(false);
 
   constructor(private windowRef: WindowRef) {
     this.crypto = this.windowRef.nativeWindow?.crypto.subtle;
     if ( !this.crypto ) {
       throw new ReferenceError("Could not get crypto reference!");
     }
+    this.crypto.importKey("raw", stringToArrayBuffer(localStorageHMACKey), { name: "PBKDF2" }, false, ["deriveKey"])
+    .then((static_passphrase: CryptoKey) => this.crypto.deriveKey(pbkdf2Params, static_passphrase, hmacParams, true, ['sign']))
+    .then((hmac_key: CryptoKey) => this.hmac_key = hmac_key)
+    .then(() => this.hmac_ready.set(true));
   }
 
-  async initialize(passphrase: string): Promise<boolean> {
-    return new Promise( (resolve, reject) => {
-      this.crypto.deriveKey(pbkdf2Params, passphrase, pbkdf2Params, false, ['deriveKey', 'wrapKey', 'unwrapKey'])
-      .then((k: CryptoKey) => { this.wrap_key = k; })
-      .then(() => {this.crypto.deriveKey(hkdfParams, this.wrap_key, hkdfParams, true, ['sign']);})
-      .then((k: CryptoKey) => { this.hmac_key = k; })
-      .then(() => {
-        this.ready.set(true);
-        resolve(true);
-      })
-      .catch((err: Error) => reject(err));
-    });
+  async init_hmac() {
+    // This key is available without user supplied passprahse to allow duplicate
+    // detection whether the user entered a passhphrase or not.
+    const pbkdf2_key = await this.crypto.importKey("raw", stringToArrayBuffer(localStorageHMACKey), { name: "PBKDF2" }, false, ["deriveKey"]);
+    this.hmac_key = await this.crypto.deriveKey('PBKDF2', pbkdf2_key, hmacParams, false, ['sign']);
+    this.hmac_ready.set(true);
+  }
+
+  debugme() {
+    console.log('Debug me called');
   }
 
   clear() {

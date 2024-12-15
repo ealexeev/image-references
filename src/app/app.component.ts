@@ -9,6 +9,7 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { Subscription } from 'rxjs';
 
 import { LoginFormComponent } from './login-form/login-form.component';
+import { CryptographyService } from './cryptography.service';
 
 // Don't show UI to users with a UID other than this.  Storage and Firebase APIs are also gated by this requirement.
 const permittedUid = "***REDACTED UID***";
@@ -29,13 +30,13 @@ const authRequired = false;
 export class AppComponent implements OnDestroy {
   private auth = inject(Auth);
   readonly dialog = inject(MatDialog);
+  readonly crypto = inject(CryptographyService);
   authState$ = authState(this.auth);
   authStateSubscription: Subscription;
   user: User|null = null;
   username = '';
   password = '';
-  // PBKDF2 derived key.
-  key: any = null;
+  passphrase = '';
 
   constructor() {
     this.authStateSubscription = this.authState$.subscribe(( aUser: User | null) => {

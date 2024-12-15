@@ -1,10 +1,45 @@
 @use '@angular/material' as mat;
 
-$my-primary-palette: mat.define-palette(mat.$indigo-palette);
+$custom-primary-palette: (
+  50: #e6e9ff,
+  100: #ccd3ff,
+  200: #99a7ff,
+  300: #667aff,
+  400: #334eff,
+  500: #0022ff,
+  600: #001bcc,
+  700: #0018b3,
+  800: #001180,
+  900: #000a4d,
+  contrast: (
+    50: #000,
+    100: #000 ,
+    200: #000,
+    300: #fff,
+    400: #fff,
+    500: #fff,
+    600: #fff,
+    700: #fff,
+    800: #fff,
+    900: #fff,
+  ),
+);
+
+$custom-primary: mat.define-palette($custom-primary-palette);
+$custom-accent: mat.define-palette(mat.$pink-palette, A200, A100, A400);
+$custom-warn: mat.define-palette(mat.$red-palette);
+
+$custom-typography: mat.define-typography-config($font-family: "Roboto, Teko");
+
+
+$my-primary-palette: mat.define-palette($custom-primary);
 $my-accent-palette: mat.define-palette(mat.$pink-palette, A200, A100, A400);
+
 $my-theme: mat.define-dark-theme((
   color: (
-    primary: $my-primary-palette,
-    accent: $my-accent-palette,
-  )
+    primary: $custom-primary,
+    accent: $custom-accent,
+    warn: $custom-warn,
+  ),
+  typography: $custom-typography,
 ));

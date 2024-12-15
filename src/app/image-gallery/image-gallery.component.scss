@@ -1,3 +1,5 @@
+@use '../../_variables.scss' as theme;
+
 $grid_gap: 20px;
 
 .image-grid {
@@ -6,4 +8,5 @@ $grid_gap: 20px;
 	flex-wrap: wrap;
 	justify-content: flex-start;
 	gap: $grid_gap;
+	background: theme.$background;
 }

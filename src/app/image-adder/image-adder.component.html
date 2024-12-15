@@ -1,0 +1,12 @@
+<mat-card (paste)="onPaste($event)" class="image-adder">
+	<mat-card-content>
+		<div class="dropzone" appDragDrop (files)="filesDropped($event)">
+			<div class="text-wrapper">
+				Drag and drop and image<p>or paste a URL!
+				<div><button mat-icon-button [disabled]="files.length == 0" (click)="uploadClicked()">
+					<mat-icon [matBadge]="files.length" [matBadgeHidden]="files.length == 0" fontIcon="upload" class="add-icon" ></mat-icon>
+				</button></div>
+			</div>
+		</div>
+	</mat-card-content>
+</mat-card>

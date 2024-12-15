@@ -1,0 +1,9 @@
+$grid_gap: 20px;
+
+.image-grid {
+	padding: $grid_gap;
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: flex-start;
+	gap: $grid_gap;
+}

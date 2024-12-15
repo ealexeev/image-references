@@ -1,0 +1,17 @@
+.image-adder {
+	layout: grid;
+	.add-icon {
+		color: darkseagreen;
+	}
+	.dropzone {
+		border-style: dashed;
+		border-color: grey;
+		border-radius: 10px;
+		padding: 50px 0;
+		vertical-align: middle;
+		text-align: center;
+		.text-wrapper {
+		 	padding: 25px 25px 0px 25px;
+		}
+	}
+}

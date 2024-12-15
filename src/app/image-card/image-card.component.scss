@@ -1,0 +1,12 @@
+.image-card {
+	img {
+		object-fit: contain;
+		height: 200px;
+	}
+	button {
+		transform: scale(0.8);
+	}
+	mat-chip {
+		margin: 5px;
+	}
+}

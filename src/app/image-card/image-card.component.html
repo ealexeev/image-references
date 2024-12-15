@@ -1,0 +1,17 @@
+<mat-card class="image-card">
+	<img mat-card-image [src]="imageSource?.url" alt="Image">
+	<mat-card-actions align='end'>
+		<button mat-icon-button [matBadge]="getImageTags().length" [matBadgeHidden]="getImageTags().length < 2"> 
+			<mat-icon fontIcon="list"></mat-icon>
+		</button>
+		<button mat-icon-button> 
+			<mat-icon fontIcon="add" >info</mat-icon>
+		</button>
+		<button mat-icon-button (click)="onDownload()">
+			<mat-icon fontIcon="download"></mat-icon>
+		</button>
+		<button mat-icon-button (click)="onDelete()">
+			<mat-icon fontIcon="delete"></mat-icon>
+		</button>
+	</mat-card-actions>
+</mat-card>

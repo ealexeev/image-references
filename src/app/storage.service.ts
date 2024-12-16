@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { CryptographyService } from './cryptography.service';
+import { HmacService } from './hmac.service';
 
 export interface StoredImage {
   // Unique ID
@@ -38,7 +38,7 @@ export class StorageService {
     }
   ];
 
-  constructor(private crypto: CryptographyService) { }
+  constructor(private hmac: HmacService) { }
 
   getAllImagesWithTag(tag: string): StoredImage[] {
     var ret: StoredImage[] = [];
@@ -70,8 +70,7 @@ export class StorageService {
     var tags: string[] = [];
     for (const tag of tags) {
       var hmac: string | ArrayBuffer | null;
-      hmac = await this.crypto.GetHMAC(new Blob([tag]), this.crypto.hmac_key);
-      hmac = await this.crypto.ArrayBufferToB64(hmac as ArrayBuffer);
+      hmac = await this.hmac.getHmacBase64(new Blob([tag]));
       tags.push(hmac as string);
     }
     const img: StoredImage = {

@@ -9,7 +9,7 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { Subscription } from 'rxjs';
 
 import { LoginFormComponent } from './login-form/login-form.component';
-import { CryptographyService } from './cryptography.service';
+import { HmacService } from './hmac.service';
 
 // Don't show UI to users with a UID other than this.  Storage and Firebase APIs are also gated by this requirement.
 const permittedUid = "***REDACTED UID***";
@@ -30,7 +30,7 @@ const authRequired = false;
 export class AppComponent implements OnDestroy {
   private auth = inject(Auth);
   readonly dialog = inject(MatDialog);
-  readonly crypto = inject(CryptographyService);
+  readonly crypto = inject(HmacService);
   authState$ = authState(this.auth);
   authStateSubscription: Subscription;
   user: User|null = null;

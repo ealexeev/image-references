@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { addDoc, Bytes, collection, connectFirestoreEmulator, deleteDoc, doc, DocumentReference, Firestore, getDoc, getDocs, query, setDoc, where } from '@angular/fire/firestore';
+import { addDoc, Bytes, collection, connectFirestoreEmulator, deleteDoc, doc, DocumentReference, DocumentSnapshot, Firestore, getDoc, getDocs, query, setDoc, where } from '@angular/fire/firestore';
 
 import { HmacService } from './hmac.service';
 
@@ -12,10 +12,6 @@ export type EncryptionMetadata = {
 }
 
 export type StoredImage = {
-  // Unique ID (HMAC of bytes), base64 encoded.  
-  // Even if Bytes was too large to store in Firestore directly, the HMAC represents the HMAC of the raw data -- and thus a method to avoid duplicates.
-  id: string,
-  // Time image was first added.
   added: Date,
   // URL to use for image retrieval if data is empty
   url: string,
@@ -39,7 +35,6 @@ export type LiveImage = {
 }
 
 export type StoredTag = {
-  // Unique ID (HMAC of name), base64 encoded
   id: string,
   // If not encrypted the name of the tag
   name: string,
@@ -163,25 +158,30 @@ export class StorageService {
   }
 
   async StoreImage(image: Blob, url: string, tags: DocumentReference[]): Promise<DocumentReference> {
+    const id = await this.hmac.getHmacHex(image)
     const i = {
-      id: await this.hmac.getHmacHex(image),
       added: new Date(),
       url: url,
       data: Bytes.fromUint8Array(new Uint8Array(await image.arrayBuffer())),
       tags: tags,
     }
-    const iRef = doc(this.firestore, imagesCollectionPath, i.id)
+    const iRef = doc(this.firestore, imagesCollectionPath, id)
     setDoc(iRef, i);
     return iRef
   }
 
-  async LiveImageFromStored(stored: StoredImage | StoredEncryptedImage ): Promise<LiveImage> {
-    return new Promise((resolve, _) => {
+  async LiveImageFromSnapshot(snapshot: DocumentSnapshot ): Promise<LiveImage> {
+    return new Promise((resolve, reject) => {
+      const stored = snapshot.data()
+      if ( !stored ) {
+        reject("Empty snapshot.");
+        return;
+      }
       const imageTags: string[] = [];
-      stored.tags.map(async (tagRef) => { imageTags.push(((await this.LoadTag(tagRef))?.name) || "") });
+      stored['tags'].map(async (tagRef: DocumentReference) => { imageTags.push(((await this.LoadTag(tagRef))?.name) || "") });
       resolve({
-        id: stored.id,
-        url: stored.data.toUint8Array().length > 0 ?  URL.createObjectURL(new Blob([stored.data.toUint8Array()])) : stored.url,
+        id: snapshot.id,
+        url: stored['data'].toUint8Array().length > 0 ?  URL.createObjectURL(new Blob([stored['data'].toUint8Array()])) : stored['url'],
         tags: imageTags,
       })
     })
@@ -189,7 +189,7 @@ export class StorageService {
 
   async LoadImage(imageRef: DocumentReference): Promise<LiveImage | undefined> {
     return new Promise((resolve, reject) => {
-      getDoc(imageRef).then((snapshot) => { resolve( this.LiveImageFromStored(snapshot.data() as StoredImage))})
+      getDoc(imageRef).then((snapshot) => { resolve( this.LiveImageFromSnapshot(snapshot))})
     })
   }
 
@@ -202,7 +202,8 @@ export class StorageService {
     const snapshot = await getDocs(q);
     const images: LiveImage[] = []
     for ( const imageSnapshot of snapshot.docs ) {
-      images.push(await this.LiveImageFromStored(imageSnapshot.data() as StoredImage));
+      // There is some hang-up around query doc snapshots not being compatible, but they seem to work.
+      images.push(await this.LiveImageFromSnapshot(imageSnapshot as DocumentSnapshot));
     }
     return images;
   }

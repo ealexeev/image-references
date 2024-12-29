@@ -20,7 +20,16 @@ export class ImageGalleryComponent {
   images: LiveImage[] = [];
 
   constructor(private storage: StorageService){
-    this.storage.LoadImagesWithTag(this.tag).then((si)=>this.images = si);
+    this.storage.LoadTag(this.tag).then((stored) => {
+      if ( !stored ) {
+        this.storage.StoreTag(this.tag).then(() => {
+          this.storage.LoadImagesWithTag(this.tag).then((si)=>this.images = si)      
+        })
+      } else {
+        this.storage.LoadImagesWithTag(this.tag).then((si)=>this.images = si)
+      }
+    })
+    ;
   }
 
   async receiveImageURL(url: string): Promise<void> {

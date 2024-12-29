@@ -119,7 +119,7 @@ export class StorageService {
   }
 
   // Save a tag to firestore, encrypt with specified key
-  async StoreTag(name: string, key: string): Promise<DocumentReference> {
+  async StoreTag(name: string): Promise<DocumentReference> {
     const t = {
       id: await this.hmac.getHmacBase64(new Blob([name], { type: 'text/plain' })),
       name: name,
@@ -181,39 +181,22 @@ export class StorageService {
 
   async LoadImage(imageRef: DocumentReference): Promise<LiveImage | undefined> {
     return new Promise((resolve, reject) => {
-      getDoc(imageRef).then((snapshot) => {
-        try {
-          try {
-            const sei = snapshot.data() as StoredEncryptedImage;  
-            console.log("Received a StoredEncryptedImage, logic is not implemented!")
-            resolve(undefined)
-          } catch (error) {
-            console.log(`Error casting to StoredEncryptedImage: ${error}`)
-            this.LiveImageFromStored(snapshot.data() as StoredImage);
-          }
-        } catch (error) {
-          console.log(`Error casting to StoredImage: ${error}`)
-          resolve(undefined);
-        }
-      })
+      getDoc(imageRef).then((snapshot) => { resolve( this.LiveImageFromStored(snapshot.data() as StoredImage))})
     })
   }
 
-  async LoadImagesWithTag(tag: string): Promise<LiveImage[]> {
-    const tagRef = await this.GetTagReference(tag)
-    const q = query(this.imagesCollection, where("tags", "array-contains", tagRef))
+  async LoadImagesWithTag(tag: string | DocumentReference): Promise<LiveImage[]> {
+    if ( typeof tag == "string") {
+      tag = await this.GetTagReference(tag)  
+    }
+    const q = query(this.imagesCollection, where("tags", "array-contains", tag))
 
     const snapshot = await getDocs(q);
     const images = snapshot.docs.map((si) => {
       try {
-        try {
-          const out = si.data() as StoredEncryptedImage;
-          console.log("Recieved a StoredEncryptedImage, logic is not implemented")
-          undefined
-        } catch {
-          this.LiveImageFromStored(si.data() as StoredImage);
-        }
-      } catch {
+        this.LiveImageFromStored(si.data() as StoredImage);
+      } catch (error) {
+        console.log(`Error casting ${si.data()} to StoredImage: ${error}`)
         si.data() as undefined
       }
     }).filter( (i) => i !== undefined )

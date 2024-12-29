@@ -89,11 +89,11 @@ export class StorageService {
   }
 
   async GetTagReference(name: string): Promise<DocumentReference> {
-    return doc(this.firestore,  tagsCollectionPath, await this.hmac.getHmacBase64(new Blob([name], { type: 'text/plain' })))
+    return doc(this.firestore,  tagsCollectionPath, await this.hmac.getHmacHex(new Blob([name], { type: 'text/plain' })))
   }
 
   async GetImageReferenceFromBlob(image: Blob): Promise<DocumentReference> {
-    return doc(this.firestore, imagesCollectionPath, await this.hmac.getHmacBase64(image))
+    return doc(this.firestore, imagesCollectionPath, await this.hmac.getHmacHex(image))
   }
 
   GetImageReferenceFromId(imageId: string): DocumentReference {
@@ -102,7 +102,7 @@ export class StorageService {
 
   async StoreKey(key: Blob): Promise<DocumentReference> {
     const k = {
-      id: await this.hmac.getHmacBase64(key),
+      id: await this.hmac.getHmacHex(key),
       key: Bytes.fromUint8Array(new Uint8Array(await key.arrayBuffer())),
     }
     this.keys[k.id] = k.key;
@@ -126,7 +126,7 @@ export class StorageService {
   async StoreTag(name: string): Promise<DocumentReference> {
     const tRef = await this.GetTagReference(name)
     const t = {
-      id: await this.hmac.getHmacBase64(new Blob([name], { type: 'text/plain' })),
+      id: await this.hmac.getHmacHex(new Blob([name], { type: 'text/plain' })),
       name: name,
     }
     this.tags[t.id] = t.name
@@ -164,13 +164,15 @@ export class StorageService {
 
   async StoreImage(image: Blob, url: string, tags: DocumentReference[]): Promise<DocumentReference> {
     const i = {
-      id: await this.hmac.getHmacBase64(image),
+      id: await this.hmac.getHmacHex(image),
       added: new Date(),
       url: url,
       data: Bytes.fromUint8Array(new Uint8Array(await image.arrayBuffer())),
       tags: tags,
     }
-    return addDoc(this.imagesCollection, i);
+    const iRef = doc(this.firestore, imagesCollectionPath, i.id)
+    setDoc(iRef, i);
+    return iRef
   }
 
   async LiveImageFromStored(stored: StoredImage | StoredEncryptedImage ): Promise<LiveImage> {

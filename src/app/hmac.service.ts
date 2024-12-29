@@ -23,6 +23,24 @@ function stringToArrayBuffer(input: string): ArrayBuffer {
   return encoder.encode(input);
 }
 
+const byteToHex: string[] = [];
+
+for (let n = 0; n <= 0xff; ++n)
+{
+    const hexOctet = n.toString(16).padStart(2, "0");
+    byteToHex.push(hexOctet);
+}
+
+function hex(arrayBuffer: ArrayBuffer): string {
+    const buff = new Uint8Array(arrayBuffer);
+    const hexOctets = []; // new Array(buff.length) is even faster (preallocates necessary array size), then use hexOctets[i] instead of .push()
+
+    for (let i = 0; i < buff.length; ++i)
+        hexOctets.push(byteToHex[buff[i]]);
+
+    return hexOctets.join("");
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -56,23 +74,12 @@ export class HmacService {
 
   }
 
-  async getHmacBase64(blob: Blob): Promise<string> {
+  async getHmacHex(blob: Blob): Promise<string> {
     if ( !this.key ) {
       await this.initKey();
     }
     return blob.arrayBuffer()
       .then((data: ArrayBuffer) => { return this.crypto!.sign("HMAC",  this.key!, data);})
-      .then((buffer: ArrayBuffer) => this.bufferToBase64(buffer));
-  }
-
-  async bufferToBase64(buffer: ArrayBuffer): Promise<string> {
-    // use a FileReader to generate a base64 data URI:
-    const base64url: string = await new Promise(r => {
-      const reader = new FileReader()
-      reader.onload = () => r(reader.result as string)
-      reader.readAsDataURL(new Blob([buffer]))
-    });
-    // remove the `data:...;base64,` part from the start
-    return base64url.slice(base64url.indexOf(',') + 1);
+      .then((buffer: ArrayBuffer) => hex(buffer));
   }
 }

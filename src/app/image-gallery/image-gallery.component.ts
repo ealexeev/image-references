@@ -29,7 +29,6 @@ export class ImageGalleryComponent {
         this.storage.LoadImagesWithTag(this.tag).then((si)=>this.images = si)
       }
     })
-    ;
   }
 
   async receiveImageURL(url: string): Promise<void> {
@@ -44,6 +43,7 @@ export class ImageGalleryComponent {
   }
 
   async deleteImage(id: string) {
+    this.images = this.images.filter((li) => li.id != id);
     return this.storage.DeleteImage(this.storage.GetImageReferenceFromId(id))
   }
 }

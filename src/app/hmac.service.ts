@@ -37,19 +37,28 @@ export class HmacService {
     } else {
       throw new ReferenceError("Could not get crypto reference!");
     }
-    this.crypto.importKey("raw", stringToArrayBuffer(hmacPassPhrase), { name: "PBKDF2" }, false, ["deriveKey"])
-    .then((static_passphrase: CryptoKey) => this.crypto!.deriveKey(pbkdf2Params, static_passphrase, hmacParams, true, ['sign']))
-    .then((hmac_key: CryptoKey) => this.key = hmac_key)
-    .then(() => this.ready.set(true));
+    this.initKey();
+    console.log("HMAC Service constructor finished");
   }
 
   debugme() {
     console.log('Debug me called');
   }
 
+  async initKey(): Promise<void> {
+    return new Promise(async (resolve, _) => {
+      const static_passphrase = await this.crypto.importKey("raw", stringToArrayBuffer(hmacPassPhrase), { name: "PBKDF2" }, false, ["deriveKey"])
+      const hmak_key = await this.crypto!.deriveKey(pbkdf2Params, static_passphrase, hmacParams, true, ['sign'])
+      this.key = hmak_key;
+      this.ready.set(true);
+      resolve();
+    })
+
+  }
+
   async getHmacBase64(blob: Blob): Promise<string> {
     if ( !this.key ) {
-      throw TypeError('HmacService:  no key loaded!');
+      await this.initKey();
     }
     return blob.arrayBuffer()
       .then((data: ArrayBuffer) => { return this.crypto!.sign("HMAC",  this.key!, data);})

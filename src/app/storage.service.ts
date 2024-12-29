@@ -1,18 +1,65 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
+import { addDoc, Bytes, collection, connectFirestoreEmulator, deleteDoc, doc, DocumentReference, Firestore, getDoc, getDocs, query, where } from '@angular/fire/firestore';
+
 import { HmacService } from './hmac.service';
 
-export interface StoredImage {
-  // Unique ID
+
+export type EncryptionMetadata = {
+  // IV used during encryption.
+  iv: Bytes
+  // Key id or refernce to a wrapped key stored in Firestore.  The key used for data encryption.
+  key: string,
+}
+
+export type StoredImage = {
+  // Unique ID (HMAC of bytes), base64 encoded.  
+  // Even if Bytes was too large to store in Firestore directly, the HMAC represents the HMAC of the raw data -- and thus a method to avoid duplicates.
   id: string,
   // Time image was first added.
   added: Date,
-  // IV used
-  iv: string,
-  // URL of the image
+  // URL to use for image retrieval if data is empty
   url: string,
-  // Collection of applicable tag IDs
+  // If sufficiently small to store in Firestore, image bytes, possibly encrypted.
+  data: Bytes
+  // Collection of applicable tag IDs, references to firestore documents
+  tags: DocumentReference[]
+}
+
+export type StoredEncryptedImage = StoredImage & EncryptionMetadata;
+
+// AppImage is an image that has been fetched from storage, had its data and tags decrypted
+// if necessary and is now being "served" from the local host.
+export type LiveImage = {
+  // The stored ID of this image in case changes have to be made
+  id: string
+  // The local URL of this image's Blob
+  url: string
+  // The names of tags applied to this image.
   tags: string[]
 }
+
+export type StoredTag = {
+  // Unique ID (HMAC of name), base64 encoded
+  id: string,
+  // If not encrypted the name of the tag
+  name: string,
+}
+
+export type StoredEncryptedTag = StoredTag & EncryptionMetadata;
+
+export type StoredKey = {
+  // Unique ID (HMAC of key), base64 encoded
+  id: string,
+  // Wrapped encryption key, no IV needed.
+  key: Bytes
+}
+
+
+// KeyMap retains a map of key ids (HMACs) to wrapped key bytes.
+type KeyMap = Record<string, Bytes>
+// TagMap retains a map of tag names to HMACs / tag ids for easy lookup.
+type TagMap = Record<string, string>
+
 
 const LOCAL_STORAGE_KEY_IMAGES = "prestige-ape-images";
 
@@ -20,69 +67,160 @@ const LOCAL_STORAGE_KEY_IMAGES = "prestige-ape-images";
   providedIn: 'root'
 })
 export class StorageService {
+  private firestore: Firestore = inject(Firestore);
+  private hmac: HmacService = inject(HmacService);
+  private keysCollection: any;
+  private imagesCollection: any;
+  private tagsCollection: any;
+  private keys: KeyMap = {};
+  private tags: TagMap = {};
 
-  private allImages: StoredImage[] = [
-    {
-      id: "test-1",
-      added: new Date(),
-      iv: "an-iv",
-      url: "https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/51506a75-0aeb-4f25-94a6-40117720b244/dh27kbi-89e73254-9a88-44e6-b617-5c62813866fa.jpg/v1/fit/w_828,h_622,q_70,strp/the_cybernetic_companion_by_queenwithnothrone_dh27kbi-414w-2x.jpg?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7InBhdGgiOiJcL2ZcLzUxNTA2YTc1LTBhZWItNGYyNS05NGE2LTQwMTE3NzIwYjI0NFwvZGgyN2tiaS04OWU3MzI1NC05YTg4LTQ0ZTYtYjYxNy01YzYyODEzODY2ZmEuanBnIiwiaGVpZ2h0IjoiPD05NjAiLCJ3aWR0aCI6Ijw9MTI4MCJ9XV0sImF1ZCI6WyJ1cm46c2VydmljZTppbWFnZS53YXRlcm1hcmsiXSwid21rIjp7InBhdGgiOiJcL3dtXC81MTUwNmE3NS0wYWViLTRmMjUtOTRhNi00MDExNzcyMGIyNDRcL3F1ZWVud2l0aG5vdGhyb25lLTQucG5nIiwib3BhY2l0eSI6OTUsInByb3BvcnRpb25zIjowLjQ1LCJncmF2aXR5IjoiY2VudGVyIn19.Uw0UP0iKgRMzjUbYUq4Yi5A8jQMSmRy2duoynE8qVac",
-      tags: ["robot"]
-    },
-    {
-      id: "test-2",
-      added: new Date(),
-      iv: "an-iv",
-      url: "https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/51506a75-0aeb-4f25-94a6-40117720b244/dhxuaoa-add4922b-fcf1-41ea-b7ad-f0128e70d8cb.jpg/v1/fit/w_828,h_622,q_70,strp/hot_coffee_by_queenwithnothrone_dhxuaoa-414w-2x.jpg?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7InBhdGgiOiJcL2ZcLzUxNTA2YTc1LTBhZWItNGYyNS05NGE2LTQwMTE3NzIwYjI0NFwvZGh4dWFvYS1hZGQ0OTIyYi1mY2YxLTQxZWEtYjdhZC1mMDEyOGU3MGQ4Y2IuanBnIiwiaGVpZ2h0IjoiPD05NjAiLCJ3aWR0aCI6Ijw9MTI4MCJ9XV0sImF1ZCI6WyJ1cm46c2VydmljZTppbWFnZS53YXRlcm1hcmsiXSwid21rIjp7InBhdGgiOiJcL3dtXC81MTUwNmE3NS0wYWViLTRmMjUtOTRhNi00MDExNzcyMGIyNDRcL3F1ZWVud2l0aG5vdGhyb25lLTQucG5nIiwib3BhY2l0eSI6OTUsInByb3BvcnRpb25zIjowLjQ1LCJncmF2aXR5IjoiY2VudGVyIn19.YBs-gEz8pE1QhzqS4e7aLFbjyN3iw3s2TXiWPp-KdHs",
-      tags: ["robot", "coffee"]
-    }
-  ];
 
-  constructor(private hmac: HmacService) { }
+  constructor() {
+    this.keysCollection = collection(this.firestore, 'keys')
+    this.imagesCollection = collection(this.firestore, 'images')
+    this.tagsCollection = collection(this.firestore, 'tags')
 
-  getAllImagesWithTag(tag: string): StoredImage[] {
-    var ret: StoredImage[] = [];
-    var local: StoredImage[] = [];
-    try {
-      local = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_IMAGES) || "") as StoredImage[];  
-    } catch (error) {
-      console.log(error);
-    }
-    if ( local.length > 0 ) {
-      console.log("Got results from local storage!");
-      return local;
-    }
-    
-    for (const stored of this.allImages) {
-      for (const storedTag of stored.tags) {
-        if ( storedTag === tag ) {
-          ret.push(stored)
-        }
-      }
-    }
-    return ret;
+    connectFirestoreEmulator(this.firestore, 'localhost', 8080, {})
   }
 
-  // Will need to refactor handling local blob URLs since they are not stable.  
-  // Uploaded files will need to be hosted somewhere.
-  async storeImageFromURL(url: string, tags: string[]): Promise<StoredImage> {
+  async GetTagReference(name: string): Promise<DocumentReference> {
+    return doc(this.tagsCollection, await this.hmac.getHmacBase64(new Blob([name], { type: 'text/plain' })))
+  }
 
-    var tags: string[] = [];
-    for (const tag of tags) {
-      var hmac: string | ArrayBuffer | null;
-      hmac = await this.hmac.getHmacBase64(new Blob([tag]));
-      tags.push(hmac as string);
+  async GetImageReferenceFromBlob(image: Blob): Promise<DocumentReference> {
+    return doc(this.imagesCollection, await this.hmac.getHmacBase64(image))
+  }
+
+  GetImageReferenceFromId(imageId: string): DocumentReference {
+    return doc(this.imagesCollection, imageId)
+  }
+
+  async StoreKey(key: Blob): Promise<DocumentReference> {
+    const k = {
+      id: await this.hmac.getHmacBase64(key),
+      key: Bytes.fromUint8Array(new Uint8Array(await key.arrayBuffer())),
     }
-    const img: StoredImage = {
-      id: "",
-      added: new Date(),
-      iv: "an-iv",
-      url: url,
-      tags: tags,
-    };
+    this.keys[k.id] = k.key;
+    return addDoc(this.keysCollection, <StoredKey> k)
+  }
 
-    this.allImages.push(img);
-    localStorage.setItem(LOCAL_STORAGE_KEY_IMAGES, JSON.stringify(this.allImages));
-    return new Promise((resolve) => {resolve(img)});
+  async LoadKey(keyId: string): Promise<StoredKey|undefined> {
+    if (keyId in this.keys) {
+      return { id: keyId, key: this.keys[keyId] };
+    }
+    const ref = doc(this.keysCollection, keyId);
+    const snapshot = await getDoc(ref);
+    const sk = snapshot.data() as StoredKey | undefined;
+    if (sk) {
+      this.keys[keyId] = sk.key;
+    }
+    return sk
+  }
+
+  // Save a tag to firestore, encrypt with specified key
+  async StoreTag(name: string, key: string): Promise<DocumentReference> {
+    const t = {
+      id: await this.hmac.getHmacBase64(new Blob([name], { type: 'text/plain' })),
+      name: name,
+    }
+    this.tags[t.id] = t.name;
+    return addDoc(this.tagsCollection, t);
+  }
+
+  async LoadTag(tagRef: string | DocumentReference): Promise<StoredTag|undefined> {
+    if ( typeof tagRef == "string" ) {
+      tagRef = await this.GetTagReference(tagRef)
+    }
+    if ( tagRef.id in this.tags) {
+      return { id: tagRef.id, name: this.tags[tagRef.id] };
+    }
+    const snapshot = await getDoc(tagRef);
+    const st = snapshot.data() as StoredTag | StoredEncryptedTag | undefined;
+    if (st) {
+      this.tags[st.id] = st.name;
+    }
+    return st
+  }
+
+  async LoadAllTags(): Promise<StoredTag[]> {
+    return new Promise((resolve, _) => {
+      const ret: StoredTag[] = [];
+      getDocs(this.tagsCollection).then((qs) => qs.forEach((doc) => { ret.push(doc.data() as StoredTag) }));
+      resolve(ret);
+    });
+  }
+
+  async DeleteTag(name: string): Promise<void> {
+    const tagRef = await this.GetTagReference(name)
+    return deleteDoc(tagRef)
+  }
+
+  async StoreImage(image: Blob, url: string, tags: DocumentReference[]): Promise<DocumentReference> {
+    const i = {
+      id: await this.hmac.getHmacBase64(image),
+      added: new Date(),
+      url: url,
+      data: Bytes.fromUint8Array(new Uint8Array(await image.arrayBuffer())),
+      tags: tags,
+    }
+    return addDoc(this.imagesCollection, i);
+  }
+
+  async LiveImageFromStored(stored: StoredImage | StoredEncryptedImage ): Promise<LiveImage> {
+    return new Promise((resolve, _) => {
+      const imageTags: string[] = [];
+      stored.tags.map(async (tagRef) => { imageTags.push(((await this.LoadTag(tagRef))?.name) || "") });
+      resolve({
+        id: stored.id,
+        url: stored.url || URL.createObjectURL(new Blob([stored.data.toUint8Array()])),
+        tags: imageTags,
+      })
+    })
+  }
+
+  async LoadImage(imageRef: DocumentReference): Promise<LiveImage | undefined> {
+    return new Promise((resolve, reject) => {
+      getDoc(imageRef).then((snapshot) => {
+        try {
+          try {
+            const sei = snapshot.data() as StoredEncryptedImage;  
+            console.log("Received a StoredEncryptedImage, logic is not implemented!")
+            resolve(undefined)
+          } catch (error) {
+            console.log(`Error casting to StoredEncryptedImage: ${error}`)
+            this.LiveImageFromStored(snapshot.data() as StoredImage);
+          }
+        } catch (error) {
+          console.log(`Error casting to StoredImage: ${error}`)
+          resolve(undefined);
+        }
+      })
+    })
+  }
+
+  async LoadImagesWithTag(tag: string): Promise<LiveImage[]> {
+    const tagRef = await this.GetTagReference(tag)
+    const q = query(this.imagesCollection, where("tags", "array-contains", tagRef))
+
+    const snapshot = await getDocs(q);
+    const images = snapshot.docs.map((si) => {
+      try {
+        try {
+          const out = si.data() as StoredEncryptedImage;
+          console.log("Recieved a StoredEncryptedImage, logic is not implemented")
+          undefined
+        } catch {
+          this.LiveImageFromStored(si.data() as StoredImage);
+        }
+      } catch {
+        si.data() as undefined
+      }
+    }).filter( (i) => i !== undefined )
+    return images;
+  }
+
+  async DeleteImage(imageRef: DocumentReference) {
+    return deleteDoc(imageRef)
   }
 }

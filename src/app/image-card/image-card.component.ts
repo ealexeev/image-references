@@ -4,7 +4,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatChipsModule } from '@angular/material/chips';
-import { StoredImage } from '../storage.service';
+import { LiveImage } from '../storage.service';
 
 @Component({
   selector: 'app-image-card',
@@ -20,7 +20,7 @@ import { StoredImage } from '../storage.service';
   styleUrl: './image-card.component.scss'
 })
 export class ImageCardComponent {
-  @Input() imageSource: StoredImage|null = null;
+  @Input() imageSource: LiveImage|null = null;
   
   @Output() imageDeleted = new EventEmitter<string>;
   

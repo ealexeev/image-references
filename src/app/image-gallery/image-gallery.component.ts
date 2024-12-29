@@ -3,7 +3,7 @@ import { MatCardModule } from '@angular/material/card';
 
 import { ImageCardComponent } from '../image-card/image-card.component';
 import { ImageAdderComponent } from '../image-adder/image-adder.component';
-import { StorageService, StoredImage } from '../storage.service';
+import { StorageService, LiveImage } from '../storage.service';
 
 @Component({
   selector: 'app-image-gallery',
@@ -17,28 +17,24 @@ import { StorageService, StoredImage } from '../storage.service';
 })
 export class ImageGalleryComponent {
   tag = 'robot'
-  images: StoredImage[] = [];
-  storage: StorageService = inject(StorageService);
+  images: LiveImage[] = [];
 
-  constructor(){
-    this.images = this.storage.getAllImagesWithTag(this.tag);
+  constructor(private storage: StorageService){
+    this.storage.LoadImagesWithTag(this.tag).then((si)=>this.images = si);
   }
 
-  receiveImageURL(url: string) {
+  async receiveImageURL(url: string): Promise<void> {
     console.log("Received URL: ", url)
-    if (url) {
-      const img = this.storage.storeImageFromURL(url, [this.tag]);
-      img.then((i: StoredImage) => this.images.push(i));
-    }
+    const imageBlob = await fetch(url).then((response) => response.blob().then(b => b));
+    const docRef = await this.storage.StoreImage(imageBlob, url, [await this.storage.GetTagReference(this.tag)]);
+    this.storage.LoadImage(docRef).then((i) => {
+      if (i) {
+        this.images.push(i)
+      }
+    });
   }
 
-  deleteImage(id: string) {
-    console.log("Deleting: ", id)
-    for (var i = 0; i < this.images.length; i++) {
-      if (this.images[i].id === id) {
-        this.images.splice(i, 1);
-        break;
-      }
-    }
+  async deleteImage(id: string) {
+    return this.storage.DeleteImage(this.storage.GetImageReferenceFromId(id))
   }
 }

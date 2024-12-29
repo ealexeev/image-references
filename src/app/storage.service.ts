@@ -179,7 +179,7 @@ export class StorageService {
       stored.tags.map(async (tagRef) => { imageTags.push(((await this.LoadTag(tagRef))?.name) || "") });
       resolve({
         id: stored.id,
-        url: stored.url || URL.createObjectURL(new Blob([stored.data.toUint8Array()])),
+        url: stored.data.toUint8Array().length > 0 ?  URL.createObjectURL(new Blob([stored.data.toUint8Array()])) : stored.url,
         tags: imageTags,
       })
     })
@@ -198,14 +198,10 @@ export class StorageService {
     const q = query(this.imagesCollection, where("tags", "array-contains", tag))
 
     const snapshot = await getDocs(q);
-    const images = snapshot.docs.map((si) => {
-      try {
-        this.LiveImageFromStored(si.data() as StoredImage);
-      } catch (error) {
-        console.log(`Error casting ${si.data()} to StoredImage: ${error}`)
-        si.data() as undefined
-      }
-    }).filter( (i) => i !== undefined )
+    const images: LiveImage[] = []
+    for ( const imageSnapshot of snapshot.docs ) {
+      images.push(await this.LiveImageFromStored(imageSnapshot.data() as StoredImage));
+    }
     return images;
   }
 

@@ -25,21 +25,7 @@ export class ImageAdderComponent {
 
   onPaste(event: any) {
     event.preventDefault();
-    let paste = navigator.clipboard.readText().then( (s: string) => {
-      let url = new URL(s);
-      if (url) {
-        console.log("Received URL: ", url)
-        fetch(url).then( 
-          response => { return response.blob().then(
-            b => {
-              const oURL = URL.createObjectURL(b);
-              console.log("Object URL: ", oURL);
-              this.imageAdded.emit(oURL);
-            }) });
-      } else {
-        console.error("Invalid URL: ", s)
-      };
-    });
+    navigator.clipboard.readText().then( (s: string) => this.imageAdded.emit(s));
   };
 
   filesDropped(files: FileHandle[]) {

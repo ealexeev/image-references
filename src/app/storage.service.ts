@@ -34,10 +34,15 @@ export type LiveImage = {
   tags: string[]
 }
 
-export type StoredTag = {
+export type LiveTag = {
+  // The ID of the stored tag.
   id: string,
-  // If not encrypted the name of the tag
+  // The plain text name of the stored tag.  Decrypted if necessary.
   name: string,
+}
+
+export type StoredTag = {
+  name: Bytes,
 }
 
 export type StoredEncryptedTag = StoredTag & EncryptionMetadata;
@@ -120,16 +125,12 @@ export class StorageService {
   // Save a tag to firestore, encrypt with specified key
   async StoreTag(name: string): Promise<DocumentReference> {
     const tRef = await this.GetTagReference(name)
-    const t = {
-      id: await this.hmac.getHmacHex(new Blob([name], { type: 'text/plain' })),
-      name: name,
-    }
-    this.tags[t.id] = t.name
-    setDoc(tRef, t)
+    this.tags[tRef.id] = name
+    setDoc(tRef, {name: name})
     return tRef
   }
 
-  async LoadTag(tagRef: string | DocumentReference): Promise<StoredTag|undefined> {
+  async LoadTag(tagRef: string | DocumentReference): Promise<LiveTag|undefined> {
     if ( typeof tagRef == "string" ) {
       tagRef = await this.GetTagReference(tagRef)
     }
@@ -137,11 +138,12 @@ export class StorageService {
       return { id: tagRef.id, name: this.tags[tagRef.id] };
     }
     const snapshot = await getDoc(tagRef);
-    const st = snapshot.data() as StoredTag | StoredEncryptedTag | undefined;
-    if (st) {
-      this.tags[st.id] = st.name;
+    const st = snapshot.data();
+    if (!st || !st['name']) {
+      return undefined;
     }
-    return st
+    this.tags[snapshot.id] = (st['name'] as Bytes).toString();
+    return {id: snapshot.id, name: this.tags[snapshot.id]}
   }
 
   async LoadAllTags(): Promise<StoredTag[]> {

@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { addDoc, Bytes, collection, connectFirestoreEmulator, deleteDoc, doc, DocumentReference, Firestore, getDoc, getDocs, query, where } from '@angular/fire/firestore';
+import { addDoc, Bytes, collection, connectFirestoreEmulator, deleteDoc, doc, DocumentReference, Firestore, getDoc, getDocs, query, setDoc, where } from '@angular/fire/firestore';
 
 import { HmacService } from './hmac.service';
 
@@ -63,6 +63,10 @@ type TagMap = Record<string, string>
 
 const LOCAL_STORAGE_KEY_IMAGES = "prestige-ape-images";
 
+const keysCollectionPath = 'keys'
+const imagesCollectionPath = 'images'
+const tagsCollectionPath = 'tags'
+
 @Injectable({
   providedIn: 'root'
 })
@@ -77,23 +81,23 @@ export class StorageService {
 
 
   constructor() {
-    this.keysCollection = collection(this.firestore, 'keys')
-    this.imagesCollection = collection(this.firestore, 'images')
-    this.tagsCollection = collection(this.firestore, 'tags')
+    this.keysCollection = collection(this.firestore, keysCollectionPath)
+    this.imagesCollection = collection(this.firestore, imagesCollectionPath)
+    this.tagsCollection = collection(this.firestore, tagsCollectionPath)
 
     connectFirestoreEmulator(this.firestore, 'localhost', 8080, {})
   }
 
   async GetTagReference(name: string): Promise<DocumentReference> {
-    return doc(this.tagsCollection, await this.hmac.getHmacBase64(new Blob([name], { type: 'text/plain' })))
+    return doc(this.firestore,  tagsCollectionPath, await this.hmac.getHmacBase64(new Blob([name], { type: 'text/plain' })))
   }
 
   async GetImageReferenceFromBlob(image: Blob): Promise<DocumentReference> {
-    return doc(this.imagesCollection, await this.hmac.getHmacBase64(image))
+    return doc(this.firestore, imagesCollectionPath, await this.hmac.getHmacBase64(image))
   }
 
   GetImageReferenceFromId(imageId: string): DocumentReference {
-    return doc(this.imagesCollection, imageId)
+    return doc(this.firestore, imagesCollectionPath, imageId)
   }
 
   async StoreKey(key: Blob): Promise<DocumentReference> {
@@ -120,12 +124,14 @@ export class StorageService {
 
   // Save a tag to firestore, encrypt with specified key
   async StoreTag(name: string): Promise<DocumentReference> {
+    const tRef = await this.GetTagReference(name)
     const t = {
       id: await this.hmac.getHmacBase64(new Blob([name], { type: 'text/plain' })),
       name: name,
     }
-    this.tags[t.id] = t.name;
-    return addDoc(this.tagsCollection, t);
+    this.tags[t.id] = t.name
+    setDoc(tRef, t)
+    return tRef
   }
 
   async LoadTag(tagRef: string | DocumentReference): Promise<StoredTag|undefined> {

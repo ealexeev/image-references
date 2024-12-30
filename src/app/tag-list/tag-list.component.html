@@ -1,4 +1,13 @@
 <mat-list>
+	<mat-form-field appearance="outline">
+    	<mat-label>Search for a tag</mat-label>
+    	<input 
+    		matInput 
+    		placeholder="..."
+    		[formControl]="searchText"
+    	/>
+    	<mat-icon matSuffix>search</mat-icon>
+  	</mat-form-field>
 	<div mat-subheader>Tags</div>
 	<mat-divider></mat-divider>
 	<mat-list-item>

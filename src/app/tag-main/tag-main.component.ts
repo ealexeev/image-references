@@ -16,5 +16,5 @@ import { TagListComponent } from '../tag-list/tag-list.component';
   styleUrl: './tag-main.component.scss'
 })
 export class TagMainComponent {
-
+  selectedTag = 'robot'
 }

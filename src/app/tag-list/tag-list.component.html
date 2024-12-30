@@ -1,8 +1,9 @@
 <mat-list>
+	<mat-divider></mat-divider>
 	<div mat-subheader>Tags</div>
 	@for (liveTag of tags$|async; track liveTag) {
 		<mat-list-item>
-			<mat-icon fontIcon="tag"></mat-icon>
+			<mat-icon matListItemIcon fontIcon="tag"></mat-icon>
 			<div matListItemTitle>{{liveTag.name}}</div>
 		</mat-list-item>
 	}

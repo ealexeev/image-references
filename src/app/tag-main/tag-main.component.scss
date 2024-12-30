@@ -3,4 +3,7 @@
   /* The background property is added to clearly distinguish the borders between drawer and main
      content */
   background: #eee;
+  .mat-drawer {
+    min-width: 10%;
+  }
 }

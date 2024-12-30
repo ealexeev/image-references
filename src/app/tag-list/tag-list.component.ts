@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { AsyncPipe, CommonModule } from '@angular/common';
 import { LiveTag, StorageService } from '../storage.service';
 import { Observable } from 'rxjs';
+import {MatDividerModule} from '@angular/material/divider';
 import {MatIconModule} from '@angular/material/icon';
 import {MatListModule} from '@angular/material/list';
 
@@ -11,6 +12,7 @@ import {MatListModule} from '@angular/material/list';
   standalone: true,
   imports: [
     CommonModule,
+    MatDividerModule,
     MatIconModule,
     MatListModule,
   ],

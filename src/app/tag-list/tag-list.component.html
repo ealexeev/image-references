@@ -16,7 +16,9 @@
 
 	<mat-chip-listbox class="mat-mdc-chip-set-stacked" aria-label="Cutest dog breeds">
 	  	@for (liveTag of tags$ | async; track liveTag) {
-	    	<mat-chip-option>{{liveTag.name}}</mat-chip-option>
+	    	<mat-chip-option
+	    		(selectionChange)="onChipSelectionChange($event, liveTag)"
+	    	>{{liveTag.name}}</mat-chip-option>
 	  	}
 	</mat-chip-listbox>
 

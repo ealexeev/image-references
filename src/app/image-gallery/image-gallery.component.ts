@@ -1,4 +1,4 @@
-import { Component, inject, Input, OnInit } from '@angular/core';
+import { Component, inject, Input, OnChanges, OnInit } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 
 import { ImageCardComponent } from '../image-card/image-card.component';
@@ -16,14 +16,15 @@ import { catchError, from, of, mergeMap, single } from 'rxjs';
   templateUrl: './image-gallery.component.html',
   styleUrl: './image-gallery.component.scss'
 })
-export class ImageGalleryComponent implements OnInit {
+export class ImageGalleryComponent implements OnChanges {
   @Input({required: true}) tag = '';
 
   images: LiveImage[] = [];
 
   constructor(private storage: StorageService) {}
 
-  ngOnInit() {
+  ngOnChanges() {
+    this.images = [];
     from(this.storage.LoadTag(this.tag)).pipe(
       single(),
       mergeMap((t: LiveTag | undefined) => {

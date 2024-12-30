@@ -1,8 +1,10 @@
 <mat-drawer-container class="example-container">
   <mat-drawer mode="side" opened>
-    <app-tag-list></app-tag-list>
+    <app-tag-list (tagSelectionEvent)="onTagSelection($event)"/>
   </mat-drawer>
   <mat-drawer-content>
-    <app-image-gallery [tag]=selectedTag/>
+    @if ( selectedTag$ | async; as value ) {
+      <app-image-gallery [tag]=value />
+    }
   </mat-drawer-content>
 </mat-drawer-container>

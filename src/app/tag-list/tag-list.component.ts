@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, EventEmitter, OnInit, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { LiveTag, StorageService } from '../storage.service';
 import { catchError, combineLatestWith, debounceTime, distinctUntilChanged, map, of, startWith, tap, Observable, BehaviorSubject } from 'rxjs';
@@ -30,6 +30,9 @@ import {FormControl, FormsModule, ReactiveFormsModule} from '@angular/forms';
   styleUrl: './tag-list.component.scss'
 })
 export class TagListComponent implements OnInit{
+
+  @Output() tagSelectionEvent = new EventEmitter<string>()
+
   tags$: Observable<LiveTag[]>;
   tagsSharedLenght$: BehaviorSubject<number> = new BehaviorSubject(0);
   enableCreateButton$: BehaviorSubject<boolean> = new BehaviorSubject(false);
@@ -66,5 +69,9 @@ export class TagListComponent implements OnInit{
         return of();
       }),
     ).subscribe( (r)=> {console.log(`Create tag: ${r?.name} with id ${r?.id}`)})
+  }
+
+  onChipSelectionChange(event: any, tag: LiveTag) {
+    this.tagSelectionEvent.emit(tag.name);
   }
 }

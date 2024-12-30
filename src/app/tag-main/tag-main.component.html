@@ -1,10 +1,10 @@
-<mat-drawer-container class="example-container">
-  <mat-drawer mode="side" opened>
+<mat-sidenav-container>
+  <mat-sidenav mode="side" opened>
     <app-tag-list (tagSelectionEvent)="onTagSelection($event)"/>
-  </mat-drawer>
-  <mat-drawer-content>
-    @if ( selectedTag$ | async; as value ) {
-      <app-image-gallery [tag]=value />
-    }
-  </mat-drawer-content>
-</mat-drawer-container>
+  </mat-sidenav>
+  @if ( selectedTag$ | async; as value ) {
+    <app-image-gallery [tag]=value />
+  } @else {
+    <div class="filler">Filler</div>
+  }
+</mat-sidenav-container>

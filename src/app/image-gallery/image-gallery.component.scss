@@ -2,22 +2,29 @@
 
 $grid_gap: 20px;
 
-h1 {
-  	background: theme.$background;
-  	margin: 0 0 0 0;
-  	text-align: center;
-  	font-family: "Teko", serif;
-  	font-optical-sizing: auto;
-    font-weight: 400;
-	font-style: normal;
-	color: lightgrey;
-}
-
-.image-grid {
-	padding: $grid_gap;
-	display: flex;
-	flex-wrap: wrap;
-	justify-content: flex-start;
-	gap: $grid_gap;
+.image-gallery {
+	margin: 0;
+	padding: 0;
 	background: theme.$background;
+	height: 100%
+
+	h1 {
+	  	background: theme.$background;
+	  	margin: 0 0 0 0;
+	  	text-align: center;
+	  	font-family: "Teko", serif;
+	  	font-optical-sizing: auto;
+	    font-weight: 400;
+		font-style: normal;
+		color: lightgrey;
+	}
+
+	.image-grid {
+		padding: $grid_gap;
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: flex-start;
+		gap: $grid_gap;
+		background: theme.$background;
+	}	
 }

@@ -19,7 +19,7 @@ import { BehaviorSubject } from 'rxjs';
   styleUrl: './tag-main.component.scss'
 })
 export class TagMainComponent {
-  selectedTag$: BehaviorSubject<string> = new BehaviorSubject('robot');
+  selectedTag$: BehaviorSubject<string> = new BehaviorSubject('');
 
   onTagSelection(tagName: string) {
     this.selectedTag$.next(tagName);

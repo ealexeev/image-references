@@ -14,4 +14,8 @@
 
 :root {
 	background: theme.$background;
+	html, body {
+  		margin: 0px;
+  		height: 100vh;
+	}
 }

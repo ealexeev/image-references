@@ -1,7 +1,9 @@
-<h1>{{ tag }}</h1>
-<div class="image-grid"> 
-  <app-image-adder (imageAdded)="receiveImageURL($event)"/>
-  @for (storedImage of images; track storedImage) {
-    <app-image-card [imageSource]=storedImage (imageDeleted)="deleteImage($event)"/>  
-  }
+<div class="image-gallery">
+  <h1>{{ tag }}</h1>
+  <div class="image-grid"> 
+    <app-image-adder (imageAdded)="receiveImageURL($event)"/>
+    @for (storedImage of images; track storedImage) {
+      <app-image-card [imageSource]=storedImage (imageDeleted)="deleteImage($event)"/>  
+    }
+  </div>
 </div>

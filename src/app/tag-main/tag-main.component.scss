@@ -1,13 +1,12 @@
-.mat-drawer-container {
-  background: #eee;
-  height: 100vh;
-  
-  .mat-drawer-inner-container {
-    min-width: 10%;
-  }
+@use '../../_variables.scss' as theme;
 
-  .mat-drawer-content {
-    height: 100vh;
+.mat-sidenav-container {
+  background: #eee;
+  height: 100%;
+
+  .filler {
+    background: theme.$background;
+    height: 100%;
   }
 }
 

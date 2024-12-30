@@ -1,9 +1,10 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 
 import { ImageCardComponent } from '../image-card/image-card.component';
 import { ImageAdderComponent } from '../image-adder/image-adder.component';
-import { StorageService, LiveImage } from '../storage.service';
+import { StorageService, LiveImage, LiveTag } from '../storage.service';
+import { from, of, mergeMap } from 'rxjs';
 
 @Component({
   selector: 'app-image-gallery',
@@ -15,20 +16,30 @@ import { StorageService, LiveImage } from '../storage.service';
   templateUrl: './image-gallery.component.html',
   styleUrl: './image-gallery.component.scss'
 })
-export class ImageGalleryComponent {
+export class ImageGalleryComponent implements OnInit {
   tag = 'robot'
   images: LiveImage[] = [];
 
-  constructor(private storage: StorageService){
-    this.storage.LoadTag(this.tag).then((stored) => {
-      if ( !stored ) {
-        this.storage.StoreTag(this.tag).then(() => {
-          this.storage.LoadImagesWithTag(this.tag).then((si)=>this.images = si)      
-        })
-      } else {
-        this.storage.LoadImagesWithTag(this.tag).then((si)=>this.images = si)
-      }
-    })
+
+  constructor(private storage: StorageService) {}
+
+  ngOnInit() {
+    from(this.storage.LoadTag(this.tag)).pipe(
+      mergeMap( (t: LiveTag | undefined) => {
+        if ( !t ) {
+          return this.storage.StoreTag(this.tag)
+        } else {
+          return of(t)
+        }
+      }),
+      mergeMap((t: LiveTag | undefined) => {
+        if ( !t ) {
+          return of([]);
+        } else {
+          return from(this.storage.LoadImagesWithTag(this.tag))
+        }
+      })
+    ).subscribe((images: LiveImage[]) => this.images = images);
   }
 
   async receiveImageURL(url: string): Promise<void> {

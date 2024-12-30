@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { addDoc, Bytes, collection, connectFirestoreEmulator, deleteDoc, doc, DocumentReference, DocumentSnapshot, Firestore, getDoc, getDocs, query, setDoc, where } from '@angular/fire/firestore';
 
 import { HmacService } from './hmac.service';
+import { BehaviorSubject, catchError, first, from, mergeMap, map, Observable, of, Subject } from 'rxjs';
 
 
 export type EncryptionMetadata = {
@@ -79,12 +80,15 @@ export class StorageService {
   private keys: KeyMap = {};
   private tags: TagMap = {};
 
+  // All tags known to the storage service.
+  tags$ = new BehaviorSubject<LiveTag[]>([]);
+  errors$ = new Subject<Error>;
+
 
   constructor() {
     this.keysCollection = collection(this.firestore, keysCollectionPath)
     this.imagesCollection = collection(this.firestore, imagesCollectionPath)
     this.tagsCollection = collection(this.firestore, tagsCollectionPath)
-
     connectFirestoreEmulator(this.firestore, 'localhost', 8080, {})
   }
 
@@ -123,11 +127,18 @@ export class StorageService {
   }
 
   // Save a tag to firestore, encrypt with specified key
-  async StoreTag(name: string): Promise<DocumentReference> {
-    const tRef = await this.GetTagReference(name)
-    this.tags[tRef.id] = name
-    setDoc(tRef, {name: name})
-    return tRef
+  StoreTag(name: string): Observable<LiveTag|undefined> {
+    return from(this.GetTagReference(name)).pipe(
+      first(),
+      map((tRef) => { 
+        this.tags[tRef.id] = name;
+        const lt = { id: tRef.id, name: name }
+        return {ref: tRef, tag: lt}}),
+      mergeMap( (res) => from(setDoc(res.ref, { name: name })).pipe(
+          map(() => res.tag),
+          catchError((error) => { this.errors$.next(error); return of(undefined); })
+      )),
+      );
   }
 
   async LoadTag(tagRef: string | DocumentReference): Promise<LiveTag|undefined> {

@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { addDoc, Bytes, collection, connectFirestoreEmulator, deleteDoc, doc, DocumentReference, DocumentSnapshot, Firestore, getDoc, getDocs, query, QuerySnapshot, setDoc, where } from '@angular/fire/firestore';
 
 import { HmacService } from './hmac.service';
-import { BehaviorSubject, catchError, first, from, mergeMap, map, Observable, of, Subject, tap } from 'rxjs';
+import { BehaviorSubject, catchError, first, from, mergeMap, map, Observable, of, Subject, single, tap, firstValueFrom } from 'rxjs';
 
 
 export type EncryptionMetadata = {
@@ -90,6 +90,7 @@ export class StorageService {
     this.imagesCollection = collection(this.firestore, imagesCollectionPath)
     this.tagsCollection = collection(this.firestore, tagsCollectionPath)
     connectFirestoreEmulator(this.firestore, 'localhost', 8080, {})
+
   }
 
   async GetTagReference(name: string): Promise<DocumentReference> {
@@ -181,24 +182,25 @@ export class StorageService {
   }
 
   LoadAllTags(): Observable<LiveTag[]> {
-    return from(getDocs(this.tagsCollection)).pipe(
+    from(getDocs(this.tagsCollection)).pipe(
+      first(),
       map( (qs) => {
         const ret: LiveTag[] = []
         qs.forEach( (doc) => {
           if ( doc.exists() ) {
             const data = doc.data() as StoredTag
-            (this as unknown as LiveTag[]).push({id: doc.id, name: data.name.toString()});
+            ret.push({id: doc.id, name: data.name.toString()});
           }
-        }, ret);
+        });
         return ret;
       }),
-      tap((tags: LiveTag[]) => this.tags$.next(tags)),
       catchError((error) => { 
         console.log(`Error LoadAllTags(): ${error}`)
         this.errors$.next(error)
         return of([])
       }),
-    )
+    ).subscribe((tags: LiveTag[]) => this.tags$.next(tags));
+    return this.tags$.asObservable();
   }
 
   DeleteTag(name: string) {
@@ -233,7 +235,7 @@ export class StorageService {
         return;
       }
       const imageTags: string[] = [];
-      stored['tags'].map(async (tagRef: DocumentReference) => { imageTags.push(((await this.LoadTag(tagRef))?.name) || "") });
+      stored['tags'].map(async (tagRef: DocumentReference) => { imageTags.push(((await firstValueFrom(this.LoadTag(tagRef)))?.name) || "") });
       resolve({
         id: snapshot.id,
         url: stored['data'].toUint8Array().length > 0 ?  URL.createObjectURL(new Blob([stored['data'].toUint8Array()])) : stored['url'],

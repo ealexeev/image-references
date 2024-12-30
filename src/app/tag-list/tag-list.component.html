@@ -1,1 +1,9 @@
-<p>tag-list works!</p>
+<mat-list>
+	<div mat-subheader>Tags</div>
+	@for (liveTag of tags$|async; track liveTag) {
+		<mat-list-item>
+			<mat-icon fontIcon="tag"></mat-icon>
+			<div matListItemTitle>{{liveTag.name}}</div>
+		</mat-list-item>
+	}
+</mat-list>

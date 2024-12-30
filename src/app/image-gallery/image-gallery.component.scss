@@ -3,10 +3,12 @@
 $grid_gap: 20px;
 
 .image-gallery {
-	margin: 0;
-	padding: 0;
+	// WHY does this overlap with the side content?  Jesus help me!
+	padding-left: 13px;
 	background: theme.$background;
-	height: 100%
+	display: flex;
+	flex-flow: column;
+	height: 100%;
 
 	h1 {
 	  	background: theme.$background;
@@ -26,5 +28,5 @@ $grid_gap: 20px;
 		justify-content: flex-start;
 		gap: $grid_gap;
 		background: theme.$background;
-	}	
+	}
 }

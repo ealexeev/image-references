@@ -68,7 +68,10 @@ export class TagListComponent implements OnInit{
         console.log(`Error createTag(): ${this.searchText.value}: ${error}`);
         return of();
       }),
-    ).subscribe( (r)=> {console.log(`Create tag: ${r?.name} with id ${r?.id}`)})
+    ).subscribe( (r)=> {
+      console.log(`Create tag: ${r?.name} with id ${r?.id}`)
+      this.searchText.setValue(this.searchText.value)
+    })
   }
 
   onChipSelectionChange(event: any, tag: LiveTag) {

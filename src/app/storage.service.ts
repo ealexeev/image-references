@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { addDoc, Bytes, collection, connectFirestoreEmulator, deleteDoc, doc, DocumentReference, DocumentSnapshot, Firestore, getDoc, getDocs, query, QuerySnapshot, setDoc, where } from '@angular/fire/firestore';
 
 import { HmacService } from './hmac.service';
-import { BehaviorSubject, catchError, first, from, mergeMap, map, Observable, of, shareReplay, Subject, single, tap, firstValueFrom } from 'rxjs';
+import { BehaviorSubject, catchError, first, from, mergeMap, map, Observable, of, shareReplay, Subject, single, take, tap, firstValueFrom } from 'rxjs';
 
 
 export type EncryptionMetadata = {
@@ -138,6 +138,15 @@ export class StorageService {
         return {ref: tRef, tag: lt}}),
       mergeMap( (res) => from(setDoc(res.ref, { name: name })).pipe(
           map(() => res.tag),
+          map(( res: LiveTag | undefined ) => {
+            this.tags$.pipe(take(1)).subscribe((tags: LiveTag[]) => {
+              if ( res ) {
+                tags.push(res)
+                this.tags$.next(tags)
+              }
+            })
+            return res
+          }), 
           catchError((error) => { this.errors$.next(error); return of(undefined); })
       )),
       );

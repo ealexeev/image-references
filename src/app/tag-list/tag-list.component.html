@@ -8,6 +8,11 @@
     	/>
     	<mat-icon matSuffix>search</mat-icon>
   	</mat-form-field>
+  	@if ( enableCreateButton$ | async ) {
+  		<div class="create-button">	
+  			<button mat-stroked-button (click)="createTag()">Create {{searchText.value}}</button>
+  		</div>
+  	}
 	<div mat-subheader>Tags</div>
 	<mat-divider></mat-divider>
 	<mat-list-item>

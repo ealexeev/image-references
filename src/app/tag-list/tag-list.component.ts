@@ -1,9 +1,10 @@
 import { Component, OnInit } from '@angular/core';
-import { AsyncPipe, CommonModule } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { LiveTag, StorageService } from '../storage.service';
-import { combineLatestWith, debounceTime, defaultIfEmpty, distinctUntilChanged, map, startWith, tap, Observable } from 'rxjs';
+import { catchError, combineLatestWith, debounceTime, distinctUntilChanged, map, of, startWith, tap, Observable, BehaviorSubject } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
+import {MatButtonModule} from '@angular/material/button';
 import {MatDividerModule} from '@angular/material/divider';
 import {MatChipsModule} from '@angular/material/chips';
 import {MatIconModule} from '@angular/material/icon';
@@ -17,6 +18,7 @@ import {FormControl, FormsModule, ReactiveFormsModule} from '@angular/forms';
   imports: [
     CommonModule,
     FormsModule,
+    MatButtonModule,
     MatChipsModule,
     MatDividerModule,
     MatIconModule,
@@ -29,6 +31,7 @@ import {FormControl, FormsModule, ReactiveFormsModule} from '@angular/forms';
 })
 export class TagListComponent implements OnInit{
   tags$: Observable<LiveTag[]>;
+  enableCreateButton$: BehaviorSubject<boolean> = new BehaviorSubject(false);
 
   readonly searchText = new FormControl('')
 
@@ -39,18 +42,25 @@ export class TagListComponent implements OnInit{
       debounceTime(250),
     );
     this.tags$ = this.storage.tags$.pipe(
-      // distinctUntilChanged(),
+      distinctUntilChanged(),
       combineLatestWith(search),
-      tap( ([tags, searchText]) => {
-        console.log(`Search: ${searchText}, tags: ${tags}`)
-      }),
       map( ([tags, searchText]) => {
         return tags.filter(t => t.name.toLowerCase().includes((searchText || '').toLowerCase()))
       }),
+      tap( (tags: LiveTag[]) => { this.enableCreateButton$.next(tags.length == 0)} ),
     );
   }
 
   ngOnInit() {
     this.storage.LoadAllTags();
+  }
+
+  createTag() {
+    this.storage.StoreTag(this.searchText.value ?? '').pipe(
+      catchError( (error: Error) => {
+        console.log(`Error createTag(): ${this.searchText.value}: ${error}`);
+        return of();
+      }),
+    ).subscribe( (r)=> {console.log(`Create tag: ${r?.name} with id ${r?.id}`)})
   }
 }

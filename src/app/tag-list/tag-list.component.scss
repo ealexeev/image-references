@@ -1,10 +1,21 @@
 @use '../../_variables.scss' as theme;
 
-mat-form-field {
-	margin: 5px 20px;
+.tag-list {
+	mat-form-field {
+		margin: 20px 20px 10px;
+	}
+
+	.create-button {
+		margin: 0px 20px 0px;
+		color: red;
+	}
+
+	mat-chip-listbox {
+		max-width: 300px;
+		mat-chip-option {
+			margin: 5px 20px;
+		}		
+	}
+
 }
 
-.create-button {
-	margin: 0px 20px 0px;
-	color: red;
-}

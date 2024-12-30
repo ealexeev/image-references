@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { addDoc, Bytes, collection, connectFirestoreEmulator, deleteDoc, doc, DocumentReference, DocumentSnapshot, Firestore, getDoc, getDocs, query, QuerySnapshot, setDoc, where } from '@angular/fire/firestore';
 
 import { HmacService } from './hmac.service';
-import { BehaviorSubject, catchError, first, from, mergeMap, map, Observable, of, Subject, single, tap, firstValueFrom } from 'rxjs';
+import { BehaviorSubject, catchError, first, from, mergeMap, map, Observable, of, shareReplay, Subject, single, tap, firstValueFrom } from 'rxjs';
 
 
 export type EncryptionMetadata = {
@@ -82,6 +82,7 @@ export class StorageService {
 
   // All tags known to the storage service.
   tags$ = new BehaviorSubject<LiveTag[]>([]);
+  tagsShared$ = this.tags$.pipe(shareReplay());
   errors$ = new Subject<Error>;
 
 

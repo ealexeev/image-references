@@ -31,6 +31,7 @@ import {FormControl, FormsModule, ReactiveFormsModule} from '@angular/forms';
 })
 export class TagListComponent implements OnInit{
   tags$: Observable<LiveTag[]>;
+  tagsSharedLenght$: BehaviorSubject<number> = new BehaviorSubject(0);
   enableCreateButton$: BehaviorSubject<boolean> = new BehaviorSubject(false);
 
   readonly searchText = new FormControl('')
@@ -41,7 +42,7 @@ export class TagListComponent implements OnInit{
       takeUntilDestroyed(),
       debounceTime(250),
     );
-    this.tags$ = this.storage.tags$.pipe(
+    this.tags$ = this.storage.tagsShared$.pipe(
       distinctUntilChanged(),
       combineLatestWith(search),
       map( ([tags, searchText]) => {
@@ -49,6 +50,9 @@ export class TagListComponent implements OnInit{
       }),
       tap( (tags: LiveTag[]) => { this.enableCreateButton$.next(tags.length == 0)} ),
     );
+    this.storage.tagsShared$.pipe(
+      takeUntilDestroyed(),
+    ).subscribe((tags) => this.tagsSharedLenght$.next(tags.length || 0));
   }
 
   ngOnInit() {

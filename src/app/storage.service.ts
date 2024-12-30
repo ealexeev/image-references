@@ -1,8 +1,8 @@
 import { Injectable, inject } from '@angular/core';
-import { addDoc, Bytes, collection, connectFirestoreEmulator, deleteDoc, doc, DocumentReference, DocumentSnapshot, Firestore, getDoc, getDocs, query, setDoc, where } from '@angular/fire/firestore';
+import { addDoc, Bytes, collection, connectFirestoreEmulator, deleteDoc, doc, DocumentReference, DocumentSnapshot, Firestore, getDoc, getDocs, query, QuerySnapshot, setDoc, where } from '@angular/fire/firestore';
 
 import { HmacService } from './hmac.service';
-import { BehaviorSubject, catchError, first, from, mergeMap, map, Observable, of, Subject } from 'rxjs';
+import { BehaviorSubject, catchError, first, from, mergeMap, map, Observable, of, Subject, tap } from 'rxjs';
 
 
 export type EncryptionMetadata = {
@@ -141,33 +141,75 @@ export class StorageService {
       );
   }
 
-  async LoadTag(tagRef: string | DocumentReference): Promise<LiveTag|undefined> {
+  LoadTag(tagRef: string | DocumentReference): Observable<LiveTag|undefined> {
+    var docRef: Observable<DocumentReference>
     if ( typeof tagRef == "string" ) {
-      tagRef = await this.GetTagReference(tagRef)
+      docRef = from(this.GetTagReference(tagRef))
+    } else {
+      docRef = of(tagRef)
     }
-    if ( tagRef.id in this.tags) {
-      return { id: tagRef.id, name: this.tags[tagRef.id] };
-    }
-    const snapshot = await getDoc(tagRef);
-    const st = snapshot.data();
-    if (!st || !st['name']) {
-      return undefined;
-    }
-    this.tags[snapshot.id] = (st['name'] as Bytes).toString();
-    return {id: snapshot.id, name: this.tags[snapshot.id]}
+    return docRef.pipe(
+      map( ( docRef: DocumentReference ) => {
+        if ( docRef.id in this.tags ) {
+          return { id: docRef.id, name: this.tags[docRef.id] }
+        } else {
+          return docRef
+        }
+      }),
+      mergeMap( ( res: LiveTag | DocumentReference ) => {
+        if ( res instanceof DocumentReference ) {
+          return from(getDoc(res)).pipe(
+            map( (snapshot) => {
+              const st = snapshot.data();
+              if (!st || !st['name']) {
+                return undefined;
+              }
+              this.tags[snapshot.id] = (st['name'] as Bytes).toString();
+              return {id: snapshot.id, name: this.tags[snapshot.id]}
+            })
+          )
+        } else {
+          return of(res)
+        }
+      }),
+      catchError( (error: Error) => {
+        console.log(`Error during LoadTag(${tagRef}): ${error}`)
+        this.errors$.next(error)
+        return of()
+      }),
+    )
   }
 
-  async LoadAllTags(): Promise<StoredTag[]> {
-    return new Promise((resolve, _) => {
-      const ret: StoredTag[] = [];
-      getDocs(this.tagsCollection).then((qs) => qs.forEach((doc) => { ret.push(doc.data() as StoredTag) }));
-      resolve(ret);
-    });
+  LoadAllTags(): Observable<LiveTag[]> {
+    return from(getDocs(this.tagsCollection)).pipe(
+      map( (qs) => {
+        const ret: LiveTag[] = []
+        qs.forEach( (doc) => {
+          if ( doc.exists() ) {
+            const data = doc.data() as StoredTag
+            (this as unknown as LiveTag[]).push({id: doc.id, name: data.name.toString()});
+          }
+        }, ret);
+        return ret;
+      }),
+      tap((tags: LiveTag[]) => this.tags$.next(tags)),
+      catchError((error) => { 
+        console.log(`Error LoadAllTags(): ${error}`)
+        this.errors$.next(error)
+        return of([])
+      }),
+    )
   }
 
-  async DeleteTag(name: string): Promise<void> {
-    const tagRef = await this.GetTagReference(name)
-    return deleteDoc(tagRef)
+  DeleteTag(name: string) {
+    from(this.GetTagReference(name)).pipe(
+      map( (tRef: DocumentReference ) => { deleteDoc(tRef) }),
+      catchError( (error: Error) => { 
+        console.log(`Error deleting tag: ${error}`);
+        this.errors$.next(error);
+        return of();  
+      }),
+    );
   }
 
   async StoreImage(image: Blob, url: string, tags: DocumentReference[]): Promise<DocumentReference> {

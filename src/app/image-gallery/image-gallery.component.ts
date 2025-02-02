@@ -47,7 +47,7 @@ export class ImageGalleryComponent implements OnChanges {
     const docRef = await this.storage.StoreImage(imageBlob, url, [await this.storage.GetTagReference(this.tag)]);
     this.storage.LoadImage(docRef).then((i) => {
       if (i) {
-        this.images.push(i)
+        this.images.unshift(i)
       }
     });
   }

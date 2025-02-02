@@ -13,8 +13,13 @@
 	mat-chip-listbox {
 		max-width: 300px;
 		mat-chip-option {
+			max-width: 200px;
 			margin: 5px 20px;
-		}		
+
+			mat-icon {
+				vertical-align: middle;
+			}
+		}	
 	}
 
 }

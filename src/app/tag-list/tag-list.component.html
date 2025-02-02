@@ -13,12 +13,17 @@
 			<button mat-stroked-button (click)="createTag()">Create {{searchText.value}}</button>
 		</div>
 	}
-
 	<mat-chip-listbox class="mat-mdc-chip-set-stacked" aria-label="Cutest dog breeds">
 	  	@for (liveTag of tags$ | async; track liveTag) {
 	    	<mat-chip-option
+	    		[selected]="(tagsFilteredCount$ | async) == 1"
 	    		(selectionChange)="onChipSelectionChange($event, liveTag)"
-	    	>{{liveTag.name}}</mat-chip-option>
+	    	>	
+	    		<div class="chip-content">
+	    			{{liveTag.name}}
+	    			<mat-icon matSuffix fontIcon="close_small"/>
+	    		</div>
+	    	</mat-chip-option>
 	  	}
 	</mat-chip-listbox>
 

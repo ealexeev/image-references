@@ -1,15 +1,18 @@
 <div class="tag-list">
 	<mat-form-field appearance="outline">
 		<mat-label>Search for a tag</mat-label>
-		<input 
-			matInput 
+		<input
+			matInput
 			placeholder="..."
 			[formControl]="searchText"
 		/>
 		<mat-icon matSuffix>search</mat-icon>
+    @if ( searchText.value ) {
+      <mat-icon matSuffix (click)="clearSearchText()">close</mat-icon>
+    }
 	</mat-form-field>
 	@if ( enableCreateButton$ | async ) {
-		<div class="create-button">	
+		<div class="create-button">
 			<button mat-stroked-button (click)="createTag()">Create {{searchText.value}}</button>
 		</div>
 	}
@@ -18,7 +21,7 @@
 	    	<mat-chip-option
 	    		[selected]="(tagsFilteredCount$ | async) == 1"
 	    		(selectionChange)="onChipSelectionChange($event, liveTag)"
-	    	>	
+	    	>
 	    		<div class="chip-content">
 	    			{{liveTag.name}}
 	    			<mat-icon matSuffix fontIcon="close_small"/>

@@ -46,7 +46,7 @@ export class ImageGalleryComponent implements OnChanges {
     const imageBlob = await fetch(url).then((response) => response.blob().then(b => b));
     const docRef = await this.storage.StoreImage(imageBlob, url, [await this.storage.GetTagReference(this.tag)]);
     this.storage.LoadImage(docRef).then((i) => {
-      if (i) {
+      if ( i && !this.images.filter(img => img.id === i.id).length ) {
         this.images.unshift(i)
       }
     });

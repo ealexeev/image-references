@@ -1,5 +1,22 @@
 import { Injectable, inject } from '@angular/core';
-import { addDoc, Bytes, collection, connectFirestoreEmulator, deleteDoc, doc, DocumentReference, DocumentSnapshot, Firestore, getDoc, getDocs, query, QuerySnapshot, setDoc, where } from '@angular/fire/firestore';
+import {
+  addDoc,
+  Bytes,
+  collection,
+  connectFirestoreEmulator,
+  deleteDoc,
+  doc,
+  DocumentReference,
+  DocumentSnapshot,
+  Firestore,
+  getDoc,
+  getDocs,
+  orderBy,
+  query,
+  QuerySnapshot,
+  setDoc,
+  where
+} from '@angular/fire/firestore';
 
 import { HmacService } from './hmac.service';
 import { BehaviorSubject, catchError, first, from, mergeMap, map, Observable, of, shareReplay, Subject, single, take, tap, firstValueFrom } from 'rxjs';
@@ -132,7 +149,7 @@ export class StorageService {
   StoreTag(name: string): Observable<LiveTag|undefined> {
     return from(this.GetTagReference(name)).pipe(
       first(),
-      map((tRef) => { 
+      map((tRef) => {
         this.tags[tRef.id] = name;
         const lt = { id: tRef.id, name: name }
         return {ref: tRef, tag: lt}}),
@@ -146,7 +163,7 @@ export class StorageService {
               }
             })
             return res
-          }), 
+          }),
           catchError((error) => { this.errors$.next(error); return of(undefined); })
       )),
       );
@@ -204,7 +221,7 @@ export class StorageService {
         });
         return ret;
       }),
-      catchError((error) => { 
+      catchError((error) => {
         console.log(`Error LoadAllTags(): ${error}`)
         this.errors$.next(error)
         return of([])
@@ -216,10 +233,10 @@ export class StorageService {
   DeleteTag(name: string) {
     from(this.GetTagReference(name)).pipe(
       map( (tRef: DocumentReference ) => { deleteDoc(tRef) }),
-      catchError( (error: Error) => { 
+      catchError( (error: Error) => {
         console.log(`Error deleting tag: ${error}`);
         this.errors$.next(error);
-        return of();  
+        return of();
       }),
     );
   }
@@ -262,9 +279,9 @@ export class StorageService {
 
   async LoadImagesWithTag(tag: string | DocumentReference): Promise<LiveImage[]> {
     if ( typeof tag == "string") {
-      tag = await this.GetTagReference(tag)  
+      tag = await this.GetTagReference(tag)
     }
-    const q = query(this.imagesCollection, where("tags", "array-contains", tag))
+    const q = query(this.imagesCollection, where("tags", "array-contains", tag), orderBy("added", "desc"))
 
     const snapshot = await getDocs(q);
     const images: LiveImage[] = []

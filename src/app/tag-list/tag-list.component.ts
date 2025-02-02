@@ -52,7 +52,7 @@ export class TagListComponent implements OnInit{
       combineLatestWith(search),
       map( ([tags, searchText]) => {
         const matches = tags.filter(t => t.name.toLowerCase().includes((searchText || '').toLowerCase()))
-        this.tagsFilteredCount$.next(tags.length);
+        this.tagsFilteredCount$.next(matches.length);
         if ( matches.length == 0 || (( searchText || '').length > 0 && !matches.map(t => t.name.toLowerCase())
                                          .includes((searchText || '').toLowerCase())) ) {
           this.enableCreateButton$.next(true);
@@ -73,7 +73,11 @@ export class TagListComponent implements OnInit{
   }
 
   createTag() {
-    this.storage.StoreTag(this.searchText.value ?? '').pipe(
+    const newTag = this.searchText.value ?? ''
+    if ( newTag.length == 0 ) {
+      return;
+    }
+    this.storage.StoreTag(newTag).pipe(
       catchError( (error: Error) => {
         console.log(`Error createTag(): ${this.searchText.value}: ${error}`);
         return of();
@@ -81,6 +85,7 @@ export class TagListComponent implements OnInit{
     ).subscribe( (r)=> {
       console.log(`Create tag: ${r?.name} with id ${r?.id}`)
       this.searchText.setValue(this.searchText.value)
+      // How do we click/select the new tag?
     })
   }
 

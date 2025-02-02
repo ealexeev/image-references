@@ -53,9 +53,11 @@ export class TagListComponent implements OnInit{
       map( ([tags, searchText]) => {
         const matches = tags.filter(t => t.name.toLowerCase().includes((searchText || '').toLowerCase()))
         this.tagsFilteredCount$.next(tags.length);
-        if ( tags.length == 0 || !matches.map(t => t.name.toLowerCase())
-                                         .includes((searchText || '').toLowerCase()) ) {
+        if ( matches.length == 0 || (( searchText || '').length > 0 && !matches.map(t => t.name.toLowerCase())
+                                         .includes((searchText || '').toLowerCase())) ) {
           this.enableCreateButton$.next(true);
+        } else {
+          this.enableCreateButton$.next(false);
         }
         return matches;
       }),

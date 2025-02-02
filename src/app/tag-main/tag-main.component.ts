@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import {Component, Input, OnInit} from '@angular/core';
 import { MatSidenavModule } from '@angular/material/sidenav';
 
 import { ImageGalleryComponent } from '../image-gallery/image-gallery.component';
@@ -18,7 +18,14 @@ import { BehaviorSubject } from 'rxjs';
   templateUrl: './tag-main.component.html',
   styleUrl: './tag-main.component.scss'
 })
-export class TagMainComponent {
+export class TagMainComponent implements OnInit {
+
+  @Input() tagName: string = '';
+
+  ngOnInit(): void {
+    if (this.tagName) { this.selectedTag$.next(this.tagName); }
+  }
+
   selectedTag$: BehaviorSubject<string> = new BehaviorSubject('');
 
   onTagSelection(tagName: string) {

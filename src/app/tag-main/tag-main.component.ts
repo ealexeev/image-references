@@ -1,4 +1,5 @@
-import { CommonModule } from '@angular/common';
+import { CommonModule, Location } from '@angular/common';
+
 import {Component, Input, OnInit} from '@angular/core';
 import { MatSidenavModule } from '@angular/material/sidenav';
 
@@ -19,6 +20,7 @@ import { BehaviorSubject } from 'rxjs';
   styleUrl: './tag-main.component.scss'
 })
 export class TagMainComponent implements OnInit {
+  constructor(private _location: Location){ }
 
   @Input() tagName: string = '';
 
@@ -30,5 +32,6 @@ export class TagMainComponent implements OnInit {
 
   onTagSelection(tagName: string) {
     this.selectedTag$.next(tagName);
+    this._location.go('/tags/' +tagName);
   }
 }

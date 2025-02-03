@@ -22,6 +22,7 @@ export class ImageGalleryComponent implements OnChanges {
   @Input({required: true}) tag = '';
 
   images: LiveImage[] = [];
+  imagesSizeLimit: number = -1;
 
   constructor(private storage: StorageService) {}
 
@@ -50,6 +51,9 @@ export class ImageGalleryComponent implements OnChanges {
     this.storage.LoadImage(docRef).then((i) => {
       if ( i && !this.images.filter(img => img.id === i.id).length ) {
         this.images.unshift(i)
+        if ( this.imagesSizeLimit > 0 && this.images.length > this.imagesSizeLimit ) {
+          this.images.pop()
+        }
       }
     });
   }
@@ -66,11 +70,13 @@ export class ImageGalleryComponent implements OnChanges {
 
   onMaxCountChanged(value: number) {
     if ( value <= this.images.length ) {
+      this.imagesSizeLimit = value;
       this.images = this.images.slice(0, value);
       return;
     }
     if ( value == 500 ) {
       value = -1
+      this.imagesSizeLimit = value;
     }
     this.storage.LoadImagesWithTag(this.tag, value).then(
       (images: LiveImage[]) => this.images = images,

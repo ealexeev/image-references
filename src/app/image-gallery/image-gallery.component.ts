@@ -5,8 +5,7 @@ import {MatSliderModule} from '@angular/material/slider';
 import { ImageCardComponent } from '../image-card/image-card.component';
 import { ImageAdderComponent } from '../image-adder/image-adder.component';
 import { StorageService, LiveImage, LiveTag } from '../storage.service';
-import {catchError, from, of, mergeMap, single, map} from 'rxjs';
-import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
+import {catchError, from, of, mergeMap, single} from 'rxjs';
 
 @Component({
   selector: 'app-image-gallery',
@@ -22,8 +21,6 @@ import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 export class ImageGalleryComponent implements OnChanges {
   @Input({required: true}) tag = '';
 
-  @Output() maxCountChanged = new EventEmitter<number>();
-
   images: LiveImage[] = [];
 
   constructor(private storage: StorageService) {}
@@ -36,7 +33,7 @@ export class ImageGalleryComponent implements OnChanges {
         if ( !t ) {
           return of([])
         } else {
-          return from(this.storage.LoadImagesWithTag(this.tag))
+          return from(this.storage.LoadImagesWithTag(this.tag, -1))
         }
       }),
       catchError( ( error: Error) => {
@@ -68,9 +65,16 @@ export class ImageGalleryComponent implements OnChanges {
   }
 
   onMaxCountChanged(value: number) {
-    if ( value > this.images.length) {
-      this.maxCountChanged.emit(value);
+    if ( value <= this.images.length ) {
+      this.images = this.images.slice(0, value);
+      return;
     }
-    this.images = this.images.slice(0, value);
+    if ( value == 500 ) {
+      value = -1
+    }
+    this.storage.LoadImagesWithTag(this.tag, value).then(
+      (images: LiveImage[]) => this.images = images,
+      v=> console.log(`Error on LoadImagesWithTag(${this.tag}, ${value}):  ${v}`)
+    )
   }
 }

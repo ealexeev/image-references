@@ -11,6 +11,7 @@ import {
   Firestore,
   getDoc,
   getDocs,
+  limit,
   orderBy,
   query,
   QuerySnapshot,
@@ -277,11 +278,16 @@ export class StorageService {
     })
   }
 
-  async LoadImagesWithTag(tag: string | DocumentReference): Promise<LiveImage[]> {
+  async LoadImagesWithTag(tag: string | DocumentReference, limitCount: number): Promise<LiveImage[]> {
     if ( typeof tag == "string") {
       tag = await this.GetTagReference(tag)
     }
-    const q = query(this.imagesCollection, where("tags", "array-contains", tag), orderBy("added", "desc"))
+    let q;
+    if ( limitCount > 0 ) {
+      q = query(this.imagesCollection, where("tags", "array-contains", tag), orderBy("added", "desc"), limit(limitCount))
+    } else {
+      q = query(this.imagesCollection, where("tags", "array-contains", tag), orderBy("added", "desc"))
+    }
 
     const snapshot = await getDocs(q);
     const images: LiveImage[] = []

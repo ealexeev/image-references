@@ -222,6 +222,7 @@ export class StorageService {
             ret.push({id: doc.id, name: data.name.toString()});
           }
         });
+        ret.sort((a, b) => a.name.localeCompare(b.name) );
         return ret;
       }),
       catchError((error) => {

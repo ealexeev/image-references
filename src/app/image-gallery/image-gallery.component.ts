@@ -1,10 +1,12 @@
-import { Component, inject, Input, OnChanges, OnInit } from '@angular/core';
-import { MatCardModule } from '@angular/material/card';
+import { Component, EventEmitter, Input, OnChanges, Output} from '@angular/core';
+import {MatSliderModule} from '@angular/material/slider';
+
 
 import { ImageCardComponent } from '../image-card/image-card.component';
 import { ImageAdderComponent } from '../image-adder/image-adder.component';
 import { StorageService, LiveImage, LiveTag } from '../storage.service';
-import { catchError, from, of, mergeMap, single } from 'rxjs';
+import {catchError, from, of, mergeMap, single, map} from 'rxjs';
+import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 
 @Component({
   selector: 'app-image-gallery',
@@ -12,12 +14,15 @@ import { catchError, from, of, mergeMap, single } from 'rxjs';
   imports: [
     ImageAdderComponent,
     ImageCardComponent,
+    MatSliderModule,
   ],
   templateUrl: './image-gallery.component.html',
   styleUrl: './image-gallery.component.scss'
 })
 export class ImageGalleryComponent implements OnChanges {
   @Input({required: true}) tag = '';
+
+  @Output() maxCountChanged = new EventEmitter<number>();
 
   images: LiveImage[] = [];
 
@@ -55,5 +60,17 @@ export class ImageGalleryComponent implements OnChanges {
   async deleteImage(id: string) {
     this.images = this.images.filter((li) => li.id != id);
     return this.storage.DeleteImage(this.storage.GetImageReferenceFromId(id))
+  }
+
+  getSliderValue(value: Number): string {
+    if ( value == 500 ) return "All";
+    return String(value);
+  }
+
+  onMaxCountChanged(value: number) {
+    if ( value > this.images.length) {
+      this.maxCountChanged.emit(value);
+    }
+    this.images = this.images.slice(0, value);
   }
 }

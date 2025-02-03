@@ -1,9 +1,12 @@
 <div class="image-gallery">
   <h1>{{ tag }}</h1>
-  <div class="image-grid"> 
+  <mat-slider min="5" max="500" showTickMarks discrete [displayWith]="getSliderValue">
+    <input matSliderThumb value="500" (valueChange)="onMaxCountChanged($event)">
+  </mat-slider>
+  <div class="image-grid">
     <app-image-adder (imageAdded)="receiveImageURL($event)"/>
     @for (storedImage of images; track storedImage) {
-      <app-image-card [imageSource]=storedImage (imageDeleted)="deleteImage($event)"/>  
+      <app-image-card [imageSource]=storedImage (imageDeleted)="deleteImage($event)"/>
     }
   </div>
 </div>

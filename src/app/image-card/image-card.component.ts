@@ -21,9 +21,10 @@ import { LiveImage } from '../storage.service';
 })
 export class ImageCardComponent {
   @Input() imageSource: LiveImage|null = null;
-  
+
   @Output() imageDeleted = new EventEmitter<string>;
-  
+  @Output() imageTagsChanged = new EventEmitter<Array<String>>();
+
   constructor(private renderer: Renderer2){}
 
   getImageTags(): string[] {

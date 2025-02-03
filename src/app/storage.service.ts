@@ -21,6 +21,7 @@ import {
 
 import { HmacService } from './hmac.service';
 import { BehaviorSubject, catchError, first, from, mergeMap, map, Observable, of, shareReplay, Subject, single, take, tap, firstValueFrom } from 'rxjs';
+import { environment } from './environments/environment';
 
 
 export type EncryptionMetadata = {
@@ -108,8 +109,9 @@ export class StorageService {
     this.keysCollection = collection(this.firestore, keysCollectionPath)
     this.imagesCollection = collection(this.firestore, imagesCollectionPath)
     this.tagsCollection = collection(this.firestore, tagsCollectionPath)
-    connectFirestoreEmulator(this.firestore, 'localhost', 8080, {})
-
+    if ( environment.firebaseUseLocal ) {
+      connectFirestoreEmulator(this.firestore, 'localhost', 8080, {})
+    }
   }
 
   async GetTagReference(name: string): Promise<DocumentReference> {

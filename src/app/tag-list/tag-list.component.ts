@@ -91,6 +91,7 @@ export class TagListComponent implements OnInit{
 
   onChipSelectionChange(event: any, tag: LiveTag) {
     this.tagSelectionEvent.emit(tag.name);
+    setTimeout(()=>this.clearSearchText(), 1500);
   }
 
   clearSearchText(): void {

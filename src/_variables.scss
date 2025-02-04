@@ -44,4 +44,5 @@ $my-theme: mat.define-dark-theme((
     warn: $custom-warn,
   ),
   typography: $custom-typography,
+  density: -5,
 ));

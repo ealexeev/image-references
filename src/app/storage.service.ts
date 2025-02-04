@@ -15,7 +15,7 @@ import {
   orderBy,
   query,
   QuerySnapshot,
-  setDoc,
+  setDoc, updateDoc,
   where
 } from '@angular/fire/firestore';
 
@@ -222,7 +222,7 @@ export class StorageService {
             ret.push({id: doc.id, name: data.name.toString()});
           }
         });
-        ret.sort((a, b) => a.name.localeCompare(b.name) );
+        ret.sort((a: LiveTag, b: LiveTag) => a.name.localeCompare(b.name) );
         return ret;
       }),
       catchError((error) => {
@@ -245,16 +245,48 @@ export class StorageService {
     );
   }
 
-  async StoreImage(image: Blob, url: string, tags: DocumentReference[]): Promise<DocumentReference> {
+  async MakeImageRef(image: Blob): Promise<DocumentReference> {
     const id = await this.hmac.getHmacHex(image)
+    return doc(this.firestore, imagesCollectionPath, id)
+  }
+
+  // Add specified tags to this image.
+  async AddTags(iRef: DocumentReference, tags: DocumentReference[]) {
+    const documentSnapshot = await getDoc(iRef);
+    if ( !documentSnapshot.exists() ) {
+      throw new Error('AddTags called on non-existent image: ' + iRef.id)
+    }
+
+    const existingTags: Set<DocumentReference> = new Set(documentSnapshot.get('tags'));
+    const uniqueTags = new Set([...existingTags , ...(new Set(tags))]);
+
+    updateDoc(iRef, {'tags': Array.from(uniqueTags)})
+      // This is for debug only.  Remove.
+      .then(() => {console.log('Added existing document tags.')})
+      // Log issues when updating tags on an existing document.
+      .catch((error: Error) => {console.log(`Error updateDoc(${iRef}, ${Array.from(uniqueTags)}}): ${error}`)});
+    return iRef;
+  }
+
+  async StoreImage(image: Blob, url: string, tags: DocumentReference[]): Promise<DocumentReference> {
+    const iRef = await this.MakeImageRef(image);
+    const documentSnapshot = await getDoc(iRef);
+
+    if ( documentSnapshot.exists() ) {
+      await this.AddTags(iRef, tags);
+      return iRef;
+    }
+
     const i = {
       added: new Date(),
       url: url,
       data: Bytes.fromUint8Array(new Uint8Array(await image.arrayBuffer())),
       tags: tags,
     }
-    const iRef = doc(this.firestore, imagesCollectionPath, id)
-    setDoc(iRef, i);
+
+    setDoc(iRef, i)
+      .then(value => console.log(`Stored image id ${iRef.id}`))
+      .catch(reason => console.error(`Error: setDoc(${iRef}, ${i}): ${reason})`));
     return iRef
   }
 

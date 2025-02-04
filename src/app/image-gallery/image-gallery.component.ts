@@ -25,11 +25,6 @@ export class ImageGalleryComponent implements OnChanges {
 
   constructor(private storage: StorageService,
               private preferences: PreferenceService) {
-    this.preferences.showAllImages$.pipe(
-      takeUntilDestroyed(),
-    ).subscribe(
-      (showAll: boolean) => { if (showAll) { this.preferences.showImageCount$.next(-1) }}
-    )
     this.preferences.showImageCount$.pipe(
       takeUntilDestroyed(),
     ).subscribe(
@@ -47,8 +42,7 @@ export class ImageGalleryComponent implements OnChanges {
         if ( !t ) {
           return of([])
         } else {
-          const count = this.preferences.showAllImages$.value? -1: this.preferences.showImageCount$.value
-          return from(this.storage.LoadImagesWithTag(this.tag, count));
+          return from(this.storage.LoadImagesWithTag(this.tag, this.preferences.showImageCount$.value));
         }
       }),
       catchError( ( error: Error) => {

@@ -23,13 +23,18 @@ import {MatSelectChange, MatSelectModule} from '@angular/material/select';
 })
 export class SetPreferencesComponent {
   preferences: PreferenceService = inject(PreferenceService);
-  counts: number[] = [5, 10, 25, 50, 100, 500];
-
-  onShowAllToggleChange() {
-    this.preferences.showAllImages$.next(!this.preferences.showAllImages$.value);
-  }
+  options = ["All", 5, 10, 25, 50, 100, 500];
 
   onSelectionChange(change: MatSelectChange) {
+    let v: number = Number(change.value);
+    if ( !v ) {
+      v = -1
+    }
     this.preferences.showImageCount$.next(change.value);
+  }
+
+  getInitialSelection() {
+    const current = this.preferences.showImageCount$.value;
+    return current > 0 ? current : "All";
   }
 }

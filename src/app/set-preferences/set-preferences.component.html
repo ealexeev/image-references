@@ -1,0 +1,14 @@
+<mat-slide-toggle
+  (change)="onShowAllToggleChange()"
+  [checked]="preferences.showAllImages$ | async"
+>Show All</mat-slide-toggle>
+@if ( !(preferences.showAllImages$ | async) ) {
+  <mat-form-field>
+    <mat-label>Image Count</mat-label>
+    <mat-select (selectionChange)="onSelectionChange($event)">
+      @for (count of counts; track count) {
+        <mat-option [value]="count">{{count}}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+}

@@ -1,11 +1,12 @@
-import { Component, EventEmitter, Input, OnChanges, Output} from '@angular/core';
-import {MatSliderModule} from '@angular/material/slider';
+import {Component, Input, OnChanges} from '@angular/core';
 
 
 import { ImageCardComponent } from '../image-card/image-card.component';
 import { ImageAdderComponent } from '../image-adder/image-adder.component';
 import { StorageService, LiveImage, LiveTag } from '../storage.service';
-import {catchError, from, of, mergeMap, single} from 'rxjs';
+import {catchError, from, of, mergeMap, single, map} from 'rxjs';
+import {PreferenceService} from '../preference-service';
+import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 
 @Component({
   selector: 'app-image-gallery',
@@ -13,7 +14,6 @@ import {catchError, from, of, mergeMap, single} from 'rxjs';
   imports: [
     ImageAdderComponent,
     ImageCardComponent,
-    MatSliderModule,
   ],
   templateUrl: './image-gallery.component.html',
   styleUrl: './image-gallery.component.scss'
@@ -22,9 +22,22 @@ export class ImageGalleryComponent implements OnChanges {
   @Input({required: true}) tag = '';
 
   images: LiveImage[] = [];
-  imagesSizeLimit: number = -1;
 
-  constructor(private storage: StorageService) {}
+  constructor(private storage: StorageService,
+              private preferences: PreferenceService) {
+    this.preferences.showAllImages$.pipe(
+      takeUntilDestroyed(),
+    ).subscribe(
+      (showAll: boolean) => { if (showAll) { this.preferences.showImageCount$.next(-1) }}
+    )
+    this.preferences.showImageCount$.pipe(
+      takeUntilDestroyed(),
+    ).subscribe(
+        (v: number) => {
+          this.onMaxCountChanged(v)
+        }
+    )
+  }
 
   ngOnChanges() {
     this.images = [];
@@ -34,7 +47,8 @@ export class ImageGalleryComponent implements OnChanges {
         if ( !t ) {
           return of([])
         } else {
-          return from(this.storage.LoadImagesWithTag(this.tag, -1))
+          const count = this.preferences.showAllImages$.value? -1: this.preferences.showImageCount$.value
+          return from(this.storage.LoadImagesWithTag(this.tag, count));
         }
       }),
       catchError( ( error: Error) => {
@@ -51,7 +65,7 @@ export class ImageGalleryComponent implements OnChanges {
     this.storage.LoadImage(docRef).then((i) => {
       if ( i && !this.images.filter(img => img.id === i.id).length ) {
         this.images.unshift(i)
-        if ( this.imagesSizeLimit > 0 && this.images.length > this.imagesSizeLimit ) {
+        if ( this.preferences.showImageCount$.value > 0 && this.images.length > this.preferences.showImageCount$.value ) {
           this.images.pop()
         }
       }
@@ -63,20 +77,10 @@ export class ImageGalleryComponent implements OnChanges {
     return this.storage.DeleteImage(this.storage.GetImageReferenceFromId(id))
   }
 
-  getSliderValue(value: Number): string {
-    if ( value == 500 ) return "All";
-    return String(value);
-  }
-
   onMaxCountChanged(value: number) {
-    if ( value <= this.images.length ) {
-      this.imagesSizeLimit = value;
+    if ( value > 0 && value <= this.images.length ) {
       this.images = this.images.slice(0, value);
       return;
-    }
-    if ( value == 500 ) {
-      value = -1
-      this.imagesSizeLimit = value;
     }
     this.storage.LoadImagesWithTag(this.tag, value).then(
       (images: LiveImage[]) => this.images = images,

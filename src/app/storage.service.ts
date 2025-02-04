@@ -19,6 +19,17 @@ import {
   where
 } from '@angular/fire/firestore';
 
+import {
+  ref,
+  getStorage,
+  FirebaseStorage,
+  connectStorageEmulator,
+  StorageReference,
+  uploadBytes,
+  UploadResult,
+  getDownloadURL
+} from '@angular/fire/storage';
+
 import { HmacService } from './hmac.service';
 import { BehaviorSubject, catchError, first, from, mergeMap, map, Observable, of, shareReplay, Subject, single, take, tap, firstValueFrom } from 'rxjs';
 import { environment } from './environments/environment';
@@ -92,10 +103,12 @@ const tagsCollectionPath = 'tags'
 })
 export class StorageService {
   private firestore: Firestore = inject(Firestore);
+  private storage: FirebaseStorage;
   private hmac: HmacService = inject(HmacService);
   private keysCollection: any;
   private imagesCollection: any;
   private tagsCollection: any;
+  private cloudStorage: any;
   private keys: KeyMap = {};
   private tags: TagMap = {};
 
@@ -109,9 +122,14 @@ export class StorageService {
     this.keysCollection = collection(this.firestore, keysCollectionPath)
     this.imagesCollection = collection(this.firestore, imagesCollectionPath)
     this.tagsCollection = collection(this.firestore, tagsCollectionPath)
-    if ( environment.firebaseUseLocal ) {
+    if ( environment.firestoreUseLocal ) {
       connectFirestoreEmulator(this.firestore, 'localhost', 8080, {})
     }
+    this.storage = getStorage();
+    if ( environment.firebaseStorageUseLocal ) {
+      connectStorageEmulator(this.storage, "127.0.0.1", 9199);
+    }
+    this.cloudStorage = ref(this.storage, 'data')
   }
 
   async GetTagReference(name: string): Promise<DocumentReference> {
@@ -250,6 +268,11 @@ export class StorageService {
     return doc(this.firestore, imagesCollectionPath, id)
   }
 
+  async MakeImageCloudRef(image: Blob): Promise<StorageReference> {
+    const id = await this.hmac.getHmacHex(image)
+    return ref(this.cloudStorage, id)
+  }
+
   // Add specified tags to this image.
   async AddTags(iRef: DocumentReference, tags: DocumentReference[]) {
     const documentSnapshot = await getDoc(iRef);
@@ -277,17 +300,30 @@ export class StorageService {
       return iRef;
     }
 
+    const imgBytes = new Uint8Array(await image.arrayBuffer())
+
     const i = {
       added: new Date(),
       url: url,
-      data: Bytes.fromUint8Array(new Uint8Array(await image.arrayBuffer())),
+      data: imgBytes.length < 1048487 ? Bytes.fromUint8Array(imgBytes) : Bytes.fromBase64String(''),
       tags: tags,
+    }
+
+    if ( imgBytes.length >= 1048487 ) {
+      const uploadResult = await this.StoreImageCloud(image);
+      console.log(`Uploaded ${uploadResult.metadata.name}, size: ${uploadResult.metadata.size}`);
+      i.url = await getDownloadURL(await this.MakeImageCloudRef(image));
     }
 
     setDoc(iRef, i)
       .then(value => console.log(`Stored image id ${iRef.id}`))
       .catch(reason => console.error(`Error: setDoc(${iRef}, ${i}): ${reason})`));
     return iRef
+  }
+
+  async StoreImageCloud(image: Blob): Promise<UploadResult> {
+    const iRef = await this.MakeImageCloudRef(image);
+    return uploadBytes(iRef, image)
   }
 
   async LiveImageFromSnapshot(snapshot: DocumentSnapshot ): Promise<LiveImage> {

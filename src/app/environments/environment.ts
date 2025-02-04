@@ -5,5 +5,6 @@ export const environment = {
 	"apiKey": "***REDACTED API KEY***",
 	"authDomain": "***REDACTED***.firebaseapp.com",
 	"messagingSenderId": "***REDACTED SENDER ID***",
-  "firebaseUseLocal": true,
+  "firestoreUseLocal": true,
+  "firebaseStorageUseLocal": true,
 };

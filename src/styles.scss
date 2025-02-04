@@ -12,6 +12,10 @@
 	font-family: 'Material Icons';
 }
 
+.multiline-tooltip {
+  white-space: pre;
+}
+
 :root {
 	background: theme.$background;
 	html, body {

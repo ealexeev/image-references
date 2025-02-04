@@ -1,10 +1,16 @@
 <mat-card class="image-card">
 	<img mat-card-image [src]="imageSource?.url" alt="Image">
 	<mat-card-actions align='end'>
-		<button mat-icon-button [matBadge]="getImageTags().length" [matBadgeHidden]="getImageTags().length < 2"> 
+		<button mat-icon-button
+            [matBadge]="getImageTags().length"
+            [matBadgeHidden]="getImageTags().length < 2"
+            [matTooltip]="getImageTagsText()"
+            matTooltipClass="multiline-tooltip"
+            matTooltipPosition="below"
+    >
 			<mat-icon fontIcon="list"></mat-icon>
 		</button>
-		<button mat-icon-button> 
+		<button mat-icon-button>
 			<mat-icon fontIcon="add" >info</mat-icon>
 		</button>
 		<button mat-icon-button (click)="onDownload()">

@@ -5,6 +5,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatChipsModule } from '@angular/material/chips';
 import { LiveImage } from '../storage.service';
+import {MatTooltipModule, TooltipPosition} from '@angular/material/tooltip';
 
 @Component({
   selector: 'app-image-card',
@@ -15,6 +16,7 @@ import { LiveImage } from '../storage.service';
     MatCardModule,
     MatChipsModule,
     MatIconModule,
+    MatTooltipModule,
     ],
   templateUrl: './image-card.component.html',
   styleUrl: './image-card.component.scss'
@@ -27,8 +29,14 @@ export class ImageCardComponent {
 
   constructor(private renderer: Renderer2){}
 
+  position: TooltipPosition = 'below';
+
   getImageTags(): string[] {
-    return this.imageSource?.tags || [];
+    return this.imageSource?.tags.sort() || [];
+  }
+
+  getImageTagsText(): string {
+    return this.getImageTags().join('\n');
   }
 
   onDelete() {

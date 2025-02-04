@@ -1,10 +1,12 @@
-<span style="font-size: 12px">Image Count</span>
-<mat-form-field>
-  <mat-label>Image Count</mat-label>
-  <mat-select (selectionChange)="onSelectionChange($event)" [value]="getInitialSelection()">
-    @for (option of options; track option) {
-      <mat-option [value]="option">{{option}}</mat-option>
-    }
-  </mat-select>
-</mat-form-field>
+<div class="flex-container">
+  <div style="font-size: 12px">Image Count</div>
+  <mat-form-field subscriptSizing="dynamic">
+    <mat-label>Image Count</mat-label>
+    <mat-select (selectionChange)="onSelectionChange($event)" [value]="getInitialSelection()" hideSingleSelectionIndicator=true >
+      @for (option of options; track option) {
+        <mat-option [value]="option">{{option}}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+</div>
 

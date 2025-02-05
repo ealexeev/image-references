@@ -27,7 +27,7 @@ export class ImageCardComponent {
   @Output() imageTagsChanged = new EventEmitter<LiveImage>();
 
   constructor(private renderer: Renderer2){}
-  
+
   showTagSelection = signal(false);
 
   getImageTags(): string[] {
@@ -45,8 +45,8 @@ export class ImageCardComponent {
   onDownload() {
     const link = this.renderer.createElement('a');
     link.setAttribute('target', '_blank');
-    link.setAttribute('href', this.imageSource);
-    link.setAttribute('download', new URL(this.imageSource?.url || "").pathname.slice(1));
+    link.setAttribute('href', this.imageSource!.url);
+    link.setAttribute('download', new URL(this.imageSource!.url).pathname.slice(1));
     link.click();
     link.remove();
   }

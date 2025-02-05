@@ -48,6 +48,8 @@ export type StoredImage = {
   url: string,
   // If sufficiently small to store in Firestore, image bytes, possibly encrypted.
   data: Bytes
+  // The mime type of the image.
+  mimeType: string,
   // Collection of applicable tag IDs, references to firestore documents
   tags: DocumentReference[]
 }
@@ -325,6 +327,7 @@ export class StorageService {
       added: new Date(),
       url: url,
       data: imgBytes.length < 1048487 ? Bytes.fromUint8Array(imgBytes) : Bytes.fromBase64String(''),
+      mimeType: image.type,
       tags: tags,
     }
 
@@ -363,10 +366,11 @@ export class StorageService {
         return;
       }
       const imageTags: string[] = [];
+      const blob = new Blob([stored['data'].toUint8Array()], { type: snapshot.get('mimeType') || '' });
       stored['tags'].map(async (tagRef: DocumentReference) => { imageTags.push(((await firstValueFrom(this.LoadTag(tagRef)))?.name) || "") });
       resolve({
         id: snapshot.id,
-        url: stored['data'].toUint8Array().length > 0 ?  URL.createObjectURL(new Blob([stored['data'].toUint8Array()])) : stored['url'],
+        url: stored['data'].toUint8Array().length > 0 ?  URL.createObjectURL(blob) : stored['url'],
         tags: imageTags,
       })
     })

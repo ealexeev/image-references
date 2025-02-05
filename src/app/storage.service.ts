@@ -149,6 +149,20 @@ export class StorageService {
     return ref(this.cloudStorage, imageId)
   }
 
+  async ImageExists(ref: DocumentReference): Promise<boolean> {
+    return new Promise((resolve, reject) => {
+      getDoc(ref)
+        .then((doc) => {
+          if ( doc.exists() ) {
+            resolve(true);
+          } else {
+            resolve(false);
+          }
+        })
+      .catch((err) => {console.log(`Error getDoc(${ref.id}): ${err}`)})
+    })
+  }
+
   async StoreKey(key: Blob): Promise<DocumentReference> {
     const k = {
       id: await this.hmac.getHmacHex(key),

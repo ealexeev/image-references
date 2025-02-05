@@ -53,10 +53,15 @@ export class ImageGalleryComponent implements OnChanges {
   }
 
   async receiveImageURL(url: string): Promise<void> {
-    console.log("Received URL: ", url)
     const imageBlob = await fetch(url).then((response) => response.blob().then(b => b));
-    const docRef = await this.storage.StoreImage(imageBlob, url, [await this.storage.GetTagReference(this.tag)]);
-    this.storage.LoadImage(docRef).then((i) => {
+    const iRef = await this.storage.GetImageReferenceFromBlob(imageBlob);
+    if ( await this.storage.ImageExists(iRef) ) {
+      await this.storage.AddTags(iRef, [await this.storage.GetTagReference(this.tag)] );
+    } else {
+      await this.storage.StoreImage(imageBlob, url, [await this.storage.GetTagReference(this.tag)]);
+    }
+
+    this.storage.LoadImage(iRef).then((i) => {
       if ( i && !this.images.filter(img => img.id === i.id).length ) {
         this.images.unshift(i)
         const targetSz = this.preferences.showImageCount$.value

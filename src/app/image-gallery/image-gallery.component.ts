@@ -67,9 +67,18 @@ export class ImageGalleryComponent implements OnChanges {
     });
   }
 
-  async deleteImage(id: string) {
+  async deleteImageOrTag(id: string) {
+    let img = this.images.filter(li => li.id == id).pop();
+    if ( !img ) {
+      return;
+    }
     this.images = this.images.filter((li) => li.id != id);
-    return this.storage.DeleteImage(this.storage.GetImageReferenceFromId(id))
+
+    if ( img.tags.length == 1 ) {
+      return this.storage.DeleteImage(this.storage.GetImageReferenceFromId(id))
+    }
+
+    return this.storage.DeleteImageTag(img, this.tag);
   }
 
   onMaxCountChanged(value: number) {

@@ -17,6 +17,7 @@
   .tag-list-selection {
     position: absolute;
     position-anchor: --image-actions;
+    position-area: bottom center;
     top: anchor(bottom);
   }
 }

@@ -310,14 +310,24 @@ export class StorageService {
     }
 
     if ( imgBytes.length >= 1048487 ) {
-      const uploadResult = await this.StoreImageCloud(image);
-      console.log(`Uploaded ${uploadResult.metadata.name}, size: ${uploadResult.metadata.size}`);
-      i.url = await getDownloadURL(await this.MakeImageCloudRef(image));
+      try {
+        const uploadResult = await this.StoreImageCloud(image);
+        console.log(`Uploaded ${uploadResult.metadata.name}, size: ${uploadResult.metadata.size}`);
+        i.url = await getDownloadURL(await this.MakeImageCloudRef(image));
+      } catch (e) {
+        return Promise.reject(`Error uploading to cloud storage: ${e}`);
+      }
     }
 
-    setDoc(iRef, i)
-      .then(value => console.log(`Stored image id ${iRef.id}`))
-      .catch(reason => console.error(`Error: setDoc(${iRef}, ${i}): ${reason})`));
+    try {
+      await setDoc(iRef, i)
+    } catch (e) {
+      if ( imgBytes.length >= 1048487 ) {
+        console.log('I need to delete cloud data!');
+      }
+      return Promise.reject(`Error creating document in firestore: ${e}`);
+    }
+
     return iRef
   }
 

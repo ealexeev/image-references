@@ -59,7 +59,8 @@ export class ImageGalleryComponent implements OnChanges {
     this.storage.LoadImage(docRef).then((i) => {
       if ( i && !this.images.filter(img => img.id === i.id).length ) {
         this.images.unshift(i)
-        if ( this.preferences.showImageCount$.value > 0 && this.images.length > this.preferences.showImageCount$.value ) {
+        const targetSz = this.preferences.showImageCount$.value
+        if ( targetSz > 0 && this.images.length > targetSz ) {
           this.images.pop()
         }
       }

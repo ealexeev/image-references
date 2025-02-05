@@ -59,7 +59,7 @@ export class TagListComponent implements OnInit{
         } else {
           this.enableCreateButton$.next(false);
         }
-        return matches;
+        return matches.sort((a, b) => a.name.localeCompare(b.name));
       }),
     );
 

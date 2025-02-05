@@ -1,6 +1,6 @@
 <mat-form-field>
   <mat-label>Tag Names</mat-label>
-  <mat-select>
+  <mat-select [formControl]="selected" multiple>
     @for (tag of tags$ | async; track tag) {
       <mat-option [value]="tag.name">{{tag.name}}</mat-option>
     }

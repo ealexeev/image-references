@@ -1,4 +1,4 @@
-import {Component, EventEmitter, inject, OnInit, Output} from '@angular/core';
+import {Component, EventEmitter, OnInit, Input, Output} from '@angular/core';
 import {LiveTag, StorageService} from '../storage.service';
 import {
   BehaviorSubject,
@@ -7,13 +7,14 @@ import {
   distinctUntilChanged,
   first, map,
   Observable,
-  startWith,
+  startWith, take,
   tap
 } from 'rxjs';
 import {MatSelectModule} from '@angular/material/select';
 import {AsyncPipe} from '@angular/common';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
-import {FormControl} from '@angular/forms';
+import {FormControl, FormsModule, ReactiveFormsModule} from '@angular/forms';
+import {MatFormFieldModule} from '@angular/material/form-field';
 
 @Component({
   selector: 'app-tag-select',
@@ -21,15 +22,22 @@ import {FormControl} from '@angular/forms';
   imports: [
     AsyncPipe,
     MatSelectModule,
+    MatFormFieldModule,
+    FormsModule,
+    ReactiveFormsModule,
   ],
   templateUrl: './tag-select.component.html',
   styleUrl: './tag-select.component.scss'
 })
-export class TagSelectComponent {
-  @Output() selectionChange = new EventEmitter<string>();
+export class TagSelectComponent implements OnInit{
+  @Input() selectedTags: string[] = [];
+  @Output() selectionChange = new EventEmitter<string[]>();
 
   readonly searchText = new FormControl('')
   tags$: Observable<LiveTag[]>;
+
+  selected: FormControl<string[]> = new FormControl();
+
   enableCreateButton$: BehaviorSubject<boolean> = new BehaviorSubject(false);
 
   constructor(private storage: StorageService) {
@@ -38,9 +46,15 @@ export class TagSelectComponent {
       takeUntilDestroyed(),
       distinctUntilChanged(),
     );
+    this.selected.valueChanges.pipe(
+      takeUntilDestroyed(),
+      debounceTime(1500),
+    ).subscribe((tags: string[]) => {
+      this.selectionChange.emit(tags);
+    })
   }
 
-  onSelectionChange(selection: string){
-    this.selectionChange.emit(selection);
+  ngOnInit() {
+    this.selected.setValue(this.selectedTags, {emitEvent:false});
   }
 }

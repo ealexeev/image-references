@@ -96,4 +96,11 @@ export class ImageGalleryComponent implements OnChanges {
       v=> console.log(`Error on LoadImagesWithTag(${this.tag}, ${value}):  ${v}`)
     )
   }
+
+  onImageTagsChanged(image: LiveImage) {
+    this.storage.ReplaceImageTags(image);
+    if ( !image.tags.includes(this.tag) ) {
+      this.images = this.images.filter(li => li.id != image.id);
+    }
+  }
 }

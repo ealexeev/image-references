@@ -425,4 +425,16 @@ export class StorageService {
       }
     })
   }
+
+  // Replace image tags with those in the live image.  If the tag list is empty delete the image instead.
+  async ReplaceImageTags(image: LiveImage){
+    const iRef = this.GetImageReferenceFromId(image.id);
+    if ( !image.tags.length ) {
+      this.DeleteImage(iRef);
+      return
+    }
+    const tagRefs: DocumentReference[] = await Promise.all(image.tags.map(async (t: string) => await this.GetTagReference(t)))
+    updateDoc(iRef, {'tags': tagRefs})
+      .catch( e => console.log(`Error replacing tags: ${e}`));
+  }
 }

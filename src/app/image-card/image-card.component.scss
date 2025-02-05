@@ -9,4 +9,14 @@
 	mat-chip {
 		margin: 5px;
 	}
+
+  .image-actions {
+    anchor-name: --image-actions;
+  }
+
+  .tag-list-selection {
+    position: absolute;
+    position-anchor: --image-actions;
+    top: anchor(bottom);
+  }
 }

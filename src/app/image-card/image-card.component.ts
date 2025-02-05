@@ -40,7 +40,6 @@ export class ImageCardComponent {
   }
 
   onDelete() {
-    console.log("Got delete click!");
     this.imageDeleted.emit(this.imageSource?.id || "");
   }
 

@@ -385,7 +385,6 @@ export class StorageService {
     const tagRef = await this.GetTagReference(tag);
     getDoc(imageRef).then((snapshot) => {
       const tags = snapshot.get('tags').filter((t: DocumentReference) => t.id != tagRef.id);
-      console.log('Updated tag list: ' + tags);
       updateDoc(imageRef, {'tags': tags})
         .catch( e => Promise.reject(`Error deleteing tag: ${e}`));
     });

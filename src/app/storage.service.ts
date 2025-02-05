@@ -27,7 +27,7 @@ import {
   StorageReference,
   uploadBytes,
   UploadResult,
-  getDownloadURL
+  getDownloadURL, deleteObject
 } from '@angular/fire/storage';
 
 import { HmacService } from './hmac.service';
@@ -97,6 +97,7 @@ const LOCAL_STORAGE_KEY_IMAGES = "prestige-ape-images";
 const keysCollectionPath = 'keys'
 const imagesCollectionPath = 'images'
 const tagsCollectionPath = 'tags'
+const cloudDataPath = 'data'
 
 @Injectable({
   providedIn: 'root'
@@ -129,7 +130,7 @@ export class StorageService {
     if ( environment.firebaseStorageUseLocal ) {
       connectStorageEmulator(this.storage, "127.0.0.1", 9199);
     }
-    this.cloudStorage = ref(this.storage, 'data')
+    this.cloudStorage = ref(this.storage, cloudDataPath)
   }
 
   async GetTagReference(name: string): Promise<DocumentReference> {
@@ -142,6 +143,10 @@ export class StorageService {
 
   GetImageReferenceFromId(imageId: string): DocumentReference {
     return doc(this.firestore, imagesCollectionPath, imageId)
+  }
+
+  GetStorageReferenceFromId(imageId: string): StorageReference {
+    return ref(this.cloudStorage, imageId)
   }
 
   async StoreKey(key: Blob): Promise<DocumentReference> {
@@ -391,6 +396,19 @@ export class StorageService {
   }
 
   async DeleteImage(imageRef: DocumentReference) {
-    return deleteDoc(imageRef)
+    getDoc(imageRef).then((snapshot) => {
+      if ( !snapshot.exists() ) {
+        return;
+      }
+      const bytes: Bytes = snapshot.get('data');
+      // If there is no data, there is a cloud storage object that needs to be cleaned up.
+      if ( bytes.toUint8Array().length == 0 ) {
+        deleteObject(this.GetStorageReferenceFromId(imageRef.id))
+          .then(() => console.log('Cloud data deleted'))
+          .finally(() => {deleteDoc(imageRef)});
+      } else {
+        deleteDoc(imageRef);
+      }
+    })
   }
 }

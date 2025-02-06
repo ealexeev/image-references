@@ -227,20 +227,22 @@ export class StorageService {
         }
       }),
       mergeMap( ( res: LiveTag | DocumentReference ) => {
-        if ( res instanceof DocumentReference ) {
-          return from(getDoc(res)).pipe(
-            map( (snapshot) => {
-              const st = snapshot.data();
-              if (!st || !st['name']) {
-                return undefined;
-              }
-              this.tags[snapshot.id] = (st['name'] as Bytes).toString();
-              return {id: snapshot.id, name: this.tags[snapshot.id]}
-            })
-          )
-        } else {
-          return of(res)
+        if ( !( res instanceof DocumentReference) ) {
+          return of(res);
         }
+        return from(getDoc(res)).pipe(
+          map((snapshot) => {
+            if (!snapshot.exists()) {
+              return undefined;
+            }
+            const name = snapshot.get('name')
+            if (!name) {
+              return undefined;
+            }
+            this.tags[snapshot.id] = name;
+            return {id: snapshot.id, name: name};
+          })
+        )
       }),
       catchError( (error: Error) => {
         console.log(`Error during LoadTag(${tagRef}): ${error}`)

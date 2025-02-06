@@ -2,9 +2,9 @@
   <h1>{{ tag }}</h1>
   <div class="image-grid">
     <app-image-adder (imageAdded)="receiveImageURL($event)"/>
-    @for (storedImage of images; track storedImage) {
+    @for (liveImage of images; track liveImage.id) {
       <app-image-card
-        [imageSource]=storedImage
+        [imageSource]=liveImage
         (imageDeleted)="deleteImageOrTag($event)"
         (imageTagsChanged)="onImageTagsChanged($event)"
       />

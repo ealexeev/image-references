@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import {
-  addDoc, arrayUnion,
+  addDoc, arrayRemove, arrayUnion,
   Bytes,
   collection,
   connectFirestoreEmulator,
@@ -396,11 +396,9 @@ export class StorageService {
   async DeleteImageTag(image: LiveImage, tag: string): Promise<void> {
     const imageRef = await this.GetImageReferenceFromId(image.id);
     const tagRef = await this.GetTagReference(tag);
-    getDoc(imageRef).then((snapshot) => {
-      const tags = snapshot.get('tags').filter((t: DocumentReference) => t.id != tagRef.id);
-      updateDoc(imageRef, {'tags': tags})
-        .catch( e => Promise.reject(`Error deleteing tag: ${e}`));
-    });
+    updateDoc(imageRef, {tags: arrayRemove(tagRef)}).catch(
+      (err: Error) => {console.log(`Error deleting tag ${tag} from ${imageRef.path}: ${err}`)}
+    )
   }
 
   async DeleteImage(imageRef: DocumentReference) {

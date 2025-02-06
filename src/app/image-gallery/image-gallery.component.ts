@@ -55,20 +55,35 @@ export class ImageGalleryComponent implements OnChanges {
   async receiveImageURL(url: string): Promise<void> {
     const imageBlob = await fetch(url).then((response) => response.blob().then(b => b));
     const iRef = await this.storage.GetImageReferenceFromBlob(imageBlob);
-    if ( await this.storage.ImageExists(iRef) ) {
-      await this.storage.AddTags(iRef, [await this.storage.GetTagReference(this.tag)] );
-    } else {
-      await this.storage.StoreImage(imageBlob, url, [await this.storage.GetTagReference(this.tag)]);
+    const newImage: LiveImage = {
+      id: iRef.id,
+      url: url,
+      tags: [this.tag],
     }
 
-    this.storage.LoadImage(iRef).then((i) => {
-      if ( i && !this.images.filter(img => img.id === i.id).length ) {
-        this.images.unshift(i)
-        const targetSz = this.preferences.showImageCount$.value
-        if ( targetSz > 0 && this.images.length > targetSz ) {
-          this.images.pop()
-        }
+    if ( !this.images.filter(img => img.id === newImage.id).length ) {
+      this.images.unshift(newImage)
+      const targetSz = this.preferences.showImageCount$.value
+      if ( targetSz > 0 && this.images.length > targetSz ) {
+        this.images.pop()
       }
+    }
+
+    this.storage.ImageExists(iRef).then(exists => {
+      this.storage.GetTagReference(this.tag).then(tagRef => {
+        if (exists) {
+          this.storage.AddTags(iRef, [tagRef]).then(iRef => {
+            this.storage.LoadImage(iRef).then((image: LiveImage | undefined) => {
+              if ( !image ) {
+                return;
+              }
+              newImage.tags = [...image.tags];
+            })
+          });
+          return;
+        }
+        this.storage.StoreImage(imageBlob, url, [tagRef]);
+      });
     });
   }
 

@@ -299,7 +299,7 @@ export class StorageService {
   // Add specified tags to this image.
   async AddTags(iRef: DocumentReference, tags: DocumentReference[]) {
     const documentSnapshot = await getDoc(iRef);
-    updateDoc(iRef, {tags: arrayUnion(tags)})
+    updateDoc(iRef, {tags: arrayUnion(...tags)})
       // Log issues when updating tags on an existing document.
       .catch((error: Error) => {console.log(`Error adding tags ${tags} ${iRef.path}: ${error}`)});
   }
@@ -353,16 +353,16 @@ export class StorageService {
   async LiveImageFromSnapshot(snapshot: DocumentSnapshot ): Promise<LiveImage> {
     return new Promise((resolve, reject) => {
       const stored = snapshot.data()
-      if ( !stored ) {
-        reject("Empty snapshot.");
+      if ( !snapshot.exists() ) {
+        reject("Snapshot is of a non-existent file.");
         return;
       }
       const imageTags: string[] = [];
-      const blob = new Blob([stored['data'].toUint8Array()], { type: snapshot.get('mimeType') || '' });
-      stored['tags'].map(async (tagRef: DocumentReference) => { imageTags.push(((await firstValueFrom(this.LoadTag(tagRef)))?.name) || "") });
+      const blob = new Blob([snapshot.get('data').toUint8Array()], { type: snapshot.get('mimeType') || '' });
+      snapshot.get('tags').map(async (tagRef: DocumentReference) => { imageTags.push(((await firstValueFrom(this.LoadTag(tagRef)))?.name) || "") });
       resolve({
         id: snapshot.id,
-        url: stored['data'].toUint8Array().length > 0 ?  URL.createObjectURL(blob) : stored['url'],
+        url: snapshot.get('data').toUint8Array().length > 0 ?  URL.createObjectURL(blob) : snapshot.get('url'),
         tags: imageTags,
       })
     })

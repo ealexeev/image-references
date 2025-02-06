@@ -72,7 +72,7 @@ export class ImageGalleryComponent implements OnChanges {
     this.storage.ImageExists(iRef).then(exists => {
       this.storage.GetTagReference(this.tag).then(tagRef => {
         if (exists) {
-          this.storage.AddTags(iRef, [tagRef]).then(iRef => {
+          this.storage.AddTags(iRef, [tagRef]).then(() => {
             this.storage.LoadImage(iRef).then((image: LiveImage | undefined) => {
               if ( !image ) {
                 return;

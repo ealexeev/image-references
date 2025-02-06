@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import {
-  addDoc,
+  addDoc, arrayUnion,
   Bytes,
   collection,
   connectFirestoreEmulator,
@@ -38,7 +38,7 @@ import { environment } from './environments/environment';
 export type EncryptionMetadata = {
   // IV used during encryption.
   iv: Bytes
-  // Key id or refernce to a wrapped key stored in Firestore.  The key used for data encryption.
+  // Key id or reference to a wrapped key stored in Firestore.  The key used for data encryption.
   key: string,
 }
 
@@ -297,19 +297,9 @@ export class StorageService {
   // Add specified tags to this image.
   async AddTags(iRef: DocumentReference, tags: DocumentReference[]) {
     const documentSnapshot = await getDoc(iRef);
-    if ( !documentSnapshot.exists() ) {
-      throw new Error('AddTags called on non-existent image: ' + iRef.id)
-    }
-
-    const existingTags: Set<DocumentReference> = new Set(documentSnapshot.get('tags'));
-    const uniqueTags = new Set([...existingTags , ...(new Set(tags))]);
-
-    updateDoc(iRef, {'tags': Array.from(uniqueTags)})
-      // This is for debug only.  Remove.
-      .then(() => {console.log('Added existing document tags.')})
+    updateDoc(iRef, {tags: arrayUnion(tags)})
       // Log issues when updating tags on an existing document.
-      .catch((error: Error) => {console.log(`Error updateDoc(${iRef}, ${Array.from(uniqueTags)}}): ${error}`)});
-    return iRef;
+      .catch((error: Error) => {console.log(`Error adding tags ${tags} ${iRef.path}: ${error}`)});
   }
 
   async StoreImage(image: Blob, url: string, tags: DocumentReference[]): Promise<DocumentReference> {
@@ -317,7 +307,7 @@ export class StorageService {
     const documentSnapshot = await getDoc(iRef);
 
     if ( documentSnapshot.exists() ) {
-      await this.AddTags(iRef, tags);
+      this.AddTags(iRef, tags);
       return iRef;
     }
 

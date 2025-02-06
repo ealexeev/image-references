@@ -36,7 +36,7 @@ export class ImageGalleryComponent implements OnChanges {
 
   ngOnChanges() {
     this.images = [];
-    from(this.storage.LoadTag(this.tag)).pipe(
+    this.storage.LoadTag(this.tag).pipe(
       single(),
       mergeMap((t: LiveTag | undefined) => {
         if ( !t ) {

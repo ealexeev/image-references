@@ -74,7 +74,9 @@ export type LiveTag = {
   name: string,
 }
 
+// Tag document as stored in cloud firestore
 export type StoredTag = {
+  // Bytes because it may be encrypted.
   name: Bytes,
 }
 
@@ -92,7 +94,6 @@ export type StoredKey = {
 type KeyMap = Record<string, Bytes>
 // TagMap retains a map of tag names to HMACs / tag ids for easy lookup.
 type TagMap = Record<string, string>
-
 
 const LOCAL_STORAGE_KEY_IMAGES = "prestige-ape-images";
 
@@ -135,8 +136,12 @@ export class StorageService {
     this.cloudStorage = ref(this.storage, cloudDataPath)
   }
 
+  // GetTagReference returns a document reference to a tag based on the tag's name
   async GetTagReference(name: string): Promise<DocumentReference> {
-    return doc(this.firestore,  tagsCollectionPath, await this.hmac.getHmacHex(new Blob([name], { type: 'text/plain' })))
+    if ( !(name in this.tags) ) {
+      this.tags[name] = await this.hmac.getHmacHex(new Blob([name], {type: 'text/plain'}));
+    }
+    return doc(this.firestore,  tagsCollectionPath, this.tags[name]);
   }
 
   async GetImageReferenceFromBlob(image: Blob): Promise<DocumentReference> {
@@ -309,7 +314,7 @@ export class StorageService {
     const documentSnapshot = await getDoc(iRef);
 
     if ( documentSnapshot.exists() ) {
-      this.AddTags(iRef, tags);
+      await this.AddTags(iRef, tags);
       return iRef;
     }
 

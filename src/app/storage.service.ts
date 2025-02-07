@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import {Injectable, inject, OnInit, OnDestroy} from '@angular/core';
 import {
   addDoc, arrayRemove, arrayUnion,
   Bytes,
@@ -11,7 +11,7 @@ import {
   Firestore,
   getDoc,
   getDocs,
-  limit,
+  limit, onSnapshot,
   orderBy,
   query,
   QuerySnapshot,
@@ -33,6 +33,7 @@ import {
 import { HmacService } from './hmac.service';
 import { BehaviorSubject, catchError, first, from, mergeMap, map, Observable, of, shareReplay, Subject, single, take, tap, firstValueFrom } from 'rxjs';
 import { environment } from './environments/environment';
+import {SnapshotOptions} from '@angular/fire/compat/firestore';
 
 
 export type EncryptionMetadata = {
@@ -43,11 +44,10 @@ export type EncryptionMetadata = {
 }
 
 export type StoredImage = {
+  // Timestamp of creation.  Facilitates sorting by latest x images.
   added: Date,
-  // URL to use for image retrieval if data is empty
+  // Presence indicates that data is stored elsewhere.  Contents may be encrypted.
   url: string,
-  // If sufficiently small to store in Firestore, image bytes, possibly encrypted.
-  data: Bytes
   // The mime type of the image.
   mimeType: string,
   // Collection of applicable tag IDs, references to firestore documents
@@ -65,6 +65,8 @@ export type LiveImage = {
   url: string
   // The names of tags applied to this image.
   tags: string[]
+  // Firestore reference to this image.
+  //reference: DocumentReference
 }
 
 export type LiveTag = {
@@ -72,6 +74,8 @@ export type LiveTag = {
   id: string,
   // The plain text name of the stored tag.  Decrypted if necessary.
   name: string,
+  // Firestore reference to this tag.
+  reference: DocumentReference
 }
 
 // Tag document as stored in cloud firestore
@@ -105,7 +109,7 @@ const cloudDataPath = 'data'
 @Injectable({
   providedIn: 'root'
 })
-export class StorageService {
+export class StorageService implements OnDestroy {
   private firestore: Firestore = inject(Firestore);
   private storage: FirebaseStorage;
   private hmac: HmacService = inject(HmacService);
@@ -115,17 +119,20 @@ export class StorageService {
   private cloudStorage: any;
   private keys: KeyMap = {};
   private tags: TagMap = {};
+  private unsubTagCollection: any;
 
   // All tags known to the storage service.
   tags$ = new BehaviorSubject<LiveTag[]>([]);
   tagsShared$ = this.tags$.pipe(shareReplay());
-  errors$ = new Subject<Error>;
+
+  // This will eventually get replaced by butter-bar service to which messages are sent.
+  errors$ = new Subject<String>;
 
 
   constructor() {
     this.keysCollection = collection(this.firestore, keysCollectionPath)
     this.imagesCollection = collection(this.firestore, imagesCollectionPath)
-    this.tagsCollection = collection(this.firestore, tagsCollectionPath)
+    this.tagsCollection = collection(this.firestore, tagsCollectionPath).withConverter(this.tagConverter);
     if ( environment.firestoreUseLocal ) {
       connectFirestoreEmulator(this.firestore, 'localhost', 8080, {})
     }
@@ -134,6 +141,19 @@ export class StorageService {
       connectStorageEmulator(this.storage, "127.0.0.1", 9199);
     }
     this.cloudStorage = ref(this.storage, cloudDataPath)
+    // Bootstrap listening for all tags
+    const allTagsQuery = query(this.tagsCollection);
+    this.unsubTagCollection = onSnapshot(allTagsQuery, (querySnapshot) => {
+      const tags: LiveTag[] = [];
+      querySnapshot.forEach((doc) => {
+        tags.push(doc.data() as LiveTag);
+      })
+      this.tags$.next(tags);
+    })
+  }
+
+  ngOnDestroy() {
+    this.unsubTagCollection();
   }
 
   // GetTagReference returns a document reference to a tag based on the tag's name
@@ -141,7 +161,7 @@ export class StorageService {
     if ( !(name in this.tags) ) {
       this.tags[name] = await this.hmac.getHmacHex(new Blob([name], {type: 'text/plain'}));
     }
-    return doc(this.firestore,  tagsCollectionPath, this.tags[name]);
+    return doc(this.firestore,  tagsCollectionPath, this.tags[name]).withConverter(this.tagConverter);
   }
 
   async GetImageReferenceFromBlob(image: Blob): Promise<DocumentReference> {
@@ -192,92 +212,44 @@ export class StorageService {
     return sk
   }
 
-  // Save a tag to firestore, encrypt with specified key
-  StoreTag(name: string): Observable<LiveTag|undefined> {
-    return from(this.GetTagReference(name)).pipe(
-      first(),
-      map((tRef) => {
-        this.tags[tRef.id] = name;
-        const lt = { id: tRef.id, name: name }
-        return {ref: tRef, tag: lt}}),
-      mergeMap( (res) => from(setDoc(res.ref, { name: name })).pipe(
-          map(() => res.tag),
-          map(( res: LiveTag | undefined ) => {
-            this.tags$.pipe(take(1)).subscribe((tags: LiveTag[]) => {
-              if ( res ) {
-                tags.push(res)
-                this.tags$.next(tags)
-              }
-            })
-            return res
-          }),
-          catchError((error) => { this.errors$.next(error); return of(undefined); })
-      )),
-      );
+  // Save a tag to firestore.
+  async StoreTag(name: string): Promise<LiveTag>  {
+    return new Promise(async (resolve, reject) => {
+      const ref = await this.GetTagReference(name);
+      const tag = {name: name, id: ref.id, reference: ref}
+      setDoc(tag.reference, tag)
+        .then(()=>resolve(tag))
+        .catch((err: Error) => {this.errors$.next(`Error storing tag ${tag.name}: ${err}`)});
+    });
   }
 
-  LoadTag(tagRef: string | DocumentReference): Observable<LiveTag|undefined> {
-    var docRef: Observable<DocumentReference>
-    if ( typeof tagRef == "string" ) {
-      docRef = from(this.GetTagReference(tagRef))
-    } else {
-      docRef = of(tagRef)
-    }
-    return docRef.pipe(
-      map( ( docRef: DocumentReference ) => {
-        if ( docRef.id in this.tags ) {
-          return { id: docRef.id, name: this.tags[docRef.id] }
-        } else {
-          return docRef
-        }
-      }),
-      mergeMap( ( res: LiveTag | DocumentReference ) => {
-        if ( !( res instanceof DocumentReference) ) {
-          return of(res);
-        }
-        return from(getDoc(res)).pipe(
-          map((snapshot) => {
-            if (!snapshot.exists()) {
-              return undefined;
-            }
-            const name = snapshot.get('name')
-            if (!name) {
-              return undefined;
-            }
-            this.tags[snapshot.id] = name;
-            return {id: snapshot.id, name: name};
+  // Load a tag from firestore.  If provided with a reference, it is assumed to have been made using
+  // GetTagReference which makes use of a converter.
+  async LoadTag(tagRef: string | DocumentReference): Promise<LiveTag> {
+    return new Promise(async (resolve, reject) => {
+      if (tagRef instanceof String) {
+        tagRef = await this.GetTagReference(tagRef as string);
+      }
+      getDoc(tagRef as DocumentReference)
+        .then((snapshot: DocumentSnapshot) => resolve(snapshot.data() as LiveTag))
+        .catch((err: Error) => {
+          this.errors$.next(`Error loading tag by reference ${(tagRef as DocumentReference).id}: ${err.message}`)
+        })
+    })
+  }
+
+  async LoadAllTags(): Promise<LiveTag[]> {
+    return new Promise(async (resolve, reject) => {
+      getDocs(this.tagsCollection)
+        .then((snapshot) => {
+          const ret: LiveTag[] = [];
+          snapshot.forEach((doc)=> {
+            ret.push(doc.data() as LiveTag)
           })
-        )
-      }),
-      catchError( (error: Error) => {
-        console.log(`Error during LoadTag(${tagRef}): ${error}`)
-        this.errors$.next(error)
-        return of()
-      }),
-    )
-  }
-
-  LoadAllTags(): Observable<LiveTag[]> {
-    from(getDocs(this.tagsCollection)).pipe(
-      first(),
-      map( (qs) => {
-        const ret: LiveTag[] = []
-        qs.forEach( (doc) => {
-          if ( doc.exists() ) {
-            const data = doc.data() as StoredTag
-            ret.push({id: doc.id, name: data.name.toString()});
-          }
-        });
-        ret.sort((a: LiveTag, b: LiveTag) => a.name.localeCompare(b.name) );
-        return ret;
-      }),
-      catchError((error) => {
-        console.log(`Error LoadAllTags(): ${error}`)
-        this.errors$.next(error)
-        return of([])
-      }),
-    ).subscribe((tags: LiveTag[]) => this.tags$.next(tags));
-    return this.tags$.asObservable();
+          resolve(ret);
+        })
+        .catch((err: Error) => {this.errors$.next(`Error loading all tags: ${err}`)})
+    })
   }
 
   DeleteTag(name: string) {
@@ -285,7 +257,7 @@ export class StorageService {
       map( (tRef: DocumentReference ) => { deleteDoc(tRef) }),
       catchError( (error: Error) => {
         console.log(`Error deleting tag: ${error}`);
-        this.errors$.next(error);
+        this.errors$.next(`Error deleting tag: ${error.message}`);
         return of();
       }),
     );
@@ -364,7 +336,7 @@ export class StorageService {
       }
       const imageTags: string[] = [];
       const blob = new Blob([snapshot.get('data').toUint8Array()], { type: snapshot.get('mimeType') || '' });
-      snapshot.get('tags').map(async (tagRef: DocumentReference) => { imageTags.push(((await firstValueFrom(this.LoadTag(tagRef)))?.name) || "") });
+      snapshot.get('tags').map(async (tagRef: DocumentReference) => { imageTags.push((await this.LoadTag(tagRef))?.name || "") });
       resolve({
         id: snapshot.id,
         url: snapshot.get('data').toUint8Array().length > 0 ?  URL.createObjectURL(blob) : snapshot.get('url'),
@@ -435,5 +407,19 @@ export class StorageService {
     const tagRefs: DocumentReference[] = await Promise.all(image.tags.map(async (t: string) => await this.GetTagReference(t)))
     updateDoc(iRef, {'tags': tagRefs})
       .catch( e => console.log(`Error replacing tags: ${e}`));
+  }
+
+  tagConverter = {
+    toFirestore: (liveTag: LiveTag) => {
+      return {'name': liveTag.name}
+    },
+    fromFirestore: (snapshot:DocumentSnapshot, options: SnapshotOptions): LiveTag => {
+      const data = snapshot.data(options);
+      return {
+        id: snapshot.id,
+        name: (data as StoredTag).name.toString(),
+        reference: snapshot.ref,
+      } as LiveTag;
+    },
   }
 }

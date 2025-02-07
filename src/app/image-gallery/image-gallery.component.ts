@@ -36,20 +36,9 @@ export class ImageGalleryComponent implements OnChanges {
 
   ngOnChanges() {
     this.images = [];
-    this.storage.LoadTag(this.tag).pipe(
-      single(),
-      mergeMap((t: LiveTag | undefined) => {
-        if ( !t ) {
-          return of([])
-        } else {
-          return from(this.storage.LoadImagesWithTag(this.tag, this.preferences.showImageCount$.value));
-        }
-      }),
-      catchError( ( error: Error) => {
-        console.log(`Error on LoadTag(${this.tag}): ${error}`)
-        return of([])
-      }),
-    ).subscribe((images: LiveImage[]) => this.images = images);
+    this.storage.LoadImagesWithTag(this.tag, this.preferences.showImageCount$.value).then(
+      (images: LiveImage[]) => this.images = images
+    );
   }
 
   async receiveImageURL(url: string): Promise<void> {

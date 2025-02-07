@@ -1,4 +1,4 @@
-import { Component, EventEmitter, OnInit, Output } from '@angular/core';
+import { Component, EventEmitter, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { LiveTag, StorageService } from '../storage.service';
 import { catchError, combineLatestWith, debounceTime, distinctUntilChanged, map, of, startWith, tap, Observable, BehaviorSubject } from 'rxjs';
@@ -29,12 +29,11 @@ import {FormControl, FormsModule, ReactiveFormsModule} from '@angular/forms';
   templateUrl: './tag-list.component.html',
   styleUrl: './tag-list.component.scss'
 })
-export class TagListComponent implements OnInit{
+export class TagListComponent {
 
   @Output() tagSelectionEvent = new EventEmitter<string>()
 
   tags$: Observable<LiveTag[]>;
-  tagsSharedLenght$: BehaviorSubject<number> = new BehaviorSubject(0);
   tagsFilteredCount$: BehaviorSubject<number> = new BehaviorSubject(0);
   enableCreateButton$: BehaviorSubject<boolean> = new BehaviorSubject(false);
 
@@ -62,31 +61,19 @@ export class TagListComponent implements OnInit{
         return matches.sort((a, b) => a.name.localeCompare(b.name));
       }),
     );
-
-    this.storage.tagsShared$.pipe(
-      takeUntilDestroyed(),
-    ).subscribe((tags) => this.tagsSharedLenght$.next(tags.length || 0));
-  }
-
-  ngOnInit() {
-    this.storage.LoadAllTags();
   }
 
   createTag() {
-    const newTag = this.searchText.value ?? ''
-    if ( newTag.length == 0 ) {
+    if ( !this.searchText?.value?.length ) {
       return;
     }
-    this.storage.StoreTag(newTag).pipe(
-      catchError( (error: Error) => {
-        console.log(`Error createTag(): ${this.searchText.value}: ${error}`);
-        return of();
-      }),
-    ).subscribe( (r)=> {
-      console.log(`Create tag: ${r?.name} with id ${r?.id}`)
-      this.searchText.setValue(this.searchText.value)
-      // How do we click/select the new tag?
-    })
+    this.storage.StoreTag(this.searchText.value)
+      .then((unused)=> {
+        console.log(`app-tag-list: StoreTag() returned: ${unused.name}`);
+        // This triggers a re-evaluation against a tag list that will now contain the recently created tag.
+        this.searchText.setValue(this.searchText.value)
+      })
+      .catch((err)=> { console.log(`app-tag-list:  error in StoreTag: ${err.message}`)})
   }
 
   onChipSelectionChange(event: any, tag: LiveTag) {

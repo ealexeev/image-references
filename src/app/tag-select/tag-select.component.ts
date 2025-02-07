@@ -33,12 +33,9 @@ export class TagSelectComponent implements OnInit{
   @Input() selectedTags: string[] = [];
   @Output() selectionChange = new EventEmitter<string[]>();
 
-  readonly searchText = new FormControl('')
   tags$: Observable<LiveTag[]>;
 
   selected: FormControl<string[]> = new FormControl();
-
-  enableCreateButton$: BehaviorSubject<boolean> = new BehaviorSubject(false);
 
   constructor(private storage: StorageService) {
     this.tags$ = this.storage.tags$.pipe(

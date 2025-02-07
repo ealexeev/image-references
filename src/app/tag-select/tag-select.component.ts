@@ -41,8 +41,7 @@ export class TagSelectComponent implements OnInit{
   enableCreateButton$: BehaviorSubject<boolean> = new BehaviorSubject(false);
 
   constructor(private storage: StorageService) {
-    this.storage.LoadAllTags();
-    this.tags$ = this.storage.tagsShared$.pipe(
+    this.tags$ = this.storage.tags$.pipe(
       takeUntilDestroyed(),
       distinctUntilChanged(),
     );

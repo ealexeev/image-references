@@ -123,7 +123,6 @@ export class StorageService implements OnDestroy {
 
   // All tags known to the storage service.
   tags$ = new BehaviorSubject<LiveTag[]>([]);
-  tagsShared$ = this.tags$.pipe(shareReplay());
 
   // This will eventually get replaced by butter-bar service to which messages are sent.
   errors$ = new Subject<String>;

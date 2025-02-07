@@ -46,7 +46,7 @@ export class TagListComponent {
       debounceTime(250),
     );
 
-    this.tags$ = this.storage.tagsShared$.pipe(
+    this.tags$ = this.storage.tags$.pipe(
       distinctUntilChanged(),
       combineLatestWith(search),
       map( ([tags, searchText]) => {

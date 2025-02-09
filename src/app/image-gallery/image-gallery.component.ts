@@ -4,9 +4,9 @@ import {Component, Input, OnChanges} from '@angular/core';
 import { ImageCardComponent } from '../image-card/image-card.component';
 import { ImageAdderComponent } from '../image-adder/image-adder.component';
 import { StorageService, LiveImage, LiveTag } from '../storage.service';
-import {catchError, from, of, mergeMap, single, map} from 'rxjs';
-import {PreferenceService} from '../preference-service';
-import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
+import { Subscription } from 'rxjs';
+import { PreferenceService } from '../preference-service';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 @Component({
   selector: 'app-image-gallery',
@@ -19,9 +19,11 @@ import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
   styleUrl: './image-gallery.component.scss'
 })
 export class ImageGalleryComponent implements OnChanges {
-  @Input({required: true}) tag = '';
+  @Input({required: true}) tag!: string;
 
   images: LiveImage[] = [];
+  dbUnsubscribe: () => void = ()=> {return};
+  imagesSub: Subscription = new Subscription();
 
   constructor(private storage: StorageService,
               private preferences: PreferenceService) {
@@ -34,54 +36,39 @@ export class ImageGalleryComponent implements OnChanges {
     )
   }
 
-  ngOnChanges() {
-    this.images = [];
-    this.storage.LoadImagesWithTag(this.tag, this.preferences.showImageCount$.value).then(
-      (images: LiveImage[]) => this.images = images
-    );
+  async ngOnChanges() {
+    if ( !this.tag ) {
+      return;
+    }
+    this.dbUnsubscribe();
+    this.imagesSub.unsubscribe();
+    this.images = []
+    const tag = await this.storage.LoadTagByName(this.tag)
+    const subscription = this.storage.SubscribeToTag(tag, this.preferences.showImageCount$.value)
+    this.imagesSub = subscription.images$.subscribe((images: LiveImage[]) => {this.images = images;})
+    this.dbUnsubscribe = subscription.unsubscribe;
   }
 
   async receiveImageURL(url: string): Promise<void> {
     const imageBlob = await fetch(url).then((response) => response.blob().then(b => b));
     const iRef = await this.storage.GetImageReferenceFromBlob(imageBlob);
+
     const newImage: LiveImage = {
-      id: iRef.id,
-      url: url,
-      tags: [this.tag],
+      mimeType: imageBlob.type,
+      tags: [this.storage.TagRefByName(this.tag)].filter(t => t !== undefined),
+      reference: iRef,
     }
+    await this.storage.StoreImage(newImage);
+    const fullUrl = await this.storage.StoreFullImage(iRef, imageBlob);
+    await this.storage.StoreImageData(iRef, imageBlob, fullUrl);
 
-    if ( !this.images.filter(img => img.id === newImage.id).length ) {
-      this.images.unshift(newImage)
-      const targetSz = this.preferences.showImageCount$.value
-      if ( targetSz > 0 && this.images.length > targetSz ) {
-        this.images.pop()
-      }
-    }
-
-    this.storage.ImageExists(iRef).then(exists => {
-      this.storage.GetTagReference(this.tag).then(tagRef => {
-        if (exists) {
-          this.storage.AddTags(iRef, [tagRef]).then(() => {
-            this.storage.LoadImage(iRef).then((image: LiveImage | undefined) => {
-              if ( !image ) {
-                return;
-              }
-              newImage.tags = [...image.tags];
-            })
-          });
-          return;
-        }
-        this.storage.StoreImage(imageBlob, url, [tagRef]);
-      });
-    });
   }
 
   async deleteImageOrTag(id: string) {
-    let img = this.images.filter(li => li.id == id).pop();
+    let img = this.images.filter(li => li.reference.id == id).pop();
     if ( !img ) {
-      return;
+      throw new Error(`deleteImageOrTag(${id}): not found`);
     }
-    this.images = this.images.filter((li) => li.id != id);
 
     if ( img.tags.length == 1 ) {
       return this.storage.DeleteImage(this.storage.GetImageReferenceFromId(id))
@@ -95,16 +82,6 @@ export class ImageGalleryComponent implements OnChanges {
       this.images = this.images.slice(0, value);
       return;
     }
-    this.storage.LoadImagesWithTag(this.tag, value).then(
-      (images: LiveImage[]) => this.images = images,
-      v=> console.log(`Error on LoadImagesWithTag(${this.tag}, ${value}):  ${v}`)
-    )
-  }
-
-  onImageTagsChanged(image: LiveImage) {
-    this.storage.ReplaceImageTags(image);
-    if ( !image.tags.includes(this.tag) ) {
-      this.images = this.images.filter(li => li.id != image.id);
-    }
+    this.ngOnChanges()
   }
 }

@@ -1,4 +1,4 @@
-import {Injectable, inject, OnInit, OnDestroy} from '@angular/core';
+import {Injectable, inject, OnDestroy} from '@angular/core';
 import {
   addDoc, arrayRemove, arrayUnion,
   Bytes,
@@ -10,11 +10,11 @@ import {
   DocumentSnapshot,
   Firestore,
   getDoc,
-  getDocs,
   limit, onSnapshot,
   orderBy,
   query,
-  QuerySnapshot,
+  QueryConstraint,
+  serverTimestamp,
   setDoc, updateDoc,
   where
 } from '@angular/fire/firestore';
@@ -26,14 +26,21 @@ import {
   connectStorageEmulator,
   StorageReference,
   uploadBytes,
-  UploadResult,
   getDownloadURL, deleteObject
 } from '@angular/fire/storage';
 
 import { HmacService } from './hmac.service';
-import { BehaviorSubject, catchError, first, from, mergeMap, map, Observable, of, shareReplay, Subject, single, take, tap, firstValueFrom } from 'rxjs';
+import {
+  BehaviorSubject,
+  catchError,
+  from,
+  map,
+  Observable,
+  of,
+  Subject,
+} from 'rxjs';
 import { environment } from './environments/environment';
-import {SnapshotOptions} from '@angular/fire/compat/firestore';
+import {CollectionReference, SnapshotOptions} from '@angular/fire/compat/firestore';
 
 
 export type EncryptionMetadata = {
@@ -46,12 +53,19 @@ export type EncryptionMetadata = {
 export type StoredImage = {
   // Timestamp of creation.  Facilitates sorting by latest x images.
   added: Date,
-  // Presence indicates that data is stored elsewhere.  Contents may be encrypted.
-  url: string,
   // The mime type of the image.
   mimeType: string,
   // Collection of applicable tag IDs, references to firestore documents
   tags: DocumentReference[]
+}
+
+export type StoredImageData = {
+  // Mime-type of the image.
+  mimeType: string,
+  // Thumbnail data.
+  thumbnail: Bytes,
+  // URL where the full-size image is stored.  May be encrypted
+  fullUrl: string,
 }
 
 export type StoredEncryptedImage = StoredImage & EncryptionMetadata;
@@ -59,24 +73,32 @@ export type StoredEncryptedImage = StoredImage & EncryptionMetadata;
 // AppImage is an image that has been fetched from storage, had its data and tags decrypted
 // if necessary and is now being "served" from the local host.
 export type LiveImage = {
-  // The stored ID of this image in case changes have to be made
-  id: string
-  // The local URL of this image's Blob
-  url: string
-  // The names of tags applied to this image.
-  tags: string[]
+  // MimeType that is re-attached to Blobs being served from both URLs above.
+  mimeType: string,
+  // References to tags that apply to this image.
+  tags: DocumentReference[]
   // Firestore reference to this image.
-  //reference: DocumentReference
+  reference: DocumentReference
+  // These can get out of sync since they are stored separately.
+  // The url of the thumbnail.  The data comes from firestore via ImageData.
+  thumbnailUrl?: string,
+  // The url of the raw image data.  If not set, indicates need to fetch from cloud.
+  fullUrl?: string,
 }
 
-export type LiveTag = {
-  // The ID of the stored tag.
-  id: string,
+export type LiveTag = Readonly<{
   // The plain text name of the stored tag.  Decrypted if necessary.
   name: string,
   // Firestore reference to this tag.
   reference: DocumentReference
-}
+}>
+
+export type LiveImageData = Readonly<{
+  mimeType: string,
+  thumbnailUrl: string,
+  fullUrl: string,
+}>
+
 
 // Tag document as stored in cloud firestore
 export type StoredTag = {
@@ -93,11 +115,15 @@ export type StoredKey = {
   key: Bytes
 }
 
+export type TagSubscription = {
+  images$: Observable<LiveImage[]>,
+  unsubscribe: () => void,
+}
 
 // KeyMap retains a map of key ids (HMACs) to wrapped key bytes.
 type KeyMap = Record<string, Bytes>
 // TagMap retains a map of tag names to HMACs / tag ids for easy lookup.
-type TagMap = Record<string, string>
+type TagMap = Record<string, LiveTag>
 
 const LOCAL_STORAGE_KEY_IMAGES = "prestige-ape-images";
 
@@ -118,7 +144,8 @@ export class StorageService implements OnDestroy {
   private tagsCollection: any;
   private cloudStorage: any;
   private keys: KeyMap = {};
-  private tags: TagMap = {};
+  private tagsByName: TagMap = {};
+  private tagsById: TagMap = {};
   private unsubTagCollection: any;
 
   // All tags known to the storage service.
@@ -130,8 +157,8 @@ export class StorageService implements OnDestroy {
 
   constructor() {
     this.keysCollection = collection(this.firestore, keysCollectionPath)
-    this.imagesCollection = collection(this.firestore, imagesCollectionPath)
-    this.tagsCollection = collection(this.firestore, tagsCollectionPath).withConverter(this.tagConverter);
+    this.imagesCollection = collection(this.firestore, imagesCollectionPath).withConverter(this.imageConverter())
+    this.tagsCollection = collection(this.firestore, tagsCollectionPath).withConverter(this.tagConverter)
     if ( environment.firestoreUseLocal ) {
       connectFirestoreEmulator(this.firestore, 'localhost', 8080, {})
     }
@@ -143,28 +170,113 @@ export class StorageService implements OnDestroy {
     // Bootstrap listening for all tags
     const allTagsQuery = query(this.tagsCollection);
     this.unsubTagCollection = onSnapshot(allTagsQuery, (querySnapshot) => {
+      console.log('Received tags subscription update')
       const tags: LiveTag[] = [];
       querySnapshot.forEach((doc) => {
         tags.push(doc.data() as LiveTag);
       })
+      this.tagsByName = Object.fromEntries(tags.map(t=>[t.name, t]))
+      this.tagsById = Object.fromEntries(tags.map(t=>[t.reference.id, t]))
       this.tags$.next(tags);
     })
+
   }
 
   ngOnDestroy() {
     this.unsubTagCollection();
   }
 
+  // Obtain a subscription to supplied tag that will return the last n images that have
+  // had the tag applied.  -1 Indicates all images.
+  SubscribeToTag(tag: LiveTag, last_n_images: number): TagSubscription {
+    const constraints: QueryConstraint[] = [orderBy("added", "desc")]
+    if ( last_n_images > 0 ) {
+      constraints.push(limit(last_n_images));
+    }
+
+    const q = query(
+      this.imagesCollection,
+      where("tags", "array-contains", tag.reference),
+      ...constraints)
+
+    const imagesObservable = new Subject<LiveImage[]>();
+
+    const unsub = onSnapshot(q, (querySnapshot) => {
+      const images: LiveImage[] = [];
+      querySnapshot.forEach((doc) => {
+        images.push(doc.data() as LiveImage)
+      })
+      imagesObservable.next(images);
+    })
+
+    return {images$: imagesObservable, unsubscribe: unsub} as TagSubscription;
+  }
+
+  // Used to fetch image data associated with an image.
+  SubscribeToImageData(imageId: string, out: Subject<LiveImageData>): () => void {
+    return onSnapshot(doc(this.firestore, this.imagesCollection.path, imageId, 'data', 'thumbnail'),
+      doc => {
+        if ( !doc.exists() ) {
+          console.error(`SubImageData(${imageId}): not found`);
+          return;
+        }
+        const stored = doc.data() as StoredImageData;
+        const thumbBytes = stored.thumbnail.toUint8Array()
+        const thumb = new Blob([thumbBytes], {type: stored.mimeType})
+        // Decryption needs to be added here.  Likely both are first fetched, decyrpted, and then get a
+        // local URL.
+        out.next({
+          mimeType: stored.mimeType,
+          thumbnailUrl: URL.createObjectURL(thumb),
+          fullUrl: stored.fullUrl,
+        } as LiveImageData);
+      })
+  }
+
+  TagRefByName(name: string): DocumentReference | undefined {
+    const ret = this.tagsByName[name]?.reference
+    if ( !ret ) {
+      this.errors$.next(`StorageService:TagRefByName(${name}): not found`)
+    }
+    return ret
+  }
+
+  TagRefById(id: string): DocumentReference | undefined {
+    const ret =  this.tagsById[id]?.reference
+    if ( !ret ) {
+      this.errors$.next(`StorageService:TagRefById(${id}): not found`)
+    }
+    return ret;
+  }
+
+  TagByName(name: string): LiveTag | undefined {
+    const ret = this.tagsByName[name]
+    if ( !ret ) {
+      this.errors$.next(`StorageService:TagByName(${name}): not found`)
+    }
+    return ret;
+  }
+
+  TagById(id: string): LiveTag | undefined {
+    const ret = this.tagsById[id]
+    if ( !ret ) {
+      this.errors$.next(`StorageService:TagById(${id}): not found`)
+    }
+    return ret
+  }
+
   // GetTagReference returns a document reference to a tag based on the tag's name
   async GetTagReference(name: string): Promise<DocumentReference> {
-    if ( !(name in this.tags) ) {
-      this.tags[name] = await this.hmac.getHmacHex(new Blob([name], {type: 'text/plain'}));
+    const cached = this.TagByName(name)?.reference
+    if ( cached !== undefined ) {
+      return cached;
     }
-    return doc(this.firestore,  tagsCollectionPath, this.tags[name]).withConverter(this.tagConverter);
+    const id = await this.hmac.getHmacHex(new Blob([name], {type: 'text/plain'}))
+    return doc(this.firestore,  this.tagsCollection.path, id).withConverter(this.tagConverter);
   }
 
   async GetImageReferenceFromBlob(image: Blob): Promise<DocumentReference> {
-    return doc(this.firestore, imagesCollectionPath, await this.hmac.getHmacHex(image))
+    return doc(this.firestore, imagesCollectionPath, await this.hmac.getHmacHex(image)).withConverter(this.imageConverter())
   }
 
   GetImageReferenceFromId(imageId: string): DocumentReference {
@@ -173,42 +285,6 @@ export class StorageService implements OnDestroy {
 
   GetStorageReferenceFromId(imageId: string): StorageReference {
     return ref(this.cloudStorage, imageId)
-  }
-
-  async ImageExists(ref: DocumentReference): Promise<boolean> {
-    return new Promise((resolve, reject) => {
-      getDoc(ref)
-        .then((doc) => {
-          if ( doc.exists() ) {
-            resolve(true);
-          } else {
-            resolve(false);
-          }
-        })
-      .catch((err) => {console.log(`Error getDoc(${ref.id}): ${err}`)})
-    })
-  }
-
-  async StoreKey(key: Blob): Promise<DocumentReference> {
-    const k = {
-      id: await this.hmac.getHmacHex(key),
-      key: Bytes.fromUint8Array(new Uint8Array(await key.arrayBuffer())),
-    }
-    this.keys[k.id] = k.key;
-    return addDoc(this.keysCollection, <StoredKey> k)
-  }
-
-  async LoadKey(keyId: string): Promise<StoredKey|undefined> {
-    if (keyId in this.keys) {
-      return { id: keyId, key: this.keys[keyId] };
-    }
-    const ref = doc(this.keysCollection, keyId);
-    const snapshot = await getDoc(ref);
-    const sk = snapshot.data() as StoredKey | undefined;
-    if (sk) {
-      this.keys[keyId] = sk.key;
-    }
-    return sk
   }
 
   // Save a tag to firestore.
@@ -224,47 +300,27 @@ export class StorageService implements OnDestroy {
 
   // Load a tag from firestore.  If provided with a reference, it is assumed to have been made using
   // GetTagReference which makes use of a converter.
-  async LoadTag(tagRef: string | DocumentReference): Promise<LiveTag> {
+  async LoadTagByName(name: string): Promise<LiveTag> {
+    const cached = this.TagByName(name);
+    if ( cached !== undefined ) {
+      return cached
+    }
+
     return new Promise(async (resolve, reject) => {
-      if (tagRef instanceof String) {
-        tagRef = await this.GetTagReference(tagRef as string);
-      }
-      getDoc(tagRef as DocumentReference)
-        .then((snapshot: DocumentSnapshot) => resolve(snapshot.data() as LiveTag))
+      const tagRef = await this.GetTagReference(name)
+      getDoc(tagRef)
+      // getDoc(tagRef)
+        .then((snapshot: DocumentSnapshot) => {
+          if ( snapshot.exists() ) {
+            resolve(snapshot.data() as LiveTag);
+          } else {
+            reject(`LoadTagByName(${name}): not found`);
+          }
+        })
         .catch((err: Error) => {
           this.errors$.next(`Error loading tag by reference ${(tagRef as DocumentReference).id}: ${err.message}`)
         })
     })
-  }
-
-  async LoadAllTags(): Promise<LiveTag[]> {
-    return new Promise(async (resolve, reject) => {
-      getDocs(this.tagsCollection)
-        .then((snapshot) => {
-          const ret: LiveTag[] = [];
-          snapshot.forEach((doc)=> {
-            ret.push(doc.data() as LiveTag)
-          })
-          resolve(ret);
-        })
-        .catch((err: Error) => {this.errors$.next(`Error loading all tags: ${err}`)})
-    })
-  }
-
-  DeleteTag(name: string) {
-    from(this.GetTagReference(name)).pipe(
-      map( (tRef: DocumentReference ) => { deleteDoc(tRef) }),
-      catchError( (error: Error) => {
-        console.log(`Error deleting tag: ${error}`);
-        this.errors$.next(`Error deleting tag: ${error.message}`);
-        return of();
-      }),
-    );
-  }
-
-  async MakeImageRef(image: Blob): Promise<DocumentReference> {
-    const id = await this.hmac.getHmacHex(image)
-    return doc(this.firestore, imagesCollectionPath, id)
   }
 
   async MakeImageCloudRef(image: Blob): Promise<StorageReference> {
@@ -274,105 +330,37 @@ export class StorageService implements OnDestroy {
 
   // Add specified tags to this image.
   async AddTags(iRef: DocumentReference, tags: DocumentReference[]) {
-    const documentSnapshot = await getDoc(iRef);
     updateDoc(iRef, {tags: arrayUnion(...tags)})
       // Log issues when updating tags on an existing document.
-      .catch((error: Error) => {console.log(`Error adding tags ${tags} ${iRef.path}: ${error}`)});
+      .catch((error: Error) => {this.errors$.next(`Error adding tags ${tags} ${iRef.path}: ${error}`)});
   }
 
-  async StoreImage(image: Blob, url: string, tags: DocumentReference[]): Promise<DocumentReference> {
-    const iRef = await this.MakeImageRef(image);
-    const documentSnapshot = await getDoc(iRef);
-
-    if ( documentSnapshot.exists() ) {
-      await this.AddTags(iRef, tags);
-      return iRef;
+  // Store a new image received by the application.  If it exists, update its list of tags.
+  async StoreImage(img: LiveImage) {
+    const snapshot =  await getDoc(img.reference)
+    if ( snapshot.exists() ) {
+      return this.AddTags(img.reference, img.tags)
     }
-
-    const imgBytes = new Uint8Array(await image.arrayBuffer())
-
-    const i = {
-      added: new Date(),
-      url: url,
-      data: imgBytes.length < 1048487 ? Bytes.fromUint8Array(imgBytes) : Bytes.fromBase64String(''),
-      mimeType: image.type,
-      tags: tags,
-    }
-
-    if ( imgBytes.length >= 1048487 ) {
-      try {
-        const uploadResult = await this.StoreImageCloud(image);
-        console.log(`Uploaded ${uploadResult.metadata.name}, size: ${uploadResult.metadata.size}`);
-        i.url = await getDownloadURL(await this.MakeImageCloudRef(image));
-      } catch (e) {
-        return Promise.reject(`Error uploading to cloud storage: ${e}`);
-      }
-    }
-
-    try {
-      await setDoc(iRef, i)
-    } catch (e) {
-      if ( imgBytes.length >= 1048487 ) {
-        console.log('I need to delete cloud data!');
-      }
-      return Promise.reject(`Error creating document in firestore: ${e}`);
-    }
-
-    return iRef
+    return setDoc(img.reference, img)
   }
 
-  async StoreImageCloud(image: Blob): Promise<UploadResult> {
-    const iRef = await this.MakeImageCloudRef(image);
-    return uploadBytes(iRef, image)
+  async StoreImageData(ref: DocumentReference,  blob: Blob, fullUrl: string): Promise<void> {
+    return setDoc(doc(ref, 'data', 'thumbnail'), {
+      'mimeType': blob.type,
+      'thumbnail': await this.BytesFromBlob(blob),
+      'fullUrl': fullUrl,
+    } as StoredImageData)
   }
 
-  async LiveImageFromSnapshot(snapshot: DocumentSnapshot ): Promise<LiveImage> {
-    return new Promise((resolve, reject) => {
-      const stored = snapshot.data()
-      if ( !snapshot.exists() ) {
-        reject("Snapshot is of a non-existent file.");
-        return;
-      }
-      const imageTags: string[] = [];
-      const blob = new Blob([snapshot.get('data').toUint8Array()], { type: snapshot.get('mimeType') || '' });
-      snapshot.get('tags').map(async (tagRef: DocumentReference) => { imageTags.push((await this.LoadTag(tagRef))?.name || "") });
-      resolve({
-        id: snapshot.id,
-        url: snapshot.get('data').toUint8Array().length > 0 ?  URL.createObjectURL(blob) : snapshot.get('url'),
-        tags: imageTags,
-      })
-    })
-  }
-
-  async LoadImage(imageRef: DocumentReference): Promise<LiveImage | undefined> {
-    return new Promise((resolve, reject) => {
-      getDoc(imageRef).then((snapshot) => { resolve( this.LiveImageFromSnapshot(snapshot))})
-    })
-  }
-
-  async LoadImagesWithTag(tag: string | DocumentReference, limitCount: number): Promise<LiveImage[]> {
-    if ( typeof tag == "string") {
-      tag = await this.GetTagReference(tag)
-    }
-    let q;
-    if ( limitCount > 0 ) {
-      q = query(this.imagesCollection, where("tags", "array-contains", tag), orderBy("added", "desc"), limit(limitCount))
-    } else {
-      q = query(this.imagesCollection, where("tags", "array-contains", tag), orderBy("added", "desc"))
-    }
-
-    const snapshot = await getDocs(q);
-    const images: LiveImage[] = []
-    for ( const imageSnapshot of snapshot.docs ) {
-      // There is some hang-up around query doc snapshots not being compatible, but they seem to work.
-      images.push(await this.LiveImageFromSnapshot(imageSnapshot as DocumentSnapshot));
-    }
-    return images;
+  async StoreFullImage(imageRef: DocumentReference, blob: Blob ): Promise<string> {
+    const storageRef = ref(this.cloudStorage, imageRef.id);
+    await uploadBytes(storageRef, blob)
+    return getDownloadURL(storageRef);
   }
 
   // Remove the specified tag from the specified image.
   async DeleteImageTag(image: LiveImage, tag: string): Promise<void> {
-    const imageRef = await this.GetImageReferenceFromId(image.id);
+    const imageRef = await this.GetImageReferenceFromId(image.reference.id);
     const tagRef = await this.GetTagReference(tag);
     updateDoc(imageRef, {tags: arrayRemove(tagRef)}).catch(
       (err: Error) => {console.log(`Error deleting tag ${tag} from ${imageRef.path}: ${err}`)}
@@ -384,27 +372,17 @@ export class StorageService implements OnDestroy {
       if ( !snapshot.exists() ) {
         return;
       }
-      const bytes: Bytes = snapshot.get('data');
-      // If there is no data, there is a cloud storage object that needs to be cleaned up.
-      if ( bytes.toUint8Array().length == 0 ) {
-        deleteObject(this.GetStorageReferenceFromId(imageRef.id))
-          .then(() => console.log('Cloud data deleted'))
-          .finally(() => {deleteDoc(imageRef)});
-      } else {
-        deleteDoc(imageRef);
-      }
+      deleteObject(this.GetStorageReferenceFromId(imageRef.id))
+        .then(() => console.log('Cloud data deleted'))
+        .finally(() => {
+          deleteDoc(imageRef)
+        });
     })
   }
 
   // Replace image tags with those in the live image.  If the tag list is empty delete the image instead.
   async ReplaceImageTags(image: LiveImage){
-    const iRef = this.GetImageReferenceFromId(image.id);
-    if ( !image.tags.length ) {
-      this.DeleteImage(iRef);
-      return
-    }
-    const tagRefs: DocumentReference[] = await Promise.all(image.tags.map(async (t: string) => await this.GetTagReference(t)))
-    updateDoc(iRef, {'tags': tagRefs})
+    return updateDoc(image.reference, {'tags': image.tags})
       .catch( e => console.log(`Error replacing tags: ${e}`));
   }
 
@@ -420,5 +398,61 @@ export class StorageService implements OnDestroy {
         reference: snapshot.ref,
       } as LiveTag;
     },
+  }
+
+  // Convert a blob to a firestore Bytes object.
+  async BytesFromBlob(b: Blob): Promise<Bytes> {
+    return Bytes.fromUint8Array(new Uint8Array(await b.arrayBuffer()))
+  }
+
+  // The firestore converter cannot cope with async construction.
+  // This should be run after the LiveImage is created...not sure how to feed it through the subscription model yet.
+  async AddDataUrls(image: LiveImage): Promise<LiveImage> {
+    return new Promise(async (resolve, reject) => {
+      const thumbDoc = await getDoc(
+        doc(this.firestore, this.imagesCollection, image.reference.id, 'data', 'thumbnail'))
+      if ( !thumbDoc.exists() ) {
+        this.errors$.next(`Error loading thumbnail of ${image.reference.id} from Firestore:  does not exist.`)
+        reject(`Error loading thumbnail of ${image.reference.id} from Firestore:  does not exist.`)
+      }
+      const thumbBytes = (thumbDoc.data() as StoredImageData).thumbnail.toUint8Array()
+      const thumb = new Blob([thumbBytes], {type: image.mimeType})
+
+      const ret: LiveImage = {
+        ...image,
+        thumbnailUrl: URL.createObjectURL(thumb),
+        fullUrl: await getDownloadURL(ref(this.cloudStorage, image.reference.id)),
+      }
+      resolve(ret)
+    })
+  }
+
+  imageToFirestore(liveImage: LiveImage) {
+    // Need to store thumbnail.
+    // Need to store raw image.
+    return {
+      added: serverTimestamp(),
+      mimeType: liveImage.mimeType,
+      tags: liveImage.tags,
+    };
+  }
+
+  imageFromFirestore(snapshot:DocumentSnapshot, options: SnapshotOptions): LiveImage {
+    const data = snapshot.data(options) as StoredImage;
+    if ( !snapshot.exists() ) {
+      this.errors$.next(`Error loading ${snapshot.id} from Firestore:  does not exist.`)
+    }
+    return {
+      mimeType: data['mimeType'],
+      tags: data['tags'],
+      reference: snapshot.ref,
+    } as LiveImage;
+  }
+
+  imageConverter() {
+    return {
+      'toFirestore': this.imageToFirestore,
+      'fromFirestore': this.imageFromFirestore,
+    }
   }
 }

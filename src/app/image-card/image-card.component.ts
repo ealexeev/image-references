@@ -1,16 +1,21 @@
-import {Component, EventEmitter, Input, Output, Renderer2, Signal, signal} from '@angular/core';
+import {Component, EventEmitter, Input, OnDestroy, OnInit, Output, Renderer2, Signal, signal} from '@angular/core';
 import { MatBadgeModule } from '@angular/material/badge';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatChipsModule } from '@angular/material/chips';
-import { LiveImage } from '../storage.service';
-import {TagSelectComponent} from '../tag-select/tag-select.component';
+import { LiveImage, LiveImageData, StorageService } from '../storage.service';
+import { TagSelectComponent } from '../tag-select/tag-select.component';
+import {QuerySnapshot} from '@angular/fire/compat/firestore';
+import {Observable, Subject} from 'rxjs';
+import {AsyncPipe} from '@angular/common';
+import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 
 @Component({
   selector: 'app-image-card',
   standalone: true,
   imports: [
+    AsyncPipe,
     MatBadgeModule,
     MatButtonModule,
     MatCardModule,
@@ -21,43 +26,56 @@ import {TagSelectComponent} from '../tag-select/tag-select.component';
   templateUrl: './image-card.component.html',
   styleUrl: './image-card.component.scss'
 })
-export class ImageCardComponent {
-  @Input() imageSource: LiveImage|null = null;
+export class ImageCardComponent implements OnInit, OnDestroy{
+  @Input({required: true}) imageSource!: LiveImage;
   @Output() imageDeleted = new EventEmitter<string>;
-  @Output() imageTagsChanged = new EventEmitter<LiveImage>();
-
-  constructor(private renderer: Renderer2){}
 
   showTagSelection = signal(false);
+  imageData: Subject<LiveImageData> = new Subject();
+  thumbnailUrl: Subject<string> = new Subject();
+  fullUrl: Subject<string> = new Subject();
+  private unsubscribe: () => void = () => {return};
 
-  getImageTags(): string[] {
-    return this.imageSource?.tags.sort() || [];
+  constructor(private renderer: Renderer2, private storage: StorageService){
+    this.imageData.pipe(
+      takeUntilDestroyed()
+    ).subscribe(
+      imageData => {
+        this.thumbnailUrl.next(imageData.thumbnailUrl);
+        this.fullUrl.next(imageData.thumbnailUrl);
+      }
+    )
   }
 
-  getImageTagsText(): string {
-    return this.getImageTags().join('\n');
+  ngOnInit(): void {
+    this.unsubscribe = this.storage.SubscribeToImageData(this.imageSource.reference.id, this.imageData);
+  }
+
+  ngOnDestroy(): void{
+    this.unsubscribe();
+  }
+
+  getImageTags(): string[] {
+    return this.imageSource.tags
+      .map(t=> this.storage.TagById(t.id)?.name)
+      .filter(n => n !== undefined)
+      .sort()
   }
 
   onDelete() {
-    this.imageDeleted.emit(this.imageSource?.id || "");
+    this.imageDeleted.emit(this.imageSource?.reference.id || "");
   }
 
   onDownload() {
     const link = this.renderer.createElement('a');
     link.setAttribute('target', '_blank');
-    link.setAttribute('href', this.imageSource!.url);
-    link.setAttribute('download', new URL(this.imageSource!.url).pathname.slice(1));
+    link.setAttribute('href', this.imageSource!.fullUrl || '');
+    link.setAttribute('download', new URL(this.imageSource!.fullUrl || '').pathname.slice(1));
     link.click();
     link.remove();
   }
 
   manageTags() {
     this.showTagSelection.set(!this.showTagSelection());
-  }
-
-  onSelectionChange(tags: string[]) {
-    this.showTagSelection.set(false);
-    this.imageSource!.tags = tags;
-    this.imageTagsChanged.emit(this.imageSource!);
   }
 }

@@ -1,5 +1,5 @@
 <mat-card class="image-card">
-	<img mat-card-image [src]="imageSource?.url" alt="Image">
+	<img mat-card-image [src]="thumbnailUrl | async" alt="Image">
 	<mat-card-actions align='end' class="image-actions">
 		<button mat-icon-button
             [matBadge]="getImageTags().length"
@@ -11,9 +11,7 @@
     @if ( showTagSelection() ) {
       <app-tag-select
         class="tag-list-selection"
-        (selectionChange)="onSelectionChange($event)"
-        [selectedTags]="getImageTags()"
-      ></app-tag-select>
+        [selectedTags]="getImageTags()"/>
     }
 		<button mat-icon-button (click)="onDownload()">
 			<mat-icon fontIcon="download"></mat-icon>

@@ -20,17 +20,17 @@ import { BehaviorSubject } from 'rxjs';
   styleUrl: './tag-main.component.scss'
 })
 export class TagMainComponent implements OnInit {
-  constructor(private _location: Location){ }
+  @Input() tagName: string = ''
 
-  @Input() tagName: string = '';
+  selectedTag$: BehaviorSubject<string> = new BehaviorSubject('');
+
+  constructor(private _location: Location){ }
 
   ngOnInit(): void {
     if (this.tagName) { this.selectedTag$.next(this.tagName); }
   }
 
-  selectedTag$: BehaviorSubject<string> = new BehaviorSubject('');
-
-  onTagSelection(tagName: string) {
+    onTagSelection(tagName: string) {
     this.selectedTag$.next(tagName);
     this._location.go('/tags/' +tagName);
   }

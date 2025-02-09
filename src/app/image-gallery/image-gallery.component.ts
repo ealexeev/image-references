@@ -1,4 +1,4 @@
-import {ChangeDetectionStrategy, Component, Input, OnChanges} from '@angular/core';
+import {ChangeDetectionStrategy, Component, Input, OnChanges, signal, WritableSignal} from '@angular/core';
 
 
 import { ImageCardComponent } from '../image-card/image-card.component';
@@ -22,7 +22,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 export class ImageGalleryComponent implements OnChanges {
   @Input({required: true}) tag!: string;
 
-  images: LiveImage[] = [];
+  images: WritableSignal<LiveImage[]> = signal([]);
   dbUnsubscribe: () => void = ()=> {return};
   imagesSub: Subscription = new Subscription();
 
@@ -43,10 +43,10 @@ export class ImageGalleryComponent implements OnChanges {
     }
     this.dbUnsubscribe();
     this.imagesSub.unsubscribe();
-    this.images = []
+    this.images.set([])
     const tag = await this.storage.LoadTagByName(this.tag)
     const subscription = this.storage.SubscribeToTag(tag, this.preferences.showImageCount$.value)
-    this.imagesSub = subscription.images$.subscribe((images: LiveImage[]) => {this.images = images;})
+    this.imagesSub = subscription.images$.subscribe((images: LiveImage[]) => this.images.set(images))
     this.dbUnsubscribe = subscription.unsubscribe;
   }
 
@@ -66,7 +66,7 @@ export class ImageGalleryComponent implements OnChanges {
   }
 
   async deleteImageOrTag(id: string) {
-    let img = this.images.filter(li => li.reference.id == id).pop();
+    let img = this.images().filter(li => li.reference.id == id).pop();
     if ( !img ) {
       throw new Error(`deleteImageOrTag(${id}): not found`);
     }
@@ -80,7 +80,7 @@ export class ImageGalleryComponent implements OnChanges {
 
   onMaxCountChanged(value: number) {
     if ( value > 0 && value <= this.images.length ) {
-      this.images = this.images.slice(0, value);
+      this.images.update(current => current.slice(0, value));
       return;
     }
     this.ngOnChanges()

@@ -1,4 +1,4 @@
-import {Component, EventEmitter, OnInit, Input, Output} from '@angular/core';
+import {Component, EventEmitter, OnInit, Input, Output, ChangeDetectionStrategy} from '@angular/core';
 import {LiveTag, StorageService} from '../storage.service';
 import {
   BehaviorSubject,
@@ -27,7 +27,8 @@ import {MatFormFieldModule} from '@angular/material/form-field';
     ReactiveFormsModule,
   ],
   templateUrl: './tag-select.component.html',
-  styleUrl: './tag-select.component.scss'
+  styleUrl: './tag-select.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TagSelectComponent implements OnInit{
   @Input() selectedTags: string[] = [];

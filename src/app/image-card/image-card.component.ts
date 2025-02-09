@@ -1,4 +1,15 @@
-import {Component, EventEmitter, Input, OnDestroy, OnInit, Output, Renderer2, Signal, signal} from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  EventEmitter,
+  Input,
+  OnDestroy,
+  OnInit,
+  Output,
+  Renderer2,
+  Signal,
+  signal
+} from '@angular/core';
 import { MatBadgeModule } from '@angular/material/badge';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -24,7 +35,8 @@ import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
     TagSelectComponent,
     ],
   templateUrl: './image-card.component.html',
-  styleUrl: './image-card.component.scss'
+  styleUrl: './image-card.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ImageCardComponent implements OnInit, OnDestroy{
   @Input({required: true}) imageSource!: LiveImage;

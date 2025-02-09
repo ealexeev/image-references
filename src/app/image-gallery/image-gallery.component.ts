@@ -1,4 +1,4 @@
-import {Component, Input, OnChanges} from '@angular/core';
+import {ChangeDetectionStrategy, Component, Input, OnChanges} from '@angular/core';
 
 
 import { ImageCardComponent } from '../image-card/image-card.component';
@@ -16,7 +16,8 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
     ImageCardComponent,
   ],
   templateUrl: './image-gallery.component.html',
-  styleUrl: './image-gallery.component.scss'
+  styleUrl: './image-gallery.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ImageGalleryComponent implements OnChanges {
   @Input({required: true}) tag!: string;

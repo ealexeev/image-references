@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Output } from '@angular/core';
+import {ChangeDetectionStrategy, Component, EventEmitter, Output} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { LiveTag, StorageService } from '../storage.service';
 import { catchError, combineLatestWith, debounceTime, distinctUntilChanged, map, of, startWith, tap, Observable, BehaviorSubject } from 'rxjs';
@@ -27,7 +27,8 @@ import {FormControl, FormsModule, ReactiveFormsModule} from '@angular/forms';
     ReactiveFormsModule,
   ],
   templateUrl: './tag-list.component.html',
-  styleUrl: './tag-list.component.scss'
+  styleUrl: './tag-list.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class TagListComponent {
 

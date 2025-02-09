@@ -1,4 +1,4 @@
-import {Component, inject} from '@angular/core';
+import {ChangeDetectionStrategy, Component, inject} from '@angular/core';
 import {PreferenceService} from '../preference-service';
 import {AsyncPipe} from '@angular/common';
 import {MatSlideToggleModule} from '@angular/material/slide-toggle';
@@ -19,7 +19,8 @@ import {MatSelectChange, MatSelectModule} from '@angular/material/select';
     MatSelectModule,
   ],
   templateUrl: './set-preferences.component.html',
-  styleUrl: './set-preferences.component.scss'
+  styleUrl: './set-preferences.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SetPreferencesComponent {
   preferences: PreferenceService = inject(PreferenceService);

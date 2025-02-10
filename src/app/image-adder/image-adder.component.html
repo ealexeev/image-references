@@ -2,14 +2,14 @@
 	<mat-card-content>
 		<div class="dropzone" appDragDrop (files)="filesDropped($event)">
 			<div class="text-wrapper">
-				Drag and drop and image<p>or paste a URL!
-				<div><button mat-icon-button [disabled]="fileCount() == 0" (click)="uploadClicked()">
+				<div>Drag and drop and image<p>or paste a URL!</div>
+				<button mat-icon-button [disabled]="fileCount() == 0" (click)="uploadClicked()">
 					<mat-icon [matBadge]="fileCount()"
                     [matBadgeHidden]="fileCount() == 0"
                     fontIcon="upload"
                     class="add-icon"
                     aria-hidden="false"/>
-				</button></div>
+				</button>
 			</div>
 		</div>
 	</mat-card-content>

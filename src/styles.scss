@@ -17,6 +17,7 @@
 }
 
 :root {
+  box-sizing: border-box;
 	background: theme.$background;
 	html, body {
   		margin: 0px;

@@ -1,17 +1,29 @@
 .image-adder {
-	layout: grid;
-	.add-icon {
-		color: darkseagreen;
-	}
-	.dropzone {
-		border-style: dashed;
-		border-color: grey;
-		border-radius: 10px;
-		padding: 50px 0;
-		vertical-align: middle;
-		text-align: center;
-		.text-wrapper {
-		 	padding: 25px 25px 0px 25px;
-		}
-	}
+  height: 252px;
+
+  mat-card-content {
+    height: 100%;
+    display: flex;
+    align-items: stretch;
+  }
+
+  .add-icon {
+    color: darkseagreen;
+  }
+
+  .dropzone {
+    display: flex;
+    align-items: center;
+
+    border-style: dashed;
+    border-color: grey;
+    border-radius: 10px;
+    //padding: 52px 0;
+    vertical-align: middle;
+    text-align: center;
+
+    .text-wrapper {
+      padding: 25px 25px 10px 25px;
+    }
+  }
 }

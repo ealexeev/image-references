@@ -9,7 +9,7 @@ import {
   DocumentReference,
   DocumentSnapshot,
   Firestore,
-  getDoc,
+  getDoc, increment,
   limit, onSnapshot,
   orderBy,
   query,
@@ -40,14 +40,19 @@ import {
   Subject,
 } from 'rxjs';
 import { environment } from './environments/environment';
-import {CollectionReference, SnapshotOptions} from '@angular/fire/compat/firestore';
+import {
+  CollectionReference,
+  QueryDocumentSnapshot,
+  QuerySnapshot,
+  SnapshotOptions
+} from '@angular/fire/compat/firestore';
 
 
 export type EncryptionMetadata = {
   // IV used during encryption.
   iv: Bytes
   // Key id or reference to a wrapped key stored in Firestore.  The key used for data encryption.
-  key: string,
+  key: DocumentReference,
 }
 
 export type StoredImage = {
@@ -109,11 +114,15 @@ export type StoredTag = {
 export type StoredEncryptedTag = StoredTag & EncryptionMetadata;
 
 export type StoredKey = {
-  // Unique ID (HMAC of key), base64 encoded
-  id: string,
   // Wrapped encryption key, no IV needed.
   key: Bytes
+  // Added time, facilitates
+  added: Date
+  // How many times the key has been used.
+  used: number
 }
+
+export type LiveKey = StoredKey & {reference : DocumentReference}
 
 export type TagSubscription = {
   images$: Observable<LiveImage[]>,
@@ -230,6 +239,28 @@ export class StorageService implements OnDestroy {
           fullUrl: stored.fullUrl,
         } as LiveImageData);
       })
+  }
+
+  SubscribeToLatestKey(out: Subject<LiveKey>): ()=>void {
+    const q = query(this.keysCollection, orderBy("added", "desc"), limit(1))
+    return onSnapshot(q, snapshot => {
+      snapshot.forEach((key  => {
+        const stored = key.data() as StoredKey;
+        out.next({...stored, ...{reference: key.ref}} as LiveKey)
+      }))
+    })
+  }
+
+  StoreNewKey(key: Bytes) {
+    return addDoc(this.keysCollection, {
+      key: key,
+      added: serverTimestamp(),
+      used: 0,
+    });
+  }
+
+  IncrementKeyUsage(ref: DocumentReference) {
+    return updateDoc(ref, {'used': increment(1)})
   }
 
   TagRefByName(name: string): DocumentReference | undefined {

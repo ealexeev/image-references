@@ -1,5 +1,5 @@
-import { Injectable, signal } from '@angular/core';
-import { WindowRef } from './window-ref.service';
+import {Injectable, signal} from '@angular/core';
+import {WindowRef} from './window-ref.service';
 
 // Leaving this static means that if there are multiple users, it is possible
 // to tell if they have stored the same file since the HMACs aren't bound
@@ -66,8 +66,7 @@ export class HmacService {
   async initKey(): Promise<void> {
     return new Promise(async (resolve, _) => {
       const static_passphrase = await this.crypto.importKey("raw", stringToArrayBuffer(hmacPassPhrase), { name: "PBKDF2" }, false, ["deriveKey"])
-      const hmak_key = await this.crypto!.deriveKey(pbkdf2Params, static_passphrase, hmacParams, true, ['sign'])
-      this.key = hmak_key;
+      this.key = await this.crypto!.deriveKey(pbkdf2Params, static_passphrase, hmacParams, true, ['sign']);
       this.ready.set(true);
       resolve();
     })

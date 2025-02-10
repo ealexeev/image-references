@@ -221,9 +221,8 @@ export class StorageService implements OnDestroy {
           return;
         }
         const stored = doc.data() as StoredImageData;
-        const thumbBytes = stored.thumbnail.toUint8Array()
-        const thumb = new Blob([thumbBytes], {type: stored.mimeType})
-        // Decryption needs to be added here.  Likely both are first fetched, decyrpted, and then get a
+        const thumb = new Blob([stored.thumbnail.toUint8Array()], {type: stored.mimeType})
+        // Decryption needs to be added here.  Likely both are first fetched, decrypted, and then get a
         // local URL.
         out.next({
           mimeType: stored.mimeType,
@@ -345,9 +344,41 @@ export class StorageService implements OnDestroy {
   }
 
   async StoreImageData(ref: DocumentReference,  blob: Blob, fullUrl: string): Promise<void> {
+
+    let scaledDown: Blob = await new Promise((resolve, reject) => {
+      const height = 400;
+      const width = 0;
+      const img = new Image();
+      img.onload = () => {
+        const el = document.createElement('canvas');
+        const dir = (width < img.width || height < img.height) ? 'min' : 'max';
+        const stretch = width && height;
+        const ratio = Math[dir](
+          (width / img.width) || 1,
+          (height / img.height) || 1
+        );
+        let w = el.width = stretch ? width : img.width * ratio;
+        let h = el.height = stretch ? height : img.height * ratio;
+        console.log(`Resizing to ${w}w x ${h}h`);
+        const ctx = el.getContext('2d');
+        if (!ctx) {
+          console.error("No context!");
+        }
+        // @ts-ignore
+        ctx.drawImage(img, 0, 0, w, h);
+        el.toBlob(scaled => {
+          if ( scaled ) {
+            resolve(scaled)
+          }
+          reject('Not a blob!')
+        }, blob.type);
+      }
+      img.src = URL.createObjectURL(blob);
+    })
+
     return setDoc(doc(ref, 'data', 'thumbnail'), {
       'mimeType': blob.type,
-      'thumbnail': await this.BytesFromBlob(blob),
+      'thumbnail': scaledDown ? await this.BytesFromBlob(scaledDown) : Bytes.fromBase64String(''),
       'fullUrl': fullUrl,
     } as StoredImageData)
   }

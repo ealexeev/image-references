@@ -8,7 +8,7 @@ import {
   Output,
   Renderer2,
   Signal,
-  signal
+  signal, WritableSignal
 } from '@angular/core';
 import { MatBadgeModule } from '@angular/material/badge';
 import { MatButtonModule } from '@angular/material/button';
@@ -44,8 +44,8 @@ export class ImageCardComponent implements OnInit, OnDestroy{
 
   showTagSelection = signal(false);
   imageData: Subject<LiveImageData> = new Subject();
-  thumbnailUrl: Subject<string> = new Subject();
-  fullUrl: Subject<string> = new Subject();
+  thumbnailUrl: WritableSignal<string> = signal('');
+  fullUrl: WritableSignal<string> = signal('');
   private unsubscribe: () => void = () => {return};
 
   constructor(private renderer: Renderer2, private storage: StorageService){
@@ -53,8 +53,8 @@ export class ImageCardComponent implements OnInit, OnDestroy{
       takeUntilDestroyed()
     ).subscribe(
       imageData => {
-        this.thumbnailUrl.next(imageData.thumbnailUrl);
-        this.fullUrl.next(imageData.thumbnailUrl);
+        this.thumbnailUrl.set(imageData.thumbnailUrl);
+        this.fullUrl.set(imageData.fullUrl);
       }
     )
   }
@@ -81,8 +81,8 @@ export class ImageCardComponent implements OnInit, OnDestroy{
   onDownload() {
     const link = this.renderer.createElement('a');
     link.setAttribute('target', '_blank');
-    link.setAttribute('href', this.imageSource!.fullUrl || '');
-    link.setAttribute('download', new URL(this.imageSource!.fullUrl || '').pathname.slice(1));
+    link.setAttribute('href', this.fullUrl());
+    link.setAttribute('download', new URL(this.fullUrl()).pathname.slice(1));
     link.click();
     link.remove();
   }

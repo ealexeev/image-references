@@ -1,5 +1,13 @@
 <mat-card class="image-card">
-	<img mat-card-image [src]="thumbnailUrl | async" alt="Image">
+  @defer ( when (thumbnailUrl().length > 0) ){
+    <img mat-card-image [src]="thumbnailUrl()" alt="Image">
+  }
+  @placeholder {
+    <div style="display: flex; height: 200px; width:200px; justify-content: center; align-items: center;">
+      <div class="lds-spinner"><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div></div>
+    </div>
+
+  }
 	<mat-card-actions align='end' class="image-actions">
 		<button mat-icon-button
             [matBadge]="getImageTags().length"

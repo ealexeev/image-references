@@ -39,6 +39,10 @@ export type EncryptionResult = Readonly<{
   keyReference: DocumentReference,
 }>
 
+type KeyBundle = Readonly<{
+  key: CryptoKey,
+  ref: DocumentReference
+}>
 
 @Injectable({
   providedIn: 'root'
@@ -47,8 +51,7 @@ export class EncryptionService implements OnDestroy {
   subtle: SubtleCrypto | null = null;
   crypto: Crypto | null = null;
   wrap_key: CryptoKey | null = null;
-  encryption_key: CryptoKey | null = null;
-  encryption_key_ref: DocumentReference | null = null;
+  encryption_key: KeyBundle | null = null;
   latest_stored$: Subject<LiveKey> = new Subject<LiveKey>();
   ready = signal(false);
   unsubscribe: () => void = ()=> {return};
@@ -65,8 +68,7 @@ export class EncryptionService implements OnDestroy {
     ).subscribe(stored => {
       if ( stored.used < USAGE_LIMIT) {
         this.UnwrapKey(stored.key.toUint8Array()).then((k: CryptoKey) => {
-          this.encryption_key = k
-          this.encryption_key_ref = stored.reference
+          this.encryption_key = {'key': k, 'ref': stored.reference}
         });
         return;
       }
@@ -96,7 +98,6 @@ export class EncryptionService implements OnDestroy {
     return new Promise(r => {
       this.subtle!.generateKey({ name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt'])
       .then((aes_key: CryptoKey) => {
-        this.encryption_key = aes_key as CryptoKey;
         r(this.subtle!.wrapKey('jwk', aes_key, this.wrap_key!, 'AES-KW'));
       })
     });
@@ -119,11 +120,11 @@ export class EncryptionService implements OnDestroy {
       name: "AES-GCM",
       iv: this.crypto!.getRandomValues(iv)
     }
-    const ciphertext = await this.subtle!.encrypt(gcmOpts, this.encryption_key!, data)
+    const ciphertext = await this.subtle!.encrypt(gcmOpts, this.encryption_key!.key, data)
     return {
       ciphertext: ciphertext,
       iv: iv,
-      keyReference: this.encryption_key_ref!,
+      keyReference: this.encryption_key!.ref,
     }
   }
 

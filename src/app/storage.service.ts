@@ -259,6 +259,10 @@ export class StorageService implements OnDestroy {
     });
   }
 
+  LoadKey(ref: DocumentReference) {
+    return getDoc(ref)
+  }
+
   IncrementKeyUsage(ref: DocumentReference) {
     return updateDoc(ref, {'used': increment(1)})
   }

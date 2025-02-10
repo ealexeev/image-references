@@ -2,7 +2,7 @@ import {Injectable, OnDestroy, signal} from '@angular/core';
 import { WindowRef } from './window-ref.service';
 import {EmptyError, Subject} from 'rxjs';
 import {LiveKey, StorageService, StoredKey} from './storage.service';
-import {Bytes, DocumentSnapshot} from '@angular/fire/firestore';
+import {Bytes, DocumentReference, DocumentSnapshot} from '@angular/fire/firestore';
 import {QueryDocumentSnapshot, QuerySnapshot} from '@angular/fire/compat/firestore';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 
@@ -30,14 +30,25 @@ function stringToArrayBuffer(input: string): ArrayBuffer {
   return encoder.encode(input);
 }
 
+export type EncryptionResult = Readonly<{
+  // Result of encryption
+  ciphertext: ArrayBuffer,
+  // IV needed during decryption
+  iv: ArrayBuffer,
+  // Firestore reference for encryption key
+  keyReference: DocumentReference,
+}>
+
 
 @Injectable({
   providedIn: 'root'
 })
 export class EncryptionService implements OnDestroy {
-  crypto: SubtleCrypto | null = null;
+  subtle: SubtleCrypto | null = null;
+  crypto: Crypto | null = null;
   wrap_key: CryptoKey | null = null;
   encryption_key: CryptoKey | null = null;
+  encryption_key_ref: DocumentReference | null = null;
   latest_stored$: Subject<LiveKey> = new Subject<LiveKey>();
   ready = signal(false);
   unsubscribe: () => void = ()=> {return};
@@ -46,13 +57,17 @@ export class EncryptionService implements OnDestroy {
     if ( !this.windowRef.nativeWindow?.crypto.subtle ) {
       throw new ReferenceError("Could not get crypto reference!");
     }
-    this.crypto = this.windowRef!.nativeWindow!.crypto.subtle;
+    this.subtle = this.windowRef!.nativeWindow!.crypto.subtle;
+    this.crypto = this.windowRef!.nativeWindow!.crypto;
     this.unsubscribe = this.storage.SubscribeToLatestKey(this.latest_stored$);
     this.latest_stored$.pipe(
       takeUntilDestroyed()
     ).subscribe(stored => {
       if ( stored.used < USAGE_LIMIT) {
-        this.UnwrapKey(stored.key.toUint8Array()).then((k: CryptoKey) => {this.encryption_key = k});
+        this.UnwrapKey(stored.key.toUint8Array()).then((k: CryptoKey) => {
+          this.encryption_key = k
+          this.encryption_key_ref = stored.reference
+        });
         return;
       }
       this.generateNewDataEncryptionKey()
@@ -62,8 +77,8 @@ export class EncryptionService implements OnDestroy {
   }
 
   async initialize(passphrase: string) {
-    await this.crypto!.importKey("raw", stringToArrayBuffer(passphrase), { name: "PBKDF2" }, false, ["deriveKey"])
-    .then((static_passphrase: CryptoKey) => this.crypto!.deriveKey(pbkdf2Params, static_passphrase, aesGcmParams, true, ['wrapKey', 'unwrapKey']))
+    await this.subtle!.importKey("raw", stringToArrayBuffer(passphrase), { name: "PBKDF2" }, false, ["deriveKey"])
+    .then((static_passphrase: CryptoKey) => this.subtle!.deriveKey(pbkdf2Params, static_passphrase, aesGcmParams, true, ['wrapKey', 'unwrapKey']))
     .then((wrap_key: CryptoKey) => this.wrap_key = wrap_key)
     this.ready.set(true);
   }
@@ -79,10 +94,10 @@ export class EncryptionService implements OnDestroy {
       return Promise.reject('Wrapping key not initialized!');
     }
     return new Promise(r => {
-      this.crypto!.generateKey({ name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt'])
+      this.subtle!.generateKey({ name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt'])
       .then((aes_key: CryptoKey) => {
         this.encryption_key = aes_key as CryptoKey;
-        r(this.crypto!.wrapKey('jwk', aes_key, this.wrap_key!, 'AES-KW'));
+        r(this.subtle!.wrapKey('jwk', aes_key, this.wrap_key!, 'AES-KW'));
       })
     });
   }
@@ -91,7 +106,39 @@ export class EncryptionService implements OnDestroy {
     if ( !this.ready() ) {
       return Promise.reject('Wrapping key not initialized!');
     }
-    return this.crypto!.unwrapKey('jwk', storedKey, this.wrap_key!, "AES-KW", "AES-GCM", false, ['encrypt', 'decrypt'])
+    return this.subtle!.unwrapKey('jwk', storedKey, this.wrap_key!, "AES-KW", "AES-GCM", false, ['encrypt', 'decrypt'])
+  }
+
+  // Need to return current encryption key reference, iv, and encrypted bytes.
+  async Encrypt(data: ArrayBuffer, id: string): Promise<EncryptionResult> {
+    if ( !this.encryption_key ) {
+      return Promise.reject('Encryption key: not found');
+    }
+    const iv = new Uint8Array(96)
+    const gcmOpts = {
+      name: "AES-GCM",
+      iv: this.crypto!.getRandomValues(iv)
+    }
+    const ciphertext = await this.subtle!.encrypt(gcmOpts, this.encryption_key!, data)
+    return {
+      ciphertext: ciphertext,
+      iv: iv,
+      keyReference: this.encryption_key_ref!,
+    }
+  }
+
+  async Decrypt(data: ArrayBuffer, keyRef: DocumentReference, iv: ArrayBuffer) {
+    const stored = await this.storage.LoadKey(keyRef);
+    if ( stored.exists() ) {
+      console.error(`LoadKey(${keyRef.id}: not found`);
+      return;
+    }
+    const key = await this.UnwrapKey(stored.get('key'))
+    const gcmOpts = {
+      name: "AES-GCM",
+      iv: iv,
+    }
+    return this.subtle!.decrypt(gcmOpts, key, data)
   }
 
   debugme() {

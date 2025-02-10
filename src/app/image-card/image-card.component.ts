@@ -88,6 +88,13 @@ export class ImageCardComponent implements OnInit, OnDestroy{
   }
 
   manageTags() {
-    this.showTagSelection.set(!this.showTagSelection());
+    this.showTagSelection.update(v => !v);
+  }
+
+  onSelectionChange(tags: string[]) {
+    this.manageTags();
+    this.storage.ReplaceImageTags(
+      this.imageSource.reference,
+      tags.map(t => this.storage.TagByName(t)?.reference).filter(t => t !== undefined))
   }
 }

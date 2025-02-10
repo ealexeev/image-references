@@ -19,7 +19,9 @@
     @if ( showTagSelection() ) {
       <app-tag-select
         class="tag-list-selection"
-        [selectedTags]="getImageTags()"/>
+        [selectedTags]="getImageTags()"
+        (selectionChange)="onSelectionChange($event)"
+      />
     }
 		<button mat-icon-button (click)="onDownload()">
 			<mat-icon fontIcon="download"></mat-icon>

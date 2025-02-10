@@ -412,8 +412,8 @@ export class StorageService implements OnDestroy {
   }
 
   // Replace image tags with those in the live image.  If the tag list is empty delete the image instead.
-  async ReplaceImageTags(image: LiveImage){
-    return updateDoc(image.reference, {'tags': image.tags})
+  async ReplaceImageTags(iRef: DocumentReference, tags: DocumentReference[]) {
+    return updateDoc(iRef, {'tags': tags})
       .catch( e => console.log(`Error replacing tags: ${e}`));
   }
 

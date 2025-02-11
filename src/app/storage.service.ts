@@ -31,7 +31,7 @@ import {
 
 import { HmacService } from './hmac.service';
 import {
-  BehaviorSubject,
+  BehaviorSubject, firstValueFrom,
   Observable,
   Subject,
 } from 'rxjs';
@@ -421,7 +421,7 @@ export class StorageService implements OnDestroy {
 
   async LiveTagToStorage(tag: LiveTag): Promise<StoredTag|StoredEncryptedTag> {
     const encodedName = (new TextEncoder()).encode(tag.name);
-    if ( !this.encryption.ready() ) {
+    if ( !(await firstValueFrom(this.encryption.currentState$)) ) {
       return {'name': Bytes.fromUint8Array(encodedName) } as StoredTag;
     }
     const res = await this.encryption.Encrypt(encodedName);

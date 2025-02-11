@@ -1,6 +1,6 @@
 import {Injectable, OnDestroy, Query, signal} from '@angular/core';
 import { WindowRef } from './window-ref.service';
-import {BehaviorSubject, first, firstValueFrom, Subject, takeUntil, tap} from 'rxjs';
+import {BehaviorSubject, first, firstValueFrom, Observable, shareReplay, Subject, takeUntil, tap} from 'rxjs';
 import {
   addDoc,
   Bytes,
@@ -62,6 +62,12 @@ type LiveKey = {
   used: number
 }
 
+enum State {
+  NotReady = 0,
+  Ready,
+  Initializing,
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -70,7 +76,8 @@ export class EncryptionService implements OnDestroy {
   crypto: Crypto | null = null;
   wrap_key: CryptoKey | null = null;
   encryption_key: LiveKey | null = null;
-  ready = signal(false);
+  readyStateChanged$: Subject<State> = new Subject<State>();
+  currentState$: Observable<State>;
 
   constructor(private windowRef: WindowRef, private firestore: Firestore) {
     if ( !this.windowRef.nativeWindow?.crypto.subtle ) {
@@ -78,16 +85,19 @@ export class EncryptionService implements OnDestroy {
     }
     this.subtle = this.windowRef!.nativeWindow!.crypto.subtle;
     this.crypto = this.windowRef!.nativeWindow!.crypto;
+    this.currentState$ = this.readyStateChanged$.pipe(shareReplay());
+    this.readyStateChanged$.next(State.NotReady)
   }
 
   async initialize(passphrase: string) {
+    this.readyStateChanged$.next(State.Initializing)
     await this.subtle!.importKey("raw", stringToArrayBuffer(passphrase), {name: "PBKDF2"}, false, ["deriveKey"])
       .then((static_passphrase: CryptoKey) => this.subtle!.deriveKey(pbkdf2Params, static_passphrase, aesKWParams, true, ['wrapKey', 'unwrapKey']))
       .then((wrap_key: CryptoKey) => this.wrap_key = wrap_key)
     const latest = await this.LoadLatestKey()
     if ( latest ) {
       this.encryption_key = latest
-      this.ready.set(true);
+      this.readyStateChanged$.next(State.Ready);
       return;
     }
     const key = await this.GenerateEncryptionKey()
@@ -97,12 +107,16 @@ export class EncryptionService implements OnDestroy {
       reference: ref,
       used: 0,
     } as LiveKey
-    this.ready.set(true);
+    this.readyStateChanged$.next(State.Ready);
   }
 
   ngOnDestroy() {
     this.clear()
   }
+
+  ReadyStateReady() {return State.Ready}
+  ReadyStateNotReady() {return State.NotReady}
+  ReadyStateInitializing() {return State.Initializing}
 
   // Ideally we make a wrapped copy right now and store it.
   // We should also set this.encryption.key
@@ -192,6 +206,11 @@ export class EncryptionService implements OnDestroy {
 
   // Decrypt using the specified key. If not ready() will fail to unwrap key.
   async Decrypt(input: EncryptionResult) {
+    let ready = await firstValueFrom(this.currentState$);
+    while ( ready !== State.Ready ) {
+      ready = await firstValueFrom(this.readyStateChanged$);
+      // need a counter here or some way to bail
+    }
     if ( !this.encryption_key ) {
       return Promise.reject('Decrypt() called:  encryption key not found')
     }
@@ -220,7 +239,8 @@ export class EncryptionService implements OnDestroy {
   // Used to undo "initialize" and make encryption/decryption impossible.
   clear() {
     this.wrap_key = null;
-    this.ready.set(false);
+    this.encryption_key = null;
+    this.readyStateChanged$.next(State.NotReady);
   }
 
   async forTestOnlyClearAllKeys() {

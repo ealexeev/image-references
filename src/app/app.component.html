@@ -5,7 +5,7 @@
       <span class="app-name">Image Reference</span>
       <span class="toolbar-spacer"></span>
       <span class="key-status">
-         @if ( encryption.ready() ) {
+         @if ( (encryption.currentState$ | async) == encryption.ReadyStateReady() ) {
             <mat-icon fontIcon="lock_open"></mat-icon>
         } @else {
           <button mat-icon-button class="key-status-button" (click)=encryption.debugme()>

@@ -87,6 +87,11 @@ export class EncryptionService implements OnDestroy {
     this.crypto = this.windowRef!.nativeWindow!.crypto;
     this.currentState$ = this.readyStateChanged$.pipe(shareReplay());
     this.readyStateChanged$.next(State.NotReady)
+    this.readyStateChanged$.pipe(
+      takeUntilDestroyed(),
+    ).subscribe(
+      state => {console.log(`EncryptionService state changed: ${state}`)}
+    )
   }
 
   async initialize(passphrase: string) {

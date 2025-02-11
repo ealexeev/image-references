@@ -346,7 +346,6 @@ export class StorageService implements OnDestroy {
   }
 
   async StoreImageData(ref: DocumentReference,  blob: Blob, fullUrl: string): Promise<void> {
-
     let scaledDown: Blob = await new Promise((resolve, reject) => {
       const height = 400;
       const width = 0;

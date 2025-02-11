@@ -230,24 +230,12 @@ export class StorageService implements OnDestroy {
       })
   }
 
-  IncrementKeyUsage(ref: DocumentReference) {
-    return updateDoc(ref, {'used': increment(1)})
-  }
-
   TagRefByName(name: string): DocumentReference | undefined {
     const ret = this.tagsByName[name]?.reference
     if ( !ret ) {
       this.errors$.next(`StorageService:TagRefByName(${name}): not found`)
     }
     return ret
-  }
-
-  TagRefById(id: string): DocumentReference | undefined {
-    const ret =  this.tagsById[id]?.reference
-    if ( !ret ) {
-      this.errors$.next(`StorageService:TagRefById(${id}): not found`)
-    }
-    return ret;
   }
 
   TagByName(name: string): LiveTag | undefined {
@@ -324,11 +312,6 @@ export class StorageService implements OnDestroy {
     })
   }
 
-  async MakeImageCloudRef(image: Blob): Promise<StorageReference> {
-    const id = await this.hmac.getHmacHex(image)
-    return ref(this.cloudStorage, id)
-  }
-
   // Add specified tags to this image.
   async AddTags(iRef: DocumentReference, tags: DocumentReference[]) {
     updateDoc(iRef, {tags: arrayUnion(...tags)})
@@ -337,46 +320,18 @@ export class StorageService implements OnDestroy {
   }
 
   // Store a new image received by the application.  If it exists, update its list of tags.
-  async StoreImage(img: LiveImage) {
+  async StoreImage(img: LiveImage): Promise<Boolean> {
     const snapshot =  await getDoc(img.reference)
     if ( snapshot.exists() ) {
-      return this.AddTags(img.reference, img.tags)
+      this.AddTags(img.reference, img.tags)
+      return true
     }
-    return setDoc(img.reference, img)
+    setDoc(img.reference, img)
+    return false
   }
 
   async StoreImageData(ref: DocumentReference,  blob: Blob, fullUrl: string): Promise<void> {
-    let scaledDown: Blob = await new Promise((resolve, reject) => {
-      const height = 400;
-      const width = 0;
-      const img = new Image();
-      img.onload = () => {
-        const el = document.createElement('canvas');
-        const dir = (width < img.width || height < img.height) ? 'min' : 'max';
-        const stretch = width && height;
-        const ratio = Math[dir](
-          (width / img.width) || 1,
-          (height / img.height) || 1
-        );
-        let w = el.width = stretch ? width : img.width * ratio;
-        let h = el.height = stretch ? height : img.height * ratio;
-        console.log(`Resizing to ${w}w x ${h}h`);
-        const ctx = el.getContext('2d');
-        if (!ctx) {
-          console.error("No context!");
-        }
-        // @ts-ignore
-        ctx.drawImage(img, 0, 0, w, h);
-        el.toBlob(scaled => {
-          if ( scaled ) {
-            resolve(scaled)
-          }
-          reject('Not a blob!')
-        }, blob.type);
-      }
-      img.src = URL.createObjectURL(blob);
-    })
-
+    let scaledDown: Blob = await this.scaleImage(blob)
     return setDoc(doc(ref, 'data', 'thumbnail'), {
       'mimeType': blob.type,
       'thumbnail': scaledDown ? await this.BytesFromBlob(scaledDown) : Bytes.fromBase64String(''),
@@ -502,4 +457,38 @@ export class StorageService implements OnDestroy {
       'fromFirestore': this.imageFromFirestore,
     }
   }
+
+  scaleImage(blob: Blob): Promise<Blob> {
+    return new Promise((resolve, reject) => {
+      const height = 400;
+      const width = 0;
+      const img = new Image();
+      img.onload = () => {
+        const el = document.createElement('canvas');
+        const dir = (width < img.width || height < img.height) ? 'min' : 'max';
+        const stretch = width && height;
+        const ratio = Math[dir](
+          (width / img.width) || 1,
+          (height / img.height) || 1
+        );
+        let w = el.width = stretch ? width : img.width * ratio;
+        let h = el.height = stretch ? height : img.height * ratio;
+        console.log(`Resizing to ${w}w x ${h}h`);
+        const ctx = el.getContext('2d');
+        if (!ctx) {
+          console.error("No context!");
+        }
+        // @ts-ignore
+        ctx.drawImage(img, 0, 0, w, h);
+        el.toBlob(scaled => {
+          if ( scaled ) {
+            resolve(scaled)
+          }
+          reject('Not a blob!')
+        }, blob.type);
+      }
+      img.src = URL.createObjectURL(blob);
+    })
+  }
 }
+

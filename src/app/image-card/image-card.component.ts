@@ -54,7 +54,7 @@ export class ImageCardComponent implements OnInit, OnDestroy{
     ).subscribe(
       imageData => {
         this.thumbnailUrl.set(imageData.thumbnailUrl);
-        this.fullUrl.set(imageData.fullUrl);
+        imageData.fullUrl().then(url => this.fullUrl.set(url));
       }
     )
   }

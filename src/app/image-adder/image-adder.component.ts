@@ -30,6 +30,7 @@ export class ImageAdderComponent {
 
   onPaste(event: any) {
     event.preventDefault();
+    console.log('Paste event!')
     navigator.clipboard.readText().then( (s: string) => this.imageAdded.emit(s));
   };
 

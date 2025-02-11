@@ -53,6 +53,7 @@ export class ImageGalleryComponent implements OnChanges {
   }
 
   async receiveImageURL(url: string): Promise<void> {
+    console.log(`Receive image URL: ${url}`);
     const imageBlob = await fetch(url).then((response) => response.blob().then(b => b));
     const iRef = await this.storage.GetImageReferenceFromBlob(imageBlob);
 

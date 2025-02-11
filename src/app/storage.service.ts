@@ -63,8 +63,12 @@ export type StoredImageData = {
   mimeType: string,
   // Thumbnail data.
   thumbnail: Bytes,
+  thumbnailIV?: Bytes,
+  thumbnailKeyRef?: DocumentReference,
   // URL where the full-size image is stored.  May be encrypted
   fullUrl: string,
+  fullIV?: Bytes,
+  fullKeyRef?: DocumentReference,
 }
 
 export type StoredEncryptedImage = StoredImage & EncryptionMetadata;
@@ -95,7 +99,7 @@ export type LiveTag = Readonly<{
 export type LiveImageData = Readonly<{
   mimeType: string,
   thumbnailUrl: string,
-  fullUrl: string,
+  fullUrl: ()=>Promise<string>,
 }>
 
 
@@ -219,14 +223,7 @@ export class StorageService implements OnDestroy {
           return;
         }
         const stored = doc.data() as StoredImageData;
-        const thumb = new Blob([stored.thumbnail.toUint8Array()], {type: stored.mimeType})
-        // Decryption needs to be added here.  Likely both are first fetched, decrypted, and then get a
-        // local URL.
-        out.next({
-          mimeType: stored.mimeType,
-          thumbnailUrl: URL.createObjectURL(thumb),
-          fullUrl: stored.fullUrl,
-        } as LiveImageData);
+        this.StoredImageDataToLive(stored, doc.ref, out);
       })
   }
 
@@ -331,10 +328,37 @@ export class StorageService implements OnDestroy {
   }
 
   async StoreImageData(ref: DocumentReference,  blob: Blob, fullUrl: string): Promise<void> {
-    let scaledDown: Blob = await this.scaleImage(blob)
+    let scaledDown: Blob;
+    try {
+      scaledDown = await this.scaleImage(blob)
+    } catch (err: unknown) {
+      throw new Error(`Error scaling down image ${ref.id}: ${err}`)
+    }
+
+    // There needs to be a better way of doing this.  There is probably some app-wide mode that indicates
+    // whether encryption is wanted or not.
+    if ( (await firstValueFrom(this.encryption.currentState$) == this.encryption.ReadyStateReady()) ){
+      try {
+        const encryptedThumb = await this.encryption.Encrypt(await scaledDown.arrayBuffer())
+        const encryptedFull = await this.encryption.Encrypt(await blob.arrayBuffer())
+        const fullUrl = await this.StoreFullImage(ref, new Blob([encryptedFull.ciphertext], {type: blob.type}))
+        return setDoc(doc(ref, 'data', 'thumbnail'), {
+          'mimeType': blob.type,
+          'thumbnail': await this.BytesFromBlob(new Blob([encryptedThumb.ciphertext], { type: blob.type })),
+          'thumbnailIV': Bytes.fromUint8Array(new Uint8Array(encryptedThumb.iv)),
+          'thumbnailKeyRef': encryptedThumb.keyReference,
+          'fullUrl': fullUrl,
+          'fullIV': Bytes.fromUint8Array(new Uint8Array(encryptedFull.iv)),
+          'fullKeyRef': encryptedFull.keyReference,
+        } as StoredImageData)
+      } catch (err: unknown) {
+        throw new Error(`Error encrypting ${ref.id} thumbnail: ${err}`)
+      }
+    }
+
     return setDoc(doc(ref, 'data', 'thumbnail'), {
       'mimeType': blob.type,
-      'thumbnail': scaledDown ? await this.BytesFromBlob(scaledDown) : Bytes.fromBase64String(''),
+      'thumbnail': await this.BytesFromBlob(scaledDown),
       'fullUrl': fullUrl,
     } as StoredImageData)
   }
@@ -343,6 +367,48 @@ export class StorageService implements OnDestroy {
     const storageRef = ref(this.cloudStorage, imageRef.id);
     await uploadBytes(storageRef, blob)
     return getDownloadURL(storageRef);
+  }
+
+  // Given StoredImageData convert to LiveIMagedata and ship via out.
+  async StoredImageDataToLive(stored: StoredImageData, ref: DocumentReference, out$: Subject<LiveImageData>) {
+    if ( !(stored?.thumbnailIV || stored?.thumbnailKeyRef || stored?.fullIV || stored?.fullKeyRef) ) {
+      const thumb = new Blob([stored.thumbnail.toUint8Array()], {type: stored.mimeType})
+      out$.next({
+        mimeType: stored.mimeType,
+        thumbnailUrl: URL.createObjectURL(thumb),
+        fullUrl: ()=>Promise.resolve(stored.fullUrl),
+      } as LiveImageData)
+      return;
+    }
+    if ( !stored?.thumbnailIV ) { throw new Error(`Encrypted image data ${ref.id} is missing .thumbnailIV`)}
+    if ( !stored?.thumbnailKeyRef ) { throw new Error(`Encrypted image data ${ref.id} is missing .thumbnailKeyRef`)}
+    if ( !stored?.fullIV ) { throw new Error(`Encrypted image data ${ref.id} is missing .fullIV`)}
+    if ( !stored?.fullKeyRef ) { throw new Error(`Encrypted image data ${ref.id} is missing .fullKeyRef`)}
+    let decryptedThumb: ArrayBuffer | undefined
+    try {
+      decryptedThumb = await this.encryption.Decrypt({
+        ciphertext: stored.thumbnail.toUint8Array(),
+        iv: stored.thumbnailIV.toUint8Array(),
+        keyReference: stored.thumbnailKeyRef,
+      })
+    } catch (e){
+      throw new Error(`Error decrypting ${ref.id} encrypted thumbnail: ${e}`);
+    }
+    out$.next({
+      mimeType: stored.mimeType,
+      thumbnailUrl: URL.createObjectURL(new Blob([decryptedThumb!], {'type': stored.mimeType})),
+      fullUrl: ()=> {
+        return new Promise((resolve, reject) => {
+          fetch(stored.fullUrl)
+            .then(res => res.blob())
+            .then(enc => enc.arrayBuffer())
+            .then(buf => this.encryption.Decrypt(
+              {ciphertext: buf, iv: stored.fullIV!.toUint8Array(), keyReference: stored.fullKeyRef!}))
+            .then(plain => resolve(URL.createObjectURL(new Blob([plain!], {'type': stored.mimeType}))))
+            .catch(e => reject(e));
+        })
+      },
+    } as LiveImageData)
   }
 
   // Remove the specified tag from the specified image.
@@ -405,28 +471,6 @@ export class StorageService implements OnDestroy {
   // Convert a blob to a firestore Bytes object.
   async BytesFromBlob(b: Blob): Promise<Bytes> {
     return Bytes.fromUint8Array(new Uint8Array(await b.arrayBuffer()))
-  }
-
-  // The firestore converter cannot cope with async construction.
-  // This should be run after the LiveImage is created...not sure how to feed it through the subscription model yet.
-  async AddDataUrls(image: LiveImage): Promise<LiveImage> {
-    return new Promise(async (resolve, reject) => {
-      const thumbDoc = await getDoc(
-        doc(this.firestore, this.imagesCollection, image.reference.id, 'data', 'thumbnail'))
-      if ( !thumbDoc.exists() ) {
-        this.errors$.next(`Error loading thumbnail of ${image.reference.id} from Firestore:  does not exist.`)
-        reject(`Error loading thumbnail of ${image.reference.id} from Firestore:  does not exist.`)
-      }
-      const thumbBytes = (thumbDoc.data() as StoredImageData).thumbnail.toUint8Array()
-      const thumb = new Blob([thumbBytes], {type: image.mimeType})
-
-      const ret: LiveImage = {
-        ...image,
-        thumbnailUrl: URL.createObjectURL(thumb),
-        fullUrl: await getDownloadURL(ref(this.cloudStorage, image.reference.id)),
-      }
-      resolve(ret)
-    })
   }
 
   imageToFirestore(liveImage: LiveImage) {

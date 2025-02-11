@@ -184,36 +184,26 @@ export class EncryptionService implements OnDestroy {
 
   // Encrypt using the latest unwrapped key.
   async Encrypt(data: ArrayBuffer): Promise<EncryptionResult> {
-    if ( !this.encryption_key ) {
-      return Promise.reject('Encrypt() called:  encryption key not found')
-    }
-
+    await this.BlockUntilReady(5000).catch((err: Error) => {throw err});
     const iv = new Uint8Array(96)
     const gcmOpts = {
       name: "AES-GCM",
       iv: this.crypto!.getRandomValues(iv)
     }
-    const ciphertext = await this.subtle!.encrypt(gcmOpts, this.encryption_key.key, data)
+    const ciphertext = await this.subtle!.encrypt(gcmOpts, this.encryption_key!.key, data)
     // This cannot be production code - updates on every use.  Needs to be done in batches.
-    updateDoc(this.encryption_key.reference, {'used': increment(1)}).
+    updateDoc(this.encryption_key!.reference, {'used': increment(1)}).
     catch((err: Error) => {console.error(`Error incrementing key use: ${err}`)})
     return {
       ciphertext: ciphertext,
       iv: iv,
-      keyReference: this.encryption_key.reference,
+      keyReference: this.encryption_key!.reference,
     } as EncryptionResult
   }
 
   // Decrypt using the specified key. If not ready() will fail to unwrap key.
   async Decrypt(input: EncryptionResult) {
-    let ready = await firstValueFrom(this.currentState$);
-    while ( ready !== State.Ready ) {
-      ready = await firstValueFrom(this.readyStateChanged$);
-      // need a counter here or some way to bail
-    }
-    if ( !this.encryption_key ) {
-      return Promise.reject('Decrypt() called:  encryption key not found')
-    }
+    await this.BlockUntilReady(5000).catch((err: Error) => {throw err});
     let key = this.encryption_key!.key
     if ( this.encryption_key!.reference.id != input.keyReference.id ) {
       const stored = await getDoc(input.keyReference);
@@ -229,6 +219,20 @@ export class EncryptionService implements OnDestroy {
       iv: input.iv,
     }
     return this.subtle!.decrypt(gcmOpts, key, input.ciphertext)
+  }
+
+  async BlockUntilReady(timeoutMs: number): Promise<void> {
+    let state = await firstValueFrom(this.currentState$);
+    let timeout = false;
+    setTimeout(()=>timeout = true, timeoutMs)
+    while ( state !== State.Ready ) {
+      if (timeout) { break }
+      state = await firstValueFrom(this.readyStateChanged$);
+    }
+    if ( state === State.Ready ) {
+      return
+    }
+    return Promise.reject(`EncryptionService not ready after ${timeoutMs}`);
   }
 
   // Delete in production.

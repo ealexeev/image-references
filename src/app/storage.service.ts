@@ -39,13 +39,14 @@ import { environment } from './environments/environment';
 import {
   SnapshotOptions
 } from '@angular/fire/compat/firestore';
+import {EncryptionService} from './encryption.service';
 
 
 export type EncryptionMetadata = {
   // IV used during encryption.
   iv: Bytes
   // Key id or reference to a wrapped key stored in Firestore.  The key used for data encryption.
-  key: DocumentReference,
+  keyReference: DocumentReference,
 }
 
 export type StoredImage = {
@@ -128,8 +129,10 @@ const cloudDataPath = 'data'
 })
 export class StorageService implements OnDestroy {
   private firestore: Firestore = inject(Firestore);
-  private storage: FirebaseStorage;
   private hmac: HmacService = inject(HmacService);
+  private encryption: EncryptionService = inject(EncryptionService);
+
+  private storage: FirebaseStorage;
   private keysCollection: any;
   private imagesCollection: any;
   private tagsCollection: any;
@@ -149,27 +152,32 @@ export class StorageService implements OnDestroy {
   constructor() {
     this.keysCollection = collection(this.firestore, keysCollectionPath)
     this.imagesCollection = collection(this.firestore, imagesCollectionPath).withConverter(this.imageConverter())
-    this.tagsCollection = collection(this.firestore, tagsCollectionPath).withConverter(this.tagConverter)
-    if ( environment.firestoreUseLocal ) {
+    this.tagsCollection = collection(this.firestore, tagsCollectionPath)
+    if (environment.firestoreUseLocal) {
       connectFirestoreEmulator(this.firestore, 'localhost', 8080, {})
     }
     this.storage = getStorage();
-    if ( environment.firebaseStorageUseLocal ) {
+    if (environment.firebaseStorageUseLocal) {
       connectStorageEmulator(this.storage, "127.0.0.1", 9199);
     }
     this.cloudStorage = ref(this.storage, cloudDataPath)
+    this.startSubscriptions()
+  }
+
+  async startSubscriptions(){
     // Bootstrap listening for all tags
     const allTagsQuery = query(this.tagsCollection);
     this.unsubTagCollection = onSnapshot(allTagsQuery, (querySnapshot) => {
-      const tags: LiveTag[] = [];
+      const tags: Promise<LiveTag>[] = [];
       querySnapshot.forEach((doc) => {
-        tags.push(doc.data() as LiveTag);
+        tags.push(this.LiveTagFromStorage(doc.data() as StoredTag, doc.ref as DocumentReference));
       })
-      this.tagsByName = Object.fromEntries(tags.map(t=>[t.name, t]))
-      this.tagsById = Object.fromEntries(tags.map(t=>[t.reference.id, t]))
-      this.tags$.next(tags);
+      Promise.all(tags).then(liveTags => {
+        this.tagsByName = Object.fromEntries(liveTags.map(t => [t.name, t]))
+        this.tagsById = Object.fromEntries(liveTags.map(t => [t.reference.id, t]))
+        this.tags$.next(liveTags);
+      })
     })
-
   }
 
   ngOnDestroy() {
@@ -265,7 +273,7 @@ export class StorageService implements OnDestroy {
       return cached;
     }
     const id = await this.hmac.getHmacHex(new Blob([name], {type: 'text/plain'}))
-    return doc(this.firestore,  this.tagsCollection.path, id).withConverter(this.tagConverter);
+    return doc(this.firestore,  this.tagsCollection.path, id);
   }
 
   async GetImageReferenceFromBlob(image: Blob): Promise<DocumentReference> {
@@ -284,9 +292,10 @@ export class StorageService implements OnDestroy {
   async StoreTag(name: string): Promise<LiveTag>  {
     return new Promise(async (resolve, reject) => {
       const ref = await this.GetTagReference(name);
-      const tag = {name: name, id: ref.id, reference: ref}
-      setDoc(tag.reference, tag)
-        .then(()=>resolve(tag))
+      const live = {name: name, reference: ref} as LiveTag;
+      const tag = await this.LiveTagToStorage(live)
+      setDoc(ref, tag)
+        .then(()=>resolve(live))
         .catch((err: Error) => {this.errors$.next(`Error storing tag ${tag.name}: ${err}`)});
     });
   }
@@ -302,10 +311,9 @@ export class StorageService implements OnDestroy {
     return new Promise(async (resolve, reject) => {
       const tagRef = await this.GetTagReference(name)
       getDoc(tagRef)
-      // getDoc(tagRef)
         .then((snapshot: DocumentSnapshot) => {
           if ( snapshot.exists() ) {
-            resolve(snapshot.data() as LiveTag);
+            resolve(this.LiveTagFromStorage(snapshot.data() as StoredTag, snapshot.ref));
           } else {
             reject(`LoadTagByName(${name}): not found`);
           }
@@ -411,18 +419,33 @@ export class StorageService implements OnDestroy {
       .catch( e => console.log(`Error replacing tags: ${e}`));
   }
 
-  tagConverter = {
-    toFirestore: (liveTag: LiveTag) => {
-      return {'name': liveTag.name}
-    },
-    fromFirestore: (snapshot:DocumentSnapshot, options: SnapshotOptions): LiveTag => {
-      const data = snapshot.data(options);
+  async LiveTagToStorage(tag: LiveTag): Promise<StoredTag|StoredEncryptedTag> {
+    const encodedName = (new TextEncoder()).encode(tag.name);
+    if ( !this.encryption.ready() ) {
+      return {'name': Bytes.fromUint8Array(encodedName) } as StoredTag;
+    }
+    const res = await this.encryption.Encrypt(encodedName);
+    return {
+      'name': Bytes.fromUint8Array(new Uint8Array(res.ciphertext)),
+      'iv': Bytes.fromUint8Array(new Uint8Array(res.iv)),
+      'keyReference': res.keyReference,
+    } as StoredEncryptedTag;
+  }
+
+  async LiveTagFromStorage(tag: StoredTag|StoredEncryptedTag, ref: DocumentReference): Promise<LiveTag> {
+    if ( !( tag.hasOwnProperty('iv') || tag.hasOwnProperty('key') ) ) {
       return {
-        id: snapshot.id,
-        name: (data as StoredTag).name.toString(),
-        reference: snapshot.ref,
+        'name': tag.name.toString(),
+        'reference': ref,
       } as LiveTag;
-    },
+    }
+    const encrypted = tag as StoredEncryptedTag;
+    const name = await this.encryption.Decrypt(
+      {'ciphertext': encrypted.name.toUint8Array(), 'iv': encrypted.iv.toUint8Array(), keyReference: encrypted.keyReference})
+    return {
+      'name': (new TextDecoder()).decode(name),
+      reference: ref
+    }
   }
 
   // Convert a blob to a firestore Bytes object.

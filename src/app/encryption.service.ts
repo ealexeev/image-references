@@ -193,14 +193,18 @@ export class EncryptionService implements OnDestroy {
   // Decrypt using the specified key. If not ready() will fail to unwrap key.
   async Decrypt(input: EncryptionResult) {
     if ( !this.encryption_key ) {
-      Promise.reject('Decrypt() called:  encryption key not found')
+      return Promise.reject('Decrypt() called:  encryption key not found')
     }
-    const stored = await getDoc(input.keyReference);
-    if ( stored.exists() ) {
-      console.error(`LoadKey(${input.keyReference.id}: not found`);
-      return;
+    let key = this.encryption_key!.key
+    if ( this.encryption_key!.reference.id != input.keyReference.id ) {
+      const stored = await getDoc(input.keyReference);
+      if ( !stored.exists() ) {
+        console.error(`LoadKey(${input.keyReference.id}): not found`);
+        return;
+      }
+      const storedKey = stored.data() as StoredKey
+      key = await this.UnwrapKey(storedKey.key.toUint8Array());
     }
-    const key = await this.UnwrapKey(stored.get('key'));
     const gcmOpts = {
       name: "AES-GCM",
       iv: input.iv,

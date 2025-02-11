@@ -294,7 +294,7 @@ export class StorageService implements OnDestroy {
       const ref = await this.GetTagReference(name);
       const live = {name: name, reference: ref} as LiveTag;
       const tag = await this.LiveTagToStorage(live)
-      setDoc(ref, tag)
+      return setDoc(ref, tag)
         .then(()=>resolve(live))
         .catch((err: Error) => {this.errors$.next(`Error storing tag ${tag.name}: ${err}`)});
     });
@@ -310,7 +310,7 @@ export class StorageService implements OnDestroy {
 
     return new Promise(async (resolve, reject) => {
       const tagRef = await this.GetTagReference(name)
-      getDoc(tagRef)
+     return  getDoc(tagRef)
         .then((snapshot: DocumentSnapshot) => {
           if ( snapshot.exists() ) {
             resolve(this.LiveTagFromStorage(snapshot.data() as StoredTag, snapshot.ref));

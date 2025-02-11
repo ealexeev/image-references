@@ -62,10 +62,11 @@ type LiveKey = {
   used: number
 }
 
-enum State {
+export enum State {
   NotReady = 0,
   Ready,
   Initializing,
+  Error,
 }
 
 @Injectable({
@@ -78,6 +79,7 @@ export class EncryptionService implements OnDestroy {
   encryption_key: LiveKey | null = null;
   readyStateChanged$: Subject<State> = new Subject<State>();
   currentState$: Observable<State>;
+  error$: Subject<Error> = new Subject<Error>();
 
   constructor(private windowRef: WindowRef, private firestore: Firestore) {
     if ( !this.windowRef.nativeWindow?.crypto.subtle ) {
@@ -99,7 +101,14 @@ export class EncryptionService implements OnDestroy {
     await this.subtle!.importKey("raw", stringToArrayBuffer(passphrase), {name: "PBKDF2"}, false, ["deriveKey"])
       .then((static_passphrase: CryptoKey) => this.subtle!.deriveKey(pbkdf2Params, static_passphrase, aesKWParams, true, ['wrapKey', 'unwrapKey']))
       .then((wrap_key: CryptoKey) => this.wrap_key = wrap_key)
-    const latest = await this.LoadLatestKey()
+    let latest: LiveKey|null;
+    try {
+      latest = await this.LoadLatestKey()
+    } catch (err: unknown) {
+      this.error$.next(err as Error)
+      this.readyStateChanged$.next(State.Error)
+      return
+    }
     if ( latest ) {
       this.encryption_key = latest
       this.readyStateChanged$.next(State.Ready);
@@ -122,6 +131,7 @@ export class EncryptionService implements OnDestroy {
   ReadyStateReady() {return State.Ready}
   ReadyStateNotReady() {return State.NotReady}
   ReadyStateInitializing() {return State.Initializing}
+  ReadyStateError() {return State.Error}
 
   // Ideally we make a wrapped copy right now and store it.
   // We should also set this.encryption.key
@@ -189,7 +199,11 @@ export class EncryptionService implements OnDestroy {
 
   // Encrypt using the latest unwrapped key.
   async Encrypt(data: ArrayBuffer): Promise<EncryptionResult> {
-    await this.BlockUntilReady(5000).catch((err: Error) => {throw err});
+    try {
+      await this.BlockUntilReady(5000)
+    } catch (err: unknown) {
+      throw new Error(`Encrypt() timeout waiting for ready: ${(err as Error).message}`)
+    }
     const iv = new Uint8Array(96)
     const gcmOpts = {
       name: "AES-GCM",
@@ -208,7 +222,11 @@ export class EncryptionService implements OnDestroy {
 
   // Decrypt using the specified key. If not ready() will fail to unwrap key.
   async Decrypt(input: EncryptionResult) {
-    await this.BlockUntilReady(5000).catch((err: Error) => {throw err});
+    try {
+      await this.BlockUntilReady(5000)
+    } catch (err: unknown) {
+      throw new Error(`Decrypt() timeout waiting for ready: ${(err as Error).message}`)
+    }
     let key = this.encryption_key!.key
     if ( this.encryption_key!.reference.id != input.keyReference.id ) {
       const stored = await getDoc(input.keyReference);

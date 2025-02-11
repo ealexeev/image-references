@@ -2,8 +2,8 @@
   <mat-sidenav mode="side" opened>
     <app-tag-list (tagSelectionEvent)="onTagSelection($event)"/>
   </mat-sidenav>
-  @if ( selectedTag$ | async; as value ) {
-    <app-image-gallery [tag]=value />
+  @if ( selectedTag() ) {
+    <app-image-gallery [tag]=selectedTag() />
   } @else {
     <div class="filler"></div>
   }

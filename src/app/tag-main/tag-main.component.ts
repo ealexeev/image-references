@@ -1,6 +1,6 @@
 import { CommonModule, Location } from '@angular/common';
 
-import {Component, Input, OnInit} from '@angular/core';
+import {Component, Input, OnChanges, OnInit, signal, WritableSignal} from '@angular/core';
 import { MatSidenavModule } from '@angular/material/sidenav';
 
 import { ImageGalleryComponent } from '../image-gallery/image-gallery.component';
@@ -19,19 +19,19 @@ import { BehaviorSubject } from 'rxjs';
   templateUrl: './tag-main.component.html',
   styleUrl: './tag-main.component.scss'
 })
-export class TagMainComponent implements OnInit {
-  @Input() tagName: string = ''
+export class TagMainComponent {
+  @Input()
+  set tagName(value: string) {
+    this.selectedTag.set(value)
+  }
 
-  selectedTag$: BehaviorSubject<string> = new BehaviorSubject('');
+  selectedTag: WritableSignal<string> = signal('');
 
   constructor(private _location: Location){ }
 
-  ngOnInit(): void {
-    if (this.tagName) { this.selectedTag$.next(this.tagName); }
-  }
-
-    onTagSelection(tagName: string) {
-    this.selectedTag$.next(tagName);
+  // I think this i the problem.  The location alo srive the tagName input.
+  onTagSelection(tagName: string) {
+    this.selectedTag.set(tagName);
     this._location.go('/tags/' +tagName);
   }
 }

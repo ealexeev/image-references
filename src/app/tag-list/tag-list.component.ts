@@ -44,7 +44,7 @@ export class TagListComponent {
     var search = this.searchText.valueChanges.pipe(
       startWith(''),
       takeUntilDestroyed(),
-      debounceTime(250),
+      debounceTime(500),
     );
 
     this.tags$ = this.storage.tags$.pipe(

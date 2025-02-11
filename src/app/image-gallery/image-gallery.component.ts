@@ -88,4 +88,34 @@ export class ImageGalleryComponent implements OnChanges {
     }
     this.ngOnChanges()
   }
+
+  async FetchImageBlob(url: string): Promise<Blob> {
+    return new Promise((resolve, reject) => {
+      const i = new Image();
+      let b: Blob;
+      i.onload = () => {
+        const el = document.createElement('canvas');
+        const ctx = el.getContext('2d');
+        if (!ctx) {
+          console.error("No context!");
+        }
+        ctx!.drawImage(i, 0, 0, i.width, i.height);
+        el.toBlob(blob => {
+          if ( blob ) {
+            resolve(blob)
+          }
+          reject('Not a blob!')
+        }, this.MimeTypeFromUrl(url));
+      }
+      i.src = url;
+    })
+  }
+
+  MimeTypeFromUrl(url: string): string {
+    if ( url.toLowerCase().includes('.jpeg') || url.toLowerCase().includes('.jpeg') ) { return 'image/jpeg' }
+    if ( url.toLowerCase().includes('.png') ) { return 'image/png' }
+    if ( url.toLowerCase().includes('.gif') ) { return 'image/gif' }
+    if ( url.toLowerCase().includes('.webp') ) { return 'image/webp' }
+    throw new Error(`Unknown mime type for ${url}`);
+  }
 }

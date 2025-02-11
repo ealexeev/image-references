@@ -4,8 +4,8 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { DragDropDirective, FileHandle } from '../drag-drop.directive';
-import {BehaviorSubject} from 'rxjs';
 import {AsyncPipe} from '@angular/common';
+import {MatInputModule} from '@angular/material/input';
 
 @Component({
   selector: 'app-image-adder',
@@ -16,7 +16,8 @@ import {AsyncPipe} from '@angular/common';
     MatBadgeModule,
     MatButtonModule,
     MatCardModule,
-    MatIconModule
+    MatIconModule,
+    MatInputModule,
   ],
   templateUrl: './image-adder.component.html',
   styleUrl: './image-adder.component.scss',

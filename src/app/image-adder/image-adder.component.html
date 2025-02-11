@@ -1,6 +1,6 @@
 <mat-card (paste)="onPaste($event)" class="image-adder">
 	<mat-card-content>
-		<div class="dropzone" appDragDrop (files)="filesDropped($event)">
+		<div class="dropzone" appDragDrop (files)="filesDropped($event)" >
 			<div class="text-wrapper">
 				<div>Drag and drop and image<p>or paste a URL!</div>
 				<button mat-icon-button [disabled]="fileCount() == 0" (click)="uploadClicked()">
@@ -10,6 +10,11 @@
                     class="add-icon"
                     aria-hidden="false"/>
 				</button>
+        <div>
+          <mat-form-field>
+            <input matInput>
+          </mat-form-field>
+        </div>
 			</div>
 		</div>
 	</mat-card-content>

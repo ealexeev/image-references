@@ -179,7 +179,7 @@ export class StorageService implements OnDestroy {
       Promise.all(tags).then(liveTags => {
         this.tagsByName = Object.fromEntries(liveTags.map(t => [t.name, t]))
         this.tagsById = Object.fromEntries(liveTags.map(t => [t.reference.id, t]))
-        this.tags$.next(liveTags);
+        this.tags$.next(liveTags.sort((a, b) => a.name.localeCompare(b.name)));
       })
     })
   }

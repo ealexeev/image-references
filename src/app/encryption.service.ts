@@ -1,6 +1,6 @@
 import {Injectable, OnDestroy, Query, signal} from '@angular/core';
 import { WindowRef } from './window-ref.service';
-import {BehaviorSubject, first, firstValueFrom, Observable, shareReplay, Subject, takeUntil, tap} from 'rxjs';
+import {BehaviorSubject, first, firstValueFrom, Observable, shareReplay, Subject, takeUntil, tap, timeout} from 'rxjs';
 import {
   addDoc,
   Bytes,
@@ -68,6 +68,8 @@ export enum State {
   Initializing,
   Error,
 }
+
+const ReadyStateDelay = 5000;
 
 @Injectable({
   providedIn: 'root'
@@ -200,7 +202,7 @@ export class EncryptionService implements OnDestroy {
   // Encrypt using the latest unwrapped key.
   async Encrypt(data: ArrayBuffer): Promise<EncryptionResult> {
     try {
-      await this.BlockUntilReady(5000)
+      await this.BlockUntilReady(ReadyStateDelay)
     } catch (err: unknown) {
       throw new Error(`Encrypt() timeout waiting for ready: ${(err as Error).message}`)
     }
@@ -223,7 +225,7 @@ export class EncryptionService implements OnDestroy {
   // Decrypt using the specified key. If not ready() will fail to unwrap key.
   async Decrypt(input: EncryptionResult) {
     try {
-      await this.BlockUntilReady(5000)
+      await this.BlockUntilReady(ReadyStateDelay)
     } catch (err: unknown) {
       throw new Error(`Decrypt() timeout waiting for ready: ${(err as Error).message}`)
     }
@@ -246,16 +248,13 @@ export class EncryptionService implements OnDestroy {
 
   async BlockUntilReady(timeoutMs: number): Promise<void> {
     let state = await firstValueFrom(this.currentState$);
-    let timeout = false;
-    setTimeout(()=>timeout = true, timeoutMs)
-    while ( state !== State.Ready ) {
-      if (timeout) { break }
-      state = await firstValueFrom(this.readyStateChanged$);
+    if ( state !== State.Ready ) {
+      try {
+        state = await firstValueFrom(this.readyStateChanged$.pipe(timeout(timeoutMs)))
+      } catch (e) {
+        return Promise.reject(`EncryptionService not ready after ${timeoutMs}`);
+      }
     }
-    if ( state === State.Ready ) {
-      return
-    }
-    return Promise.reject(`EncryptionService not ready after ${timeoutMs}`);
   }
 
   // Delete in production.

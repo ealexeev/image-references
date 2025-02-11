@@ -32,18 +32,11 @@ import {
 import { HmacService } from './hmac.service';
 import {
   BehaviorSubject,
-  catchError,
-  from,
-  map,
   Observable,
-  of,
   Subject,
 } from 'rxjs';
 import { environment } from './environments/environment';
 import {
-  CollectionReference,
-  QueryDocumentSnapshot,
-  QuerySnapshot,
   SnapshotOptions
 } from '@angular/fire/compat/firestore';
 
@@ -112,17 +105,6 @@ export type StoredTag = {
 }
 
 export type StoredEncryptedTag = StoredTag & EncryptionMetadata;
-
-export type StoredKey = {
-  // Wrapped encryption key, no IV needed.
-  key: Bytes
-  // Added time, facilitates
-  added: Date
-  // How many times the key has been used.
-  used: number
-}
-
-export type LiveKey = StoredKey & {reference : DocumentReference}
 
 export type TagSubscription = {
   images$: Observable<LiveImage[]>,
@@ -239,28 +221,6 @@ export class StorageService implements OnDestroy {
           fullUrl: stored.fullUrl,
         } as LiveImageData);
       })
-  }
-
-  SubscribeToLatestKey(out: Subject<LiveKey>): ()=>void {
-    const q = query(this.keysCollection, orderBy("added", "desc"), limit(1))
-    return onSnapshot(q, snapshot => {
-      snapshot.forEach((key  => {
-        const stored = key.data() as StoredKey;
-        out.next({...stored, ...{reference: key.ref}} as LiveKey)
-      }))
-    })
-  }
-
-  StoreNewKey(key: Bytes) {
-    return addDoc(this.keysCollection, {
-      key: key,
-      added: serverTimestamp(),
-      used: 0,
-    });
-  }
-
-  LoadKey(ref: DocumentReference) {
-    return getDoc(ref)
   }
 
   IncrementKeyUsage(ref: DocumentReference) {

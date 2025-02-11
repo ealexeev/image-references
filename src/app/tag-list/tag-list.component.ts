@@ -70,8 +70,6 @@ export class TagListComponent {
     }
     this.storage.StoreTag(this.searchText.value)
       .then((unused)=> {
-        console.log(`app-tag-list: StoreTag() returned: ${unused.name}`);
-        // This triggers a re-evaluation against a tag list that will now contain the recently created tag.
         this.searchText.setValue(this.searchText.value)
       })
       .catch((err)=> { console.log(`app-tag-list:  error in StoreTag: ${err.message}`)})

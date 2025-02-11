@@ -161,7 +161,6 @@ export class StorageService implements OnDestroy {
     // Bootstrap listening for all tags
     const allTagsQuery = query(this.tagsCollection);
     this.unsubTagCollection = onSnapshot(allTagsQuery, (querySnapshot) => {
-      console.log('Received tags subscription update')
       const tags: LiveTag[] = [];
       querySnapshot.forEach((doc) => {
         tags.push(doc.data() as LiveTag);

@@ -5,7 +5,6 @@ import { MatSidenavModule } from '@angular/material/sidenav';
 
 import { ImageGalleryComponent } from '../image-gallery/image-gallery.component';
 import { TagListComponent } from '../tag-list/tag-list.component';
-import { BehaviorSubject } from 'rxjs';
 
 @Component({
   selector: 'app-tag-main',

@@ -13,6 +13,7 @@ import { HmacService } from './hmac.service';
 import {SetPreferencesComponent} from './set-preferences/set-preferences.component';
 import {EncryptionService} from './encryption.service';
 import {AsyncPipe} from '@angular/common';
+import {StatusBarComponent} from './status-bar/status-bar.component';
 
 // Don't show UI to users with a UID other than this.  Storage and Firebase APIs are also gated by this requirement.
 const permittedUid = "***REDACTED UID***";
@@ -28,6 +29,7 @@ const authRequired = false;
     MatIconModule,
     MatToolbarModule,
     RouterOutlet,
+    StatusBarComponent,
   ],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'

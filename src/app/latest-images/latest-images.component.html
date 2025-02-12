@@ -1,12 +1,14 @@
-<div class="image-gallery dropzone" appDragDrop (files)="filesDropped($event)">
-  <h1>Latest Images</h1>
-  <div class="image-grid">
-    @for (liveImage of images(); track liveImage.reference.id) {
-      <app-image-card
-        [imageSource]=liveImage
-        [tagCountFrom]=1
-        (imageDeleted)="deleteImage($event)"
-      />
-    }
-  </div>
+<div class="dropzone" appDragDrop (files)="filesDropped($event)">
+    <div class="image-gallery" >
+        <h1>Latest Images</h1>
+        <div class="image-grid">
+            @for (liveImage of images(); track liveImage.reference.id) {
+                <app-image-card
+                        [imageSource]=liveImage
+                        [tagCountFrom]=1
+                        (imageDeleted)="deleteImage($event)"
+                />
+            }
+        </div>
+    </div>
 </div>

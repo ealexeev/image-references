@@ -1,6 +1,9 @@
 @use '../../_variables.scss' as theme;
 
 $grid_gap: 20px;
+.dropzone {
+  height: 100%;
+}
 
 .image-gallery {
   background: theme.$background;

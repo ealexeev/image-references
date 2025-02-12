@@ -31,15 +31,16 @@ import {
 
 import { HmacService } from './hmac.service';
 import {
-  BehaviorSubject, firstValueFrom,
-  Observable,
-  Subject,
+  BehaviorSubject, debounceTime, distinctUntilChanged, firstValueFrom, map,
+  Observable, shareReplay,
+  Subject, tap, withLatestFrom,
 } from 'rxjs';
 import { environment } from './environments/environment';
 import {
   SnapshotOptions
 } from '@angular/fire/compat/firestore';
 import {EncryptionService} from './encryption.service';
+import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 
 
 export type EncryptionMetadata = {
@@ -148,6 +149,10 @@ export class StorageService implements OnDestroy {
 
   // All tags known to the storage service.
   tags$ = new BehaviorSubject<LiveTag[]>([]);
+  private appliedTags$ = new BehaviorSubject<LiveTag[]>([]);
+  private lastRecentlyUsed$ = new BehaviorSubject<LiveTag[]>([]);
+  // Tags used most recently.  Contains the entire tags$ output, but in order of use.
+  recentTags$: Observable<LiveTag[]>;
 
   // This will eventually get replaced by butter-bar service to which messages are sent.
   errors$ = new Subject<String>;
@@ -165,6 +170,25 @@ export class StorageService implements OnDestroy {
       connectStorageEmulator(this.storage, "127.0.0.1", 9199);
     }
     this.cloudStorage = ref(this.storage, cloudDataPath)
+    this.recentTags$ = this.appliedTags$.pipe(
+      takeUntilDestroyed(),
+      withLatestFrom(this.lastRecentlyUsed$, this.tags$),
+      map(([applied, lastEmission, stored]) => {
+        const appliedIds = applied.map(t=>t.reference.id)
+        let ret: LiveTag[];
+        if ( stored.length > lastEmission.length ) {
+          ret = stored.filter(t=> !appliedIds.includes(t.reference.id))
+        } else {
+          ret = lastEmission.filter(t=> !appliedIds.includes(t.reference.id))
+        }
+        ret.unshift(...applied)
+        this.lastRecentlyUsed$.next(ret)
+        return ret;
+      }),
+      distinctUntilChanged(),
+      shareReplay(),
+    )
+
     this.startSubscriptions()
   }
 
@@ -333,6 +357,8 @@ export class StorageService implements OnDestroy {
 
   // Add specified tags to this image.
   async AddTags(iRef: DocumentReference, tags: DocumentReference[]) {
+    const updatedTags = tags.map(t=>this.tagsById[t.id])
+    this.appliedTags$.next(updatedTags)
     updateDoc(iRef, {tags: arrayUnion(...tags)})
       // Log issues when updating tags on an existing document.
       .catch((error: Error) => {this.errors$.next(`Error adding tags ${tags} ${iRef.path}: ${error}`)});
@@ -473,6 +499,8 @@ export class StorageService implements OnDestroy {
 
   // Replace image tags with those in the live image.  If the tag list is empty delete the image instead.
   async ReplaceImageTags(iRef: DocumentReference, tags: DocumentReference[]) {
+    const updatedTags = tags.map(t=>this.tagsById[t.id])
+    this.appliedTags$.next(updatedTags)
     return updateDoc(iRef, {'tags': tags})
       .catch( e => console.log(`Error replacing tags: ${e}`));
   }

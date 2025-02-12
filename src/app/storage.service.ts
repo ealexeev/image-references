@@ -243,13 +243,10 @@ export class StorageService implements OnDestroy {
   // Used to fetch image data associated with an image.
   SubscribeToImageData(imageId: string, out$: Subject<LiveImageData>): () => void {
     if ( this.imageCache.has(imageId) ) {
-      console.log(`Cache hit for image ${imageId}`);
       out$.next(this.imageCache.get(imageId)!);
       out$.complete();
       return ()=>{}
     }
-    console.log(`Cache miss for image ${imageId}`);
-    console.log(`Cache contains: ${this.imageCache.size} entries`)
     return onSnapshot(doc(this.firestore, this.imagesCollection.path, imageId, 'data', 'thumbnail'),
       doc => {
         if ( !doc.exists() ) {
@@ -317,7 +314,6 @@ export class StorageService implements OnDestroy {
 
   async GetImageReferenceFromBlob(image: Blob): Promise<DocumentReference> {
     const hmac = await this.hmac.getHmacHex(image)
-    console.log(`Got HMAC: ${hmac}`)
     return doc(this.firestore, imagesCollectionPath, hmac).withConverter(this.imageConverter())
   }
 
@@ -453,7 +449,6 @@ export class StorageService implements OnDestroy {
         fullUrl: ()=>Promise.resolve(stored.fullUrl),
       } as LiveImageData
       // Image data is stored under image/data/thumb, so we need the id of the parent image.
-      console.log(`Adding to cache: ${ref.parent!.parent!.id}`)
       this.imageCache.set(ref.parent!.parent!.id, ret)
       out$.next(ret)
       out$.complete();
@@ -489,9 +484,9 @@ export class StorageService implements OnDestroy {
       },
     } as LiveImageData
     // Image data is stored under image/data/thumb, so we need the id of the parent image.
-    console.log(`Adding to cache: ${ref.parent!.parent!.id}`)
     this.imageCache.set(ref.parent!.parent!.id, ret)
     out$.next(ret)
+    out$.complete()
   }
 
   // Remove the specified tag from the specified image.
@@ -499,7 +494,7 @@ export class StorageService implements OnDestroy {
     const imageRef = await this.GetImageReferenceFromId(image.reference.id);
     const tagRef = await this.GetTagReference(tag);
     updateDoc(imageRef, {tags: arrayRemove(tagRef)}).catch(
-      (err: Error) => {console.log(`Error deleting tag ${tag} from ${imageRef.path}: ${err}`)}
+      (err: Error) => {this.errors$.next(`Error deleting tag ${tag} from ${imageRef.path}: ${err}`)}
     )
   }
 
@@ -509,7 +504,6 @@ export class StorageService implements OnDestroy {
         return;
       }
       deleteObject(this.GetStorageReferenceFromId(imageRef.id))
-        .then(() => console.log('Cloud data deleted'))
         .finally(() => {
           deleteDoc(imageRef)
         });
@@ -521,7 +515,7 @@ export class StorageService implements OnDestroy {
     const updatedTags = tags.map(t=>this.tagsById[t.id])
     this.appliedTags$.next(updatedTags)
     return updateDoc(iRef, {'tags': tags})
-      .catch( e => console.log(`Error replacing tags: ${e}`));
+      .catch( e => this.errors$.next(`ReplaceImageTags error: ${e}`));
   }
 
   async LiveTagToStorage(tag: LiveTag): Promise<StoredTag|StoredEncryptedTag> {
@@ -602,10 +596,9 @@ export class StorageService implements OnDestroy {
         );
         let w = el.width = stretch ? width : img.width * ratio;
         let h = el.height = stretch ? height : img.height * ratio;
-        console.log(`Resizing to ${w}w x ${h}h`);
         const ctx = el.getContext('2d');
         if (!ctx) {
-          console.error("No context!");
+          this.errors$.next("scaleImage(): no context!");
         }
         // @ts-ignore
         ctx.drawImage(img, 0, 0, w, h);

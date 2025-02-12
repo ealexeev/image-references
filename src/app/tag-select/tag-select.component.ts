@@ -1,18 +1,7 @@
-import {Component, EventEmitter, OnInit, Input, Output, ChangeDetectionStrategy} from '@angular/core';
+import {Component, EventEmitter, OnInit, Input, Output, ChangeDetectionStrategy, inject} from '@angular/core';
 import {LiveTag, StorageService} from '../storage.service';
-import {
-  BehaviorSubject,
-  combineLatestWith,
-  debounceTime,
-  distinctUntilChanged,
-  first, map,
-  Observable,
-  startWith, take,
-  tap
-} from 'rxjs';
 import {MatSelectModule} from '@angular/material/select';
 import {AsyncPipe} from '@angular/common';
-import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {FormControl, FormsModule, ReactiveFormsModule} from '@angular/forms';
 import {MatFormFieldModule} from '@angular/material/form-field';
 
@@ -34,24 +23,14 @@ export class TagSelectComponent implements OnInit{
   @Input() selectedTags: string[] = [];
   @Output() selectionChange = new EventEmitter<string[]>();
 
-  tags$: Observable<LiveTag[]>;
-
   selected: FormControl<string[]> = new FormControl();
-
-  constructor(private storage: StorageService) {
-    this.tags$ = this.storage.tags$.pipe(
-      takeUntilDestroyed(),
-      distinctUntilChanged(),
-    );
-    this.selected.valueChanges.pipe(
-      takeUntilDestroyed(),
-      debounceTime(1500),
-    ).subscribe((tags: string[]) => {
-      this.selectionChange.emit(tags);
-    })
-  }
+  storage: StorageService = inject(StorageService);
 
   ngOnInit() {
     this.selected.setValue(this.selectedTags, {emitEvent:false});
+  }
+
+  onMouseLeave() {
+    this.selectionChange.emit(this.selected.value);
   }
 }

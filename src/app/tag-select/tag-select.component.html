@@ -1,8 +1,9 @@
 <mat-form-field>
-  <mat-label>Tag Names</mat-label>
   <mat-select [formControl]="selected" multiple>
-    @for (tag of tags$ | async; track tag.reference.id) {
-      <mat-option [value]="tag.name">{{tag.name}}</mat-option>
-    }
+    <div (mouseleave)="onMouseLeave()">
+      @for (tag of storage.tags$ | async; track tag.reference.id) {
+        <mat-option [value]="tag.name">{{ tag.name }}</mat-option>
+      }
+    </div>
   </mat-select>
 </mat-form-field>

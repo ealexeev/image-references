@@ -41,6 +41,7 @@ import {
 } from '@angular/fire/compat/firestore';
 import {EncryptionService} from './encryption.service';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
+import {LRUCache} from 'lru-cache';
 
 
 export type EncryptionMetadata = {
@@ -146,6 +147,7 @@ export class StorageService implements OnDestroy {
   private tagsByName: TagMap = {};
   private tagsById: TagMap = {};
   private unsubTagCollection: any;
+  private imageCache: LRUCache<string, LiveImageData> = new LRUCache({'max': 100})
 
   // All tags known to the storage service.
   tags$ = new BehaviorSubject<LiveTag[]>([]);
@@ -239,7 +241,15 @@ export class StorageService implements OnDestroy {
   }
 
   // Used to fetch image data associated with an image.
-  SubscribeToImageData(imageId: string, out: Subject<LiveImageData>): () => void {
+  SubscribeToImageData(imageId: string, out$: Subject<LiveImageData>): () => void {
+    if ( this.imageCache.has(imageId) ) {
+      console.log(`Cache hit for image ${imageId}`);
+      out$.next(this.imageCache.get(imageId)!);
+      out$.complete();
+      return ()=>{}
+    }
+    console.log(`Cache miss for image ${imageId}`);
+    console.log(`Cache contains: ${this.imageCache.size} entries`)
     return onSnapshot(doc(this.firestore, this.imagesCollection.path, imageId, 'data', 'thumbnail'),
       doc => {
         if ( !doc.exists() ) {
@@ -247,7 +257,7 @@ export class StorageService implements OnDestroy {
           return;
         }
         const stored = doc.data() as StoredImageData;
-        this.StoredImageDataToLive(stored, doc.ref, out);
+        this.StoredImageDataToLive(stored, doc.ref, out$);
       })
   }
 
@@ -437,11 +447,16 @@ export class StorageService implements OnDestroy {
   async StoredImageDataToLive(stored: StoredImageData, ref: DocumentReference, out$: Subject<LiveImageData>) {
     if ( !(stored?.thumbnailIV || stored?.thumbnailKeyRef || stored?.fullIV || stored?.fullKeyRef) ) {
       const thumb = new Blob([stored.thumbnail.toUint8Array()], {type: stored.mimeType})
-      out$.next({
+      const ret = {
         mimeType: stored.mimeType,
         thumbnailUrl: URL.createObjectURL(thumb),
         fullUrl: ()=>Promise.resolve(stored.fullUrl),
-      } as LiveImageData)
+      } as LiveImageData
+      // Image data is stored under image/data/thumb, so we need the id of the parent image.
+      console.log(`Adding to cache: ${ref.parent!.parent!.id}`)
+      this.imageCache.set(ref.parent!.parent!.id, ret)
+      out$.next(ret)
+      out$.complete();
       return;
     }
     if ( !stored?.thumbnailIV ) { throw new Error(`Encrypted image data ${ref.id} is missing .thumbnailIV`)}
@@ -458,7 +473,7 @@ export class StorageService implements OnDestroy {
     } catch (e){
       throw new Error(`Error decrypting ${ref.id} encrypted thumbnail: ${e}`);
     }
-    out$.next({
+    const ret = {
       mimeType: stored.mimeType,
       thumbnailUrl: URL.createObjectURL(new Blob([decryptedThumb!], {'type': stored.mimeType})),
       fullUrl: ()=> {
@@ -472,7 +487,11 @@ export class StorageService implements OnDestroy {
             .catch(e => reject(e));
         })
       },
-    } as LiveImageData)
+    } as LiveImageData
+    // Image data is stored under image/data/thumb, so we need the id of the parent image.
+    console.log(`Adding to cache: ${ref.parent!.parent!.id}`)
+    this.imageCache.set(ref.parent!.parent!.id, ret)
+    out$.next(ret)
   }
 
   // Remove the specified tag from the specified image.

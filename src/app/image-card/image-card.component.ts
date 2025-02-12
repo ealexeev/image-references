@@ -40,6 +40,7 @@ import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 })
 export class ImageCardComponent implements OnInit, OnDestroy{
   @Input({required: true}) imageSource!: LiveImage;
+  @Input() tagCountFrom: number = 2;
   @Output() imageDeleted = new EventEmitter<string>;
 
   showTagSelection = signal(false);

@@ -4,6 +4,7 @@
     @for (liveImage of images(); track liveImage.reference.id) {
       <app-image-card
         [imageSource]=liveImage
+        [tagCountFrom]=1
         (imageDeleted)="deleteImage($event)"
       />
     }

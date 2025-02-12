@@ -11,7 +11,7 @@
 	<mat-card-actions align='end' class="image-actions">
 		<button mat-icon-button
             [matBadge]="getImageTags().length"
-            [matBadgeHidden]="getImageTags().length < 2"
+            [matBadgeHidden]="getImageTags().length < tagCountFrom"
             (click)="manageTags()"
     >
 			<mat-icon fontIcon="list"></mat-icon>

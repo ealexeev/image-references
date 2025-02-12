@@ -53,19 +53,7 @@ export class ImageGalleryComponent implements OnChanges {
   }
 
   async receiveImageURL(url: string): Promise<void> {
-    console.log(`Receive image URL: ${url}`);
-    const imageBlob = await fetch(url).then((response) => response.blob().then(b => b));
-    const iRef = await this.storage.GetImageReferenceFromBlob(imageBlob);
-
-    const newImage: LiveImage = {
-      mimeType: imageBlob.type,
-      tags: [this.storage.TagRefByName(this.tag)].filter(t => t !== undefined),
-      reference: iRef,
-    }
-    if ( !(await this.storage.StoreImage(newImage)) ) {
-      const fullUrl = await this.storage.StoreFullImage(iRef, imageBlob);
-      await this.storage.StoreImageData(iRef, imageBlob, fullUrl);
-    }
+    return this.storage.StoreImageFromUrl(url, [this.tag])
   }
 
   async deleteImageOrTag(id: string) {
@@ -87,35 +75,5 @@ export class ImageGalleryComponent implements OnChanges {
       return;
     }
     this.ngOnChanges()
-  }
-
-  async FetchImageBlob(url: string): Promise<Blob> {
-    return new Promise((resolve, reject) => {
-      const i = new Image();
-      let b: Blob;
-      i.onload = () => {
-        const el = document.createElement('canvas');
-        const ctx = el.getContext('2d');
-        if (!ctx) {
-          console.error("No context!");
-        }
-        ctx!.drawImage(i, 0, 0, i.width, i.height);
-        el.toBlob(blob => {
-          if ( blob ) {
-            resolve(blob)
-          }
-          reject('Not a blob!')
-        }, this.MimeTypeFromUrl(url));
-      }
-      i.src = url;
-    })
-  }
-
-  MimeTypeFromUrl(url: string): string {
-    if ( url.toLowerCase().includes('.jpeg') || url.toLowerCase().includes('.jpeg') ) { return 'image/jpeg' }
-    if ( url.toLowerCase().includes('.png') ) { return 'image/png' }
-    if ( url.toLowerCase().includes('.gif') ) { return 'image/gif' }
-    if ( url.toLowerCase().includes('.webp') ) { return 'image/webp' }
-    throw new Error(`Unknown mime type for ${url}`);
   }
 }

@@ -3,8 +3,6 @@
 $grid_gap: 20px;
 
 .image-gallery {
-  // WHY does this overlap with the side content?  Jesus help me!
-  padding-left: 13px;
   background: theme.$background;
   display: flex;
   flex-flow: column;
@@ -13,19 +11,21 @@ $grid_gap: 20px;
   h1 {
     background: theme.$background;
     margin: 0 0 0 0;
+    padding-top: 20px;
     text-align: center;
     font-family: "Teko", serif;
     font-optical-sizing: auto;
     font-weight: 400;
     font-style: normal;
     color: lightgrey;
+    height: 40px;
   }
 
   .image-grid {
     padding: $grid_gap;
     display: flex;
     flex-wrap: wrap;
-    justify-content: flex-start;
+    justify-content: center;
     gap: $grid_gap;
     background: theme.$background;
   }

@@ -111,7 +111,7 @@ export type StoredTag = {
 
 export type StoredEncryptedTag = StoredTag & EncryptionMetadata;
 
-export type TagSubscription = {
+export type ImageSubscription = {
   images$: Observable<LiveImage[]>,
   unsubscribe: () => void,
 }
@@ -190,7 +190,7 @@ export class StorageService implements OnDestroy {
 
   // Obtain a subscription to supplied tag that will return the last n images that have
   // had the tag applied.  -1 Indicates all images.
-  SubscribeToTag(tag: LiveTag, last_n_images: number): TagSubscription {
+  SubscribeToTag(tag: LiveTag, last_n_images: number): ImageSubscription {
     const constraints: QueryConstraint[] = [orderBy("added", "desc")]
     if ( last_n_images > 0 ) {
       constraints.push(limit(last_n_images));
@@ -211,7 +211,7 @@ export class StorageService implements OnDestroy {
       imagesObservable.next(images);
     })
 
-    return {images$: imagesObservable, unsubscribe: unsub} as TagSubscription;
+    return {images$: imagesObservable, unsubscribe: unsub} as ImageSubscription;
   }
 
   // Used to fetch image data associated with an image.
@@ -225,6 +225,26 @@ export class StorageService implements OnDestroy {
         const stored = doc.data() as StoredImageData;
         this.StoredImageDataToLive(stored, doc.ref, out);
       })
+  }
+
+  SubscribeToLatestImages(last_n_images: number): ImageSubscription {
+    const constraints: QueryConstraint[] = [orderBy("added", "desc")]
+    if ( last_n_images > 0 ) {
+      constraints.push(limit(last_n_images));
+    }
+    const q = query(this.imagesCollection, ...constraints)
+
+    const imagesObservable = new Subject<LiveImage[]>();
+
+    const unsub = onSnapshot(q, (querySnapshot) => {
+      const images: LiveImage[] = [];
+      querySnapshot.forEach((doc) => {
+        images.push(doc.data() as LiveImage)
+      })
+      imagesObservable.next(images);
+    })
+
+    return {images$: imagesObservable, unsubscribe: unsub} as ImageSubscription;
   }
 
   TagRefByName(name: string): DocumentReference | undefined {
@@ -262,7 +282,9 @@ export class StorageService implements OnDestroy {
   }
 
   async GetImageReferenceFromBlob(image: Blob): Promise<DocumentReference> {
-    return doc(this.firestore, imagesCollectionPath, await this.hmac.getHmacHex(image)).withConverter(this.imageConverter())
+    const hmac = await this.hmac.getHmacHex(image)
+    console.log(`Got HMAC: ${hmac}`)
+    return doc(this.firestore, imagesCollectionPath, hmac).withConverter(this.imageConverter())
   }
 
   GetImageReferenceFromId(imageId: string): DocumentReference {
@@ -314,6 +336,22 @@ export class StorageService implements OnDestroy {
     updateDoc(iRef, {tags: arrayUnion(...tags)})
       // Log issues when updating tags on an existing document.
       .catch((error: Error) => {this.errors$.next(`Error adding tags ${tags} ${iRef.path}: ${error}`)});
+  }
+
+  // Store a new image received by URL.
+  async StoreImageFromUrl(url: string, tagNames: string[]): Promise<void> {
+    const imageBlob = await fetch(url).then((response) => response.blob().then(b => b));
+    const iRef = await this.GetImageReferenceFromBlob(imageBlob);
+
+    const newImage: LiveImage = {
+      mimeType: imageBlob.type,
+      tags: tagNames.map(name => this.TagRefByName(name)).filter(t => t !== undefined),
+      reference: iRef,
+    }
+    if ( !(await this.StoreImage(newImage)) ) {
+      const fullUrl = await this.StoreFullImage(iRef, imageBlob);
+      await this.StoreImageData(iRef, imageBlob, fullUrl);
+    }
   }
 
   // Store a new image received by the application.  If it exists, update its list of tags.

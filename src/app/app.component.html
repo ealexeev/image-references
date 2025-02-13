@@ -14,7 +14,9 @@
         }
       </span>
       <app-set-preferences></app-set-preferences>
-      <button mat-raised-button color="primary" (click)="doLogOut()">Log Out</button>
+      <button mat-icon-button (click)="doLogOut()">
+        <mat-icon fontIcon="logout"></mat-icon>
+      </button>
     </mat-toolbar>
     <div class="content">
       <router-outlet></router-outlet>

@@ -1,10 +1,11 @@
-import {Component, Input, signal, WritableSignal} from '@angular/core';
+import {Component, inject, Input, signal, WritableSignal} from '@angular/core';
 import {LiveImage, StorageService} from '../storage.service';
 import {Subscription} from 'rxjs';
 import {PreferenceService} from '../preference-service';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {ImageCardComponent} from '../image-card/image-card.component';
 import {DragDropDirective, FileHandle} from '../drag-drop.directive';
+import {MessageService} from '../message.service';
 
 @Component({
   selector: 'app-latest-images',
@@ -18,6 +19,8 @@ import {DragDropDirective, FileHandle} from '../drag-drop.directive';
 })
 export class LatestImagesComponent {
   @Input({required: true}) title!: string;
+
+  private messageService: MessageService = inject(MessageService);
 
   images: WritableSignal<LiveImage[]> = signal([]);
   files: WritableSignal<FileHandle[]> = signal([]);
@@ -67,6 +70,7 @@ export class LatestImagesComponent {
   }
 
   filesDropped(files: FileHandle[]) {
+    this.messageService.Info(`Received ${files.length} ${files.length > 1 ? 'files' : 'file'}`);
     this.files.set(files);
     for (const f of files) {
       this.receiveImageURL(f.url.toString());

@@ -1,6 +1,8 @@
-import {Component, computed, Signal, signal, WritableSignal} from '@angular/core';
+import {Component, computed, inject, Input, Signal, signal, WritableSignal} from '@angular/core';
 import {MatIconModule} from '@angular/material/icon';
 import {MatButtonModule} from '@angular/material/button';
+import {Message, MessageService} from '../message.service';
+import {interval} from 'rxjs';
 
 @Component({
   selector: 'app-status-bar',
@@ -13,12 +15,13 @@ import {MatButtonModule} from '@angular/material/button';
   styleUrl: './status-bar.component.scss'
 })
 export class StatusBarComponent {
-  messages: Array<string> = [
-    'first message',
-    'second message',
-    'third message',
-    'last message'
-  ];
+  // Max number of messages to keep in memory.
+  @Input() max: number = 500;
+
+  messages: Array<string> = [];
+  queue: Array<Message> = []
+
+  private messageService: MessageService = inject(MessageService)
 
   msgCount: WritableSignal<number>
   msgIndex: WritableSignal<number>
@@ -30,6 +33,22 @@ export class StatusBarComponent {
   constructor() {
     this.msgCount = signal(this.messages.length);
     this.msgIndex = signal(0);
+    this.messageService.messages$.subscribe(
+      (message: Message) => {
+        if ( this.queue.length < this.max ) {
+          this.queue.unshift(message);
+        } else {
+          console.error(`Status bar queue exceeds ${this.max}}`)
+        }
+      }
+    )
+    interval(1000).subscribe(() => {
+        const next = this.queue.pop()
+        if (next) {
+          this.messages.unshift(next.message)
+          this.msgCount.set(this.messages.length)
+        }
+    })
   }
 
   showLatestMessage() {

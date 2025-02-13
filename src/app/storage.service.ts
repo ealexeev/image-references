@@ -42,6 +42,7 @@ import {
 import {EncryptionService} from './encryption.service';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {LRUCache} from 'lru-cache';
+import {MessageService} from './message.service';
 
 
 export type EncryptionMetadata = {
@@ -137,6 +138,7 @@ export class StorageService implements OnDestroy {
   private firestore: Firestore = inject(Firestore);
   private hmac: HmacService = inject(HmacService);
   private encryption: EncryptionService = inject(EncryptionService);
+  private messageService: MessageService = inject(MessageService);
 
   private storage: FirebaseStorage;
   private keysCollection: any;
@@ -155,10 +157,6 @@ export class StorageService implements OnDestroy {
   private lastRecentlyUsed$ = new BehaviorSubject<LiveTag[]>([]);
   // Tags used most recently.  Contains the entire tags$ output, but in order of use.
   recentTags$: Observable<LiveTag[]>;
-
-  // This will eventually get replaced by butter-bar service to which messages are sent.
-  errors$ = new Subject<String>;
-
 
   constructor() {
     this.keysCollection = collection(this.firestore, keysCollectionPath)
@@ -234,7 +232,8 @@ export class StorageService implements OnDestroy {
       querySnapshot.forEach((doc) => {
         images.push(doc.data() as LiveImage)
       })
-      imagesObservable.next(images);
+      imagesObservable.next(images)
+      this.messageService.Info(`${tag.name} now has ${images.length} images`)
     })
 
     return {images$: imagesObservable, unsubscribe: unsub} as ImageSubscription;
@@ -250,7 +249,7 @@ export class StorageService implements OnDestroy {
     return onSnapshot(doc(this.firestore, this.imagesCollection.path, imageId, 'data', 'thumbnail'),
       doc => {
         if ( !doc.exists() ) {
-          console.error(`SubImageData(${imageId}): not found`);
+          this.messageService.Error(`SubImageData(${imageId}): not found`)
           return;
         }
         const stored = doc.data() as StoredImageData;
@@ -273,6 +272,7 @@ export class StorageService implements OnDestroy {
         images.push(doc.data() as LiveImage)
       })
       imagesObservable.next(images);
+      this.messageService.Info(`Fetched ${images.length} latest images`)
     })
 
     return {images$: imagesObservable, unsubscribe: unsub} as ImageSubscription;
@@ -281,7 +281,7 @@ export class StorageService implements OnDestroy {
   TagRefByName(name: string): DocumentReference | undefined {
     const ret = this.tagsByName[name]?.reference
     if ( !ret ) {
-      this.errors$.next(`StorageService:TagRefByName(${name}): not found`)
+      this.messageService.Error(`StorageService:TagRefByName(${name}): not found`)
     }
     return ret
   }
@@ -289,7 +289,7 @@ export class StorageService implements OnDestroy {
   TagByName(name: string): LiveTag | undefined {
     const ret = this.tagsByName[name]
     if ( !ret ) {
-      this.errors$.next(`StorageService:TagByName(${name}): not found`)
+      this.messageService.Error(`StorageService:TagByName(${name}): not found`)
     }
     return ret;
   }
@@ -297,7 +297,7 @@ export class StorageService implements OnDestroy {
   TagById(id: string): LiveTag | undefined {
     const ret = this.tagsById[id]
     if ( !ret ) {
-      this.errors$.next(`StorageService:TagById(${id}): not found`)
+      this.messageService.Error(`StorageService:TagById(${id}): not found`)
     }
     return ret
   }
@@ -332,8 +332,11 @@ export class StorageService implements OnDestroy {
       const live = {name: name, reference: ref} as LiveTag;
       const tag = await this.LiveTagToStorage(live)
       return setDoc(ref, tag)
-        .then(()=>resolve(live))
-        .catch((err: Error) => {this.errors$.next(`Error storing tag ${tag.name}: ${err}`)});
+        .then(()=> {
+          this.messageService.Info(`Created tag: ${name}`)
+          resolve(live)
+        })
+        .catch((err: Error) => {this.messageService.Error(`Error storing tag ${tag.name}: ${err}`)});
     });
   }
 
@@ -342,6 +345,7 @@ export class StorageService implements OnDestroy {
   async LoadTagByName(name: string): Promise<LiveTag> {
     const cached = this.TagByName(name);
     if ( cached !== undefined ) {
+      this.messageService.Info(`Fetched (cached) tag: ${name}`)
       return cached
     }
 
@@ -350,13 +354,15 @@ export class StorageService implements OnDestroy {
      return  getDoc(tagRef)
         .then((snapshot: DocumentSnapshot) => {
           if ( snapshot.exists() ) {
+            this.messageService.Info(`Fetched (stored) tag: ${name}`)
             resolve(this.LiveTagFromStorage(snapshot.data() as StoredTag, snapshot.ref));
           } else {
+            this.messageService.Error(`LoadTagByName(${name}): not found`)
             reject(`LoadTagByName(${name}): not found`);
           }
         })
         .catch((err: Error) => {
-          this.errors$.next(`Error loading tag by reference ${(tagRef as DocumentReference).id}: ${err.message}`)
+          this.messageService.Error(`Error loading tag by reference ${(tagRef as DocumentReference).id}: ${err.message}`)
         })
     })
   }
@@ -366,8 +372,8 @@ export class StorageService implements OnDestroy {
     const updatedTags = tags.map(t=>this.tagsById[t.id])
     this.appliedTags$.next(updatedTags)
     updateDoc(iRef, {tags: arrayUnion(...tags)})
-      // Log issues when updating tags on an existing document.
-      .catch((error: Error) => {this.errors$.next(`Error adding tags ${tags} ${iRef.path}: ${error}`)});
+      .then(()=> this.messageService.Info(`Added ${tags.length} to image *${shortenId(iRef.id)}`))
+      .catch((error: Error) => {this.messageService.Error(`Error adding tags ${tags} ${iRef.path}: ${error}`)});
   }
 
   // Store a new image received by URL.
@@ -380,10 +386,15 @@ export class StorageService implements OnDestroy {
       tags: tagNames.map(name => this.TagRefByName(name)).filter(t => t !== undefined),
       reference: iRef,
     }
-    if ( !(await this.StoreImage(newImage)) ) {
-      const fullUrl = await this.StoreFullImage(iRef, imageBlob);
-      await this.StoreImageData(iRef, imageBlob, fullUrl);
+    const existing  = await this.StoreImage(newImage);
+    if (existing) {
+      this.messageService.Info(`Received existing image *${shortenId(newImage.reference.id)}`);
+      return;
     }
+    const fullUrl = await this.StoreFullImage(iRef, imageBlob);
+    this.messageService.Info(`Stored full-size image *${shortenId(newImage.reference.id)}`)
+    await this.StoreImageData(iRef, imageBlob, fullUrl);
+    this.messageService.Info(`Stored thumbnail for ${shortenId(newImage.reference.id)}`)
   }
 
   // Store a new image received by the application.  If it exists, update its list of tags.
@@ -391,6 +402,7 @@ export class StorageService implements OnDestroy {
     const snapshot =  await getDoc(img.reference)
     if ( snapshot.exists() ) {
       this.AddTags(img.reference, img.tags)
+      this.messageService.Info(`Added ${img.tags.length} to image ${shortenId(img.reference.id)})`)
       return true
     }
     setDoc(img.reference, img)
@@ -402,7 +414,8 @@ export class StorageService implements OnDestroy {
     try {
       scaledDown = await this.scaleImage(blob)
     } catch (err: unknown) {
-      throw new Error(`Error scaling down image ${ref.id}: ${err}`)
+      this.messageService.Error(`Error scaling down image ${ref.id}: ${err}`)
+      return;
     }
 
     // There needs to be a better way of doing this.  There is probably some app-wide mode that indicates
@@ -422,6 +435,7 @@ export class StorageService implements OnDestroy {
           'fullKeyRef': encryptedFull.keyReference,
         } as StoredImageData)
       } catch (err: unknown) {
+        this.messageService.Error(`Error encrypting ${shortenId(ref.id)} thumbnail: ${err}`)
         throw new Error(`Error encrypting ${ref.id} thumbnail: ${err}`)
       }
     }
@@ -435,8 +449,13 @@ export class StorageService implements OnDestroy {
 
   async StoreFullImage(imageRef: DocumentReference, blob: Blob ): Promise<string> {
     const storageRef = ref(this.cloudStorage, imageRef.id);
-    await uploadBytes(storageRef, blob)
-    return getDownloadURL(storageRef);
+    try {
+      await uploadBytes(storageRef, blob)
+      return getDownloadURL(storageRef);
+    } catch (err: unknown) {
+      this.messageService.Error(`Error uploading ${shortenId(imageRef.id)} to cloud: ${err}`)
+      throw new Error(`Error uploading ${shortenId(imageRef.id)} to cloud: ${err}`)
+    }
   }
 
   // Given StoredImageData convert to LiveIMagedata and ship via out.
@@ -494,7 +513,7 @@ export class StorageService implements OnDestroy {
     const imageRef = await this.GetImageReferenceFromId(image.reference.id);
     const tagRef = await this.GetTagReference(tag);
     updateDoc(imageRef, {tags: arrayRemove(tagRef)}).catch(
-      (err: Error) => {this.errors$.next(`Error deleting tag ${tag} from ${imageRef.path}: ${err}`)}
+      (err: Error) => {this.messageService.Error(`Error deleting tag ${tag} from ${imageRef.path}: ${err}`)}
     )
   }
 
@@ -515,7 +534,7 @@ export class StorageService implements OnDestroy {
     const updatedTags = tags.map(t=>this.tagsById[t.id])
     this.appliedTags$.next(updatedTags)
     return updateDoc(iRef, {'tags': tags})
-      .catch( e => this.errors$.next(`ReplaceImageTags error: ${e}`));
+      .catch( e => this.messageService.Error(`ReplaceImageTags error: ${e}`));
   }
 
   async LiveTagToStorage(tag: LiveTag): Promise<StoredTag|StoredEncryptedTag> {
@@ -565,7 +584,7 @@ export class StorageService implements OnDestroy {
   imageFromFirestore(snapshot:DocumentSnapshot, options: SnapshotOptions): LiveImage {
     const data = snapshot.data(options) as StoredImage;
     if ( !snapshot.exists() ) {
-      this.errors$.next(`Error loading ${snapshot.id} from Firestore:  does not exist.`)
+      this.messageService.Error(`Error loading ${snapshot.id} from Firestore:  does not exist.`)
     }
     return {
       mimeType: data['mimeType'],
@@ -598,7 +617,7 @@ export class StorageService implements OnDestroy {
         let h = el.height = stretch ? height : img.height * ratio;
         const ctx = el.getContext('2d');
         if (!ctx) {
-          this.errors$.next("scaleImage(): no context!");
+          this.messageService.Error("scaleImage(): no context!");
         }
         // @ts-ignore
         ctx.drawImage(img, 0, 0, w, h);
@@ -614,3 +633,6 @@ export class StorageService implements OnDestroy {
   }
 }
 
+function shortenId(id: string): string {
+  return `*${id.slice(-6)}`
+}

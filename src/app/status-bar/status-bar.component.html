@@ -7,7 +7,7 @@
       <mat-icon aria-hidden="false" aria-label="Previous message" fontIcon="chevron_left"></mat-icon>
     </button>
     <div class="message-content">
-      {{ messages[msgIndex()] || '...nothing has happened...' }}
+      {{ messages[msgIndex()] || '' }}
     </div>
     <button mat-icon-button
             [disabled]="disableNext()"

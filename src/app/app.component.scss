@@ -6,10 +6,12 @@ body {
     height: 100%;
 
 		.header {
+      padding: 2px;
 			flex: 0 0 auto;
 		}
 
 		.content {
+      padding: 2px;
 			flex: 1 1 auto;
       overflow-y: auto;
 		}
@@ -38,16 +40,18 @@ body {
       font-optical-sizing: auto;
       font-weight: 400;
       font-style: normal;
-      padding-right: 10px;
+      margin-left: 20px;
 		}
 
 		button {
+      margin-right: 20px;
 			--mdc-protected-button-label-text-color: #ff4081bf;
 		}
 	}
 
   .status-bar {
     flex: 0 0 auto;
+    padding: 2px;
     background-color: #1d3141;
   }
 }

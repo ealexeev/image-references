@@ -14,14 +14,14 @@ $grid_gap: 20px;
   h1 {
     background: theme.$background;
     margin: 0 0 0 0;
-    padding-top: 20px;
+    margin-top: 0.5em;
+    margin-bottom: 0.1em;
     text-align: center;
     font-family: "Teko", serif;
     font-optical-sizing: auto;
     font-weight: 400;
     font-style: normal;
     color: lightgrey;
-    height: 40px;
   }
 
   .image-grid {

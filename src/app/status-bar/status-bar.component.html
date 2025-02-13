@@ -1,1 +1,24 @@
-<p>status-bar works!</p>
+<div class="bar">
+  <div class="status">Ok!</div>
+  <div class="message">
+    <button mat-icon-button
+            [disabled]="disablePrevious()"
+            (click)="showPreviousMessage()">
+      <mat-icon aria-hidden="false" aria-label="Previous message" fontIcon="chevron_left"></mat-icon>
+    </button>
+    <div class="message-content">
+      {{ messages[msgIndex()] || '...nothing has happened...' }}
+    </div>
+    <button mat-icon-button
+            [disabled]="disableNext()"
+            (click)="showNextMessage()">
+      <mat-icon aria-hidden="false" aria-label="Next message" fontIcon="chevron_right"></mat-icon>
+    </button>
+    <button mat-icon-button
+            [disabled]="disableLatest()"
+            (click)="showLatestMessage()">
+      <mat-icon aria-hidden="false" aria-label="Latest message" fontIcon="last_page"></mat-icon>
+    </button>
+  </div>
+  <div class="stats">100 penguins found.</div>
+</div>

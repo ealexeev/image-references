@@ -1,8 +1,8 @@
 .image-card {
 
-  --mdc-icon-button-icon-color: rgba(211, 211, 211, 0.8);
+  --mdc-icon-button-icon-color: rgba(211, 211, 211, 0.9);
   --mat-badge-background-color: rgba(157, 215, 220, 0.6);
-  --mat-badge-text-color: #2c2c2c;
+  --mat-badge-text-color: #1e1e1e;
 
 	img {
 		object-fit: contain;
@@ -12,14 +12,11 @@
 		transform: scale(0.75);
     margin: 0;
 	}
-	mat-chip {
-		margin: 5px;
-	}
 
   .image-actions {
     anchor-name: --image-actions;
     min-height: 30px;
-    padding: 5px;
+    padding: 8px 5px 5px 5px;
   }
 
   .tag-list-selection {

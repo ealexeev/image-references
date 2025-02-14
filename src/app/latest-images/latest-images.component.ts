@@ -1,5 +1,5 @@
 import {Component, inject, Input, signal, WritableSignal} from '@angular/core';
-import {LiveImage, StorageService} from '../storage.service';
+import {ImageSubscription, LiveImage, StorageService} from '../storage.service';
 import {Subscription} from 'rxjs';
 import {PreferenceService} from '../preference-service';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
@@ -19,8 +19,11 @@ import {MessageService} from '../message.service';
 })
 export class LatestImagesComponent {
   @Input({required: true}) title!: string;
+  @Input({required: true}) mode: "tag" | "latest" | "inbox" = "latest";
 
   private messageService: MessageService = inject(MessageService);
+  private preferences: PreferenceService = inject(PreferenceService);
+  private storage: StorageService = inject(StorageService);
 
   images: WritableSignal<LiveImage[]> = signal([]);
   files: WritableSignal<FileHandle[]> = signal([]);
@@ -30,8 +33,7 @@ export class LatestImagesComponent {
   };
   imagesSub: Subscription = new Subscription();
 
-  constructor(private storage: StorageService,
-              private preferences: PreferenceService) {
+  constructor() {
     this.preferences.showImageCount$.pipe(
       takeUntilDestroyed(),
     ).subscribe(
@@ -43,7 +45,14 @@ export class LatestImagesComponent {
   }
 
   startSubscriptions() {
-    const subscription = this.storage.SubscribeToLatestImages(this.preferences.showImageCount$.value)
+    let subscription: ImageSubscription;
+    switch(this.mode) {
+      case 'latest':
+        subscription = this.storage.SubscribeToLatestImages(this.preferences.showImageCount$.value)
+        break
+      default:
+        throw new Error(`Unsupported mode: ${this.mode}`);
+    }
     this.imagesSub = subscription.images$.subscribe((images: LiveImage[]) => this.images.set(images))
     this.dbUnsubscribe = subscription.unsubscribe;
   }

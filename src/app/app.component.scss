@@ -49,9 +49,10 @@ body {
 		}
 	}
 
-  .status-bar {
+  app-status-bar {
     flex: 0 0 auto;
     padding: 2px;
+    height: 26px;
     background-color: #1d3141;
   }
 }

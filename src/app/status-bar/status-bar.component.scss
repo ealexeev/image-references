@@ -9,15 +9,18 @@
   font-weight: 500;
   font-size: 10px;
 
+  mat-icon {
+    font-size: 16px;
+    height: 18px;
+    width: 18px;
+  }
 
   .status {
     flex: 0 0 auto;
     display: flex;
     align-items: center;
 
-    border-radius: 4px;
-    margin: 2px;
-    padding: 2px 6px;
+    margin: 1px 6px;
 
     .ok {
       color: #3f753c;
@@ -32,7 +35,13 @@
     flex: 1 0 auto;
     display: flex;
     flex-flow: row nowrap;
+    align-items: center;
     justify-content: center;
+
+    button {
+      --mdc-icon-button-state-layer-size: 22px !important;
+      --mdc-icon-button-icon-size: 18px;
+    }
 
     .info-message {
       background-color: rgba(211, 211, 211, 0.50);
@@ -47,7 +56,6 @@
       align-items: center;
       justify-content: center;
       border-radius: 6px;
-      margin: 2px;
       padding: 2px 6px;
 
       min-width: 150px;
@@ -57,10 +65,12 @@
 
   .stats {
     flex: 0 0 auto;
-
     display: flex;
+    flex-flow: row nowrap;
     align-items: center;
-    border-radius: 4px;
+    justify-content: center;
+
+    border-radius: 6px;
     margin: 2px;
     padding: 2px 6px;
     background-color: #3c6675;

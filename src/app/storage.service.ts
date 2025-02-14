@@ -3,13 +3,12 @@ import {
   addDoc, arrayRemove, arrayUnion,
   Bytes,
   collection,
-  connectFirestoreEmulator,
   deleteDoc,
   doc,
   DocumentReference,
   DocumentSnapshot,
   Firestore,
-  getDoc, increment,
+  getDoc,
   limit, onSnapshot,
   orderBy,
   query,
@@ -21,9 +20,7 @@ import {
 
 import {
   ref,
-  getStorage,
-  FirebaseStorage,
-  connectStorageEmulator,
+  Storage,
   StorageReference,
   uploadBytes,
   getDownloadURL, deleteObject
@@ -35,7 +32,6 @@ import {
   Observable, shareReplay,
   Subject, tap, withLatestFrom,
 } from 'rxjs';
-import { environment } from './environments/environment';
 import {
   SnapshotOptions
 } from '@angular/fire/compat/firestore';
@@ -119,8 +115,6 @@ export type ImageSubscription = {
   unsubscribe: () => void,
 }
 
-// KeyMap retains a map of key ids (HMACs) to wrapped key bytes.
-type KeyMap = Record<string, Bytes>
 // TagMap retains a map of tag names to HMACs / tag ids for easy lookup.
 type TagMap = Record<string, LiveTag>
 
@@ -139,13 +133,11 @@ export class StorageService implements OnDestroy {
   private hmac: HmacService = inject(HmacService);
   private encryption: EncryptionService = inject(EncryptionService);
   private messageService: MessageService = inject(MessageService);
+  private storage = inject(Storage);
 
-  private storage: FirebaseStorage;
-  private keysCollection: any;
   private imagesCollection: any;
   private tagsCollection: any;
   private cloudStorage: any;
-  private keys: KeyMap = {};
   private tagsByName: TagMap = {};
   private tagsById: TagMap = {};
   private unsubTagCollection: any;
@@ -159,16 +151,8 @@ export class StorageService implements OnDestroy {
   recentTags$: Observable<LiveTag[]>;
 
   constructor() {
-    this.keysCollection = collection(this.firestore, keysCollectionPath)
     this.imagesCollection = collection(this.firestore, imagesCollectionPath).withConverter(this.imageConverter())
     this.tagsCollection = collection(this.firestore, tagsCollectionPath)
-    if (environment.firestoreUseLocal) {
-      connectFirestoreEmulator(this.firestore, 'localhost', 8080, {})
-    }
-    this.storage = getStorage();
-    if (environment.firebaseStorageUseLocal) {
-      connectStorageEmulator(this.storage, "127.0.0.1", 9199);
-    }
     this.cloudStorage = ref(this.storage, cloudDataPath)
     this.recentTags$ = this.appliedTags$.pipe(
       takeUntilDestroyed(),

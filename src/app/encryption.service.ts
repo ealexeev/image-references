@@ -1,4 +1,4 @@
-import {Injectable, OnDestroy, Query, signal} from '@angular/core';
+import {inject, Injectable, OnDestroy, Query, signal} from '@angular/core';
 import { WindowRef } from './window-ref.service';
 import {BehaviorSubject, first, firstValueFrom, Observable, shareReplay, Subject, takeUntil, tap, timeout} from 'rxjs';
 import {
@@ -75,6 +75,9 @@ const ReadyStateDelay = 5000;
   providedIn: 'root'
 })
 export class EncryptionService implements OnDestroy {
+  windowRef = inject(WindowRef);
+  firestore = inject(Firestore);
+
   subtle: SubtleCrypto | null = null;
   crypto: Crypto | null = null;
   wrap_key: CryptoKey | null = null;
@@ -83,7 +86,7 @@ export class EncryptionService implements OnDestroy {
   currentState$: Observable<State>;
   error$: Subject<Error> = new Subject<Error>();
 
-  constructor(private windowRef: WindowRef, private firestore: Firestore) {
+  constructor() {
     if ( !this.windowRef.nativeWindow?.crypto.subtle ) {
       throw new ReferenceError("Could not get crypto reference!");
     }

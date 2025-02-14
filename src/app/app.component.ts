@@ -1,5 +1,5 @@
 import {Component, inject, OnDestroy, OnInit, signal} from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import {Router, RouterOutlet} from '@angular/router';
 import { Auth, authState, User, signOut } from '@angular/fire/auth';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
@@ -15,6 +15,7 @@ import {EncryptionService} from './encryption.service';
 import {AsyncPipe} from '@angular/common';
 import {StatusBarComponent} from './status-bar/status-bar.component';
 import {MatTooltipModule} from '@angular/material/tooltip';
+import {MatButtonToggleModule} from '@angular/material/button-toggle';
 
 // Don't show UI to users with a UID other than this.  Storage and Firebase APIs are also gated by this requirement.
 const permittedUid = "***REDACTED UID***";
@@ -32,6 +33,7 @@ const authRequired = false;
     RouterOutlet,
     StatusBarComponent,
     MatTooltipModule,
+    MatButtonToggleModule,
   ],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'
@@ -40,6 +42,7 @@ export class AppComponent implements OnInit, OnDestroy {
   private auth = inject(Auth);
   readonly dialog = inject(MatDialog);
   readonly encryption: EncryptionService = inject(EncryptionService);
+  readonly router = inject(Router);
   authState$ = authState(this.auth);
   authStateSubscription: Subscription;
   user: User|null = null;
@@ -71,6 +74,15 @@ export class AppComponent implements OnInit, OnDestroy {
   doLogOut() {
     signOut(this.auth);
   }
+
+  navigateLatest() {
+    this.router.navigate(['/latest']);
+  }
+
+  navitageTags() {
+    this.router.navigate(['/tags']);
+  }
+
 
   title = 'prestige-ape-references';
 }

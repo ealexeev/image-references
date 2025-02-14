@@ -44,6 +44,25 @@ body {
       margin-left: 20px;
 		}
 
+    .navigation {
+      flex: 0 0 auto;
+      margin: 0 20px;
+      border-radius: 1em;
+      height: 1.2em;
+      align-items: center;
+
+      mat-button-toggle {
+        font-family: "Roboto", sans-serif;
+        font-size: 0.625em;
+        color: lightgrey;
+        padding: 0 !important;
+        margin: 0 !important;
+        --mat-standard-button-toggle-selected-state-background-color: rgba(62, 170, 184, 0.86);
+      }
+
+    }
+
+
 		button {
       margin-right: 20px;
 			--mdc-protected-button-label-text-color: #ff4081bf;

@@ -1,24 +1,44 @@
 <div class="bar">
-  <div class="status">Ok!</div>
+  <div class="status">
+    @if (statusOk()) {
+      <mat-icon class="ok"
+                fontIcon="check_circle"
+                matTooltip="Everything is ok!"
+      />
+    } @else {
+      <mat-icon class="error"
+                fontIcon="error"
+                matTooltip="There is at least one error in messages."
+      />
+    }
+  </div>
   <div class="message">
     <button mat-icon-button
             [disabled]="disablePrevious()"
-            (click)="showPreviousMessage()">
+            (click)="showPreviousMessage()"
+            matTooltip="Previous message"
+    >
       <mat-icon aria-hidden="false" aria-label="Previous message" fontIcon="chevron_left"></mat-icon>
     </button>
-    <div class="message-content">
-      {{ messages[msgIndex()] || '' }}
+    <div class="message-content" [class]="messages[msgIndex()].type == 'error' ? 'error-message' : 'info-message'">
+      {{ messages[msgIndex()].message || '' }}
     </div>
     <button mat-icon-button
             [disabled]="disableNext()"
-            (click)="showNextMessage()">
+            (click)="showNextMessage()"
+            matTooltip="Next message"
+    >
       <mat-icon aria-hidden="false" aria-label="Next message" fontIcon="chevron_right"></mat-icon>
     </button>
     <button mat-icon-button
             [disabled]="disableLatest()"
-            (click)="showLatestMessage()">
+            (click)="showLatestMessage()"
+            matTooltip="Latest message"
+    >
       <mat-icon aria-hidden="false" aria-label="Latest message" fontIcon="last_page"></mat-icon>
     </button>
   </div>
-  <div class="stats">100 penguins found.</div>
+  <div class="stats"
+       matTooltip="Placeholder">
+       100 penguins found.</div>
 </div>

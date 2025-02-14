@@ -3,6 +3,7 @@ import {MatIconModule} from '@angular/material/icon';
 import {MatButtonModule} from '@angular/material/button';
 import {Message, MessageService} from '../message.service';
 import {interval} from 'rxjs';
+import {MatTooltipModule} from '@angular/material/tooltip';
 
 @Component({
   selector: 'app-status-bar',
@@ -10,6 +11,7 @@ import {interval} from 'rxjs';
   imports: [
     MatButtonModule,
     MatIconModule,
+    MatTooltipModule,
   ],
   templateUrl: './status-bar.component.html',
   styleUrl: './status-bar.component.scss'
@@ -18,7 +20,7 @@ export class StatusBarComponent {
   // Max number of messages to keep in memory.
   @Input() max: number = 500;
 
-  messages: Array<string> = [];
+  messages: Array<Message> = [];
   queue: Array<Message> = []
 
   private messageService: MessageService = inject(MessageService)
@@ -45,7 +47,7 @@ export class StatusBarComponent {
     interval(1000).subscribe(() => {
         const next = this.queue.pop()
         if (next) {
-          this.messages.unshift(next.message)
+          this.messages.unshift(next)
           this.msgCount.set(this.messages.length)
         }
     })
@@ -61,5 +63,9 @@ export class StatusBarComponent {
 
   showPreviousMessage() {
     this.msgIndex.update(n=> n+1 < this.messages.length ? n+1: n)
+  }
+
+  statusOk(): boolean {
+    return this.messages.every((message) => message.type != 'error')
   }
 }

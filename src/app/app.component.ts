@@ -14,6 +14,7 @@ import {SetPreferencesComponent} from './set-preferences/set-preferences.compone
 import {EncryptionService} from './encryption.service';
 import {AsyncPipe} from '@angular/common';
 import {StatusBarComponent} from './status-bar/status-bar.component';
+import {MatTooltipModule} from '@angular/material/tooltip';
 
 // Don't show UI to users with a UID other than this.  Storage and Firebase APIs are also gated by this requirement.
 const permittedUid = "***REDACTED UID***";
@@ -30,6 +31,7 @@ const authRequired = false;
     MatToolbarModule,
     RouterOutlet,
     StatusBarComponent,
+    MatTooltipModule,
   ],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'

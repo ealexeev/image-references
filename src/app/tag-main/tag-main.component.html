@@ -3,7 +3,7 @@
     <app-tag-list (tagSelectionEvent)="onTagSelection($event)"/>
   </mat-sidenav>
   @if ( selectedTag() ) {
-    <app-image-gallery [tag]=selectedTag() />
+    <app-image-gallery mode="tag" [tagName]=selectedTag() />
   } @else {
     <div class="filler"></div>
   }

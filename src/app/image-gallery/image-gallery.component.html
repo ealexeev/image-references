@@ -1,12 +1,14 @@
-<div class="image-gallery">
-  <h1>{{ tag }}</h1>
-  <div class="image-grid">
-    <app-image-adder (imageAdded)="receiveImageURL($event)"/>
-    @for (liveImage of images(); track liveImage.reference.id) {
-      <app-image-card
-        [imageSource]=liveImage
-        (imageDeleted)="deleteImageOrTag($event)"
-      />
-    }
+<div class="dropzone" appDragDrop (files)="filesDropped($event)">
+  <div class="image-gallery" >
+    <h1> {{ title() }} </h1>
+    <div class="image-grid">
+      @for (liveImage of images(); track liveImage.reference.id) {
+        <app-image-card
+          [imageSource]=liveImage
+          [tagCountFrom]="mode === 'tag' ? 2 : 1"
+          (imageDeleted)="deleteImageOrTag($event)"
+        />
+      }
+    </div>
   </div>
 </div>

@@ -77,14 +77,5 @@ export class AppComponent implements OnInit, OnDestroy {
     signOut(this.auth);
   }
 
-  navigateLatest() {
-    this.router.navigate(['/latest']);
-  }
-
-  navitageTags() {
-    this.router.navigate(['/tags']);
-  }
-
-
   title = 'prestige-ape-references';
 }

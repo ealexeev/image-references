@@ -279,27 +279,16 @@ export class StorageService implements OnDestroy {
   }
 
   TagRefByName(name: string): DocumentReference | undefined {
-    const ret = this.tagsByName[name]?.reference
-    if ( !ret ) {
-      this.messageService.Error(`StorageService:TagRefByName(${name}): not found`)
-    }
-    return ret
+    return this.tagsByName[name]?.reference
   }
 
   TagByName(name: string): LiveTag | undefined {
-    const ret = this.tagsByName[name]
-    if ( !ret ) {
-      this.messageService.Error(`StorageService:TagByName(${name}): not found`)
-    }
-    return ret;
+    return this.tagsByName[name]
   }
 
+  // Return cached copy of the tag by its id.  This can be a miss before the tag subscription has executed for the first time.
   TagById(id: string): LiveTag | undefined {
-    const ret = this.tagsById[id]
-    if ( !ret ) {
-      this.messageService.Error(`StorageService:TagById(${id}): not found`)
-    }
-    return ret
+    return this.tagsById[id]
   }
 
   // GetTagReference returns a document reference to a tag based on the tag's name
@@ -534,6 +523,7 @@ export class StorageService implements OnDestroy {
     const updatedTags = tags.map(t=>this.tagsById[t.id])
     this.appliedTags$.next(updatedTags)
     return updateDoc(iRef, {'tags': tags})
+      .then(()=>this.messageService.Info(`Updated tags (${tags.length}) for image ${shortenId(iRef.id)}`))
       .catch( e => this.messageService.Error(`ReplaceImageTags error: ${e}`));
   }
 

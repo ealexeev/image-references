@@ -13,30 +13,32 @@
     }
   </div>
   <div class="message">
-    <button mat-icon-button
-            [disabled]="disablePrevious()"
-            (click)="showPreviousMessage()"
-            matTooltip="Previous message"
-    >
-      <mat-icon aria-hidden="false" aria-label="Previous message" fontIcon="chevron_left"></mat-icon>
-    </button>
-    <div class="message-content" [class]="messages[msgIndex()].type == 'error' ? 'error-message' : 'info-message'">
-      {{ messages[msgIndex()].message || '' }}
-    </div>
-    <button mat-icon-button
-            [disabled]="disableNext()"
-            (click)="showNextMessage()"
-            matTooltip="Next message"
-    >
-      <mat-icon aria-hidden="false" aria-label="Next message" fontIcon="chevron_right"></mat-icon>
-    </button>
-    <button mat-icon-button
-            [disabled]="disableLatest()"
-            (click)="showLatestMessage()"
-            matTooltip="Latest message"
-    >
-      <mat-icon aria-hidden="false" aria-label="Latest message" fontIcon="last_page"></mat-icon>
-    </button>
+    @if ( messages.length ) {
+      <button mat-icon-button
+              [disabled]="disablePrevious()"
+              (click)="showPreviousMessage()"
+              matTooltip="Previous message"
+      >
+        <mat-icon aria-hidden="false" aria-label="Previous message" fontIcon="chevron_left"></mat-icon>
+      </button>
+      <div class="message-content" [class]="messages[msgIndex()].type == 'error' ? 'error-message' : 'info-message'">
+        {{ messages[msgIndex()].message || '' }}
+      </div>
+      <button mat-icon-button
+              [disabled]="disableNext()"
+              (click)="showNextMessage()"
+              matTooltip="Next message"
+      >
+        <mat-icon aria-hidden="false" aria-label="Next message" fontIcon="chevron_right"></mat-icon>
+      </button>
+      <button mat-icon-button
+              [disabled]="disableLatest()"
+              (click)="showLatestMessage()"
+              matTooltip="Latest message"
+      >
+        <mat-icon aria-hidden="false" aria-label="Latest message" fontIcon="last_page"></mat-icon>
+      </button>
+    }
   </div>
   <div class="stats"
        matTooltip="Placeholder">

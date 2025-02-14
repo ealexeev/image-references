@@ -1,5 +1,5 @@
 import {Component, inject, OnDestroy, OnInit, signal} from '@angular/core';
-import {Router, RouterOutlet} from '@angular/router';
+import {Router, RouterLink, RouterLinkActive, RouterOutlet} from '@angular/router';
 import { Auth, authState, User, signOut } from '@angular/fire/auth';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
@@ -31,6 +31,8 @@ const authRequired = false;
     MatIconModule,
     MatToolbarModule,
     RouterOutlet,
+    RouterLink,
+    RouterLinkActive,
     StatusBarComponent,
     MatTooltipModule,
     MatButtonToggleModule,

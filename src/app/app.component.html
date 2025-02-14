@@ -5,7 +5,8 @@
       <span class="app-name">Image Reference</span>
         <mat-button-toggle-group class="navigation" name="navigation" aria-label="navrigation">
           <mat-button-toggle value="latest"
-                             (click)="navigateLatest()"
+                             routerLink="/latest"
+                             routerLinkActive="active"
                              matTooltip="See latest images"
           >Latest</mat-button-toggle>
           <mat-button-toggle value="untagged"
@@ -13,7 +14,8 @@
                              matTooltip="WIP...see untagged images"
           >Untagged</mat-button-toggle>
           <mat-button-toggle value="tags"
-                             (click)="navitageTags()"
+                             routerLink="/tags"
+                             routerLinkActive="active"
                              matTooltip="See list of tags"
           >Tags</mat-button-toggle>
         </mat-button-toggle-group>

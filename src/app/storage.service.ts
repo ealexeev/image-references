@@ -383,27 +383,23 @@ export class StorageService implements OnDestroy {
       tags: tagNames.map(name => this.TagRefByName(name)).filter(t => t !== undefined),
       reference: iRef,
     }
-    const existing  = await this.StoreImage(newImage);
-    if (existing) {
-      this.messageService.Info(`Received existing image *${shortenId(newImage.reference.id)}`);
+
+    const snapshot = await getDoc(newImage.reference)
+    if (snapshot.exists()) {
+      this.AddTags(newImage.reference, newImage.tags)
+        .then(()=>{this.messageService.Info(`Added ${newImage.tags.length} to image ${shortenId(newImage.reference.id)})`)})
+        .catch((err: Error) => {this.messageService.Error(`Error adding tags to image ${shortenId(newImage.reference.id)}: ${err}`)});
       return;
     }
-    const fullUrl = await this.StoreFullImage(iRef, imageBlob);
-    this.messageService.Info(`Stored full-size image *${shortenId(newImage.reference.id)}`)
-    await this.StoreImageData(iRef, imageBlob, fullUrl);
-    this.messageService.Info(`Stored thumbnail for ${shortenId(newImage.reference.id)}`)
-  }
 
-  // Store a new image received by the application.  If it exists, update its list of tags.
-  async StoreImage(img: LiveImage): Promise<Boolean> {
-    const snapshot =  await getDoc(img.reference)
-    if ( snapshot.exists() ) {
-      this.AddTags(img.reference, img.tags)
-      this.messageService.Info(`Added ${img.tags.length} to image ${shortenId(img.reference.id)})`)
-      return true
+    try {
+      await setDoc(newImage.reference, newImage).then(()=> {this.imgCount$.next(this.imgCount$.value + 1)})
+      const fullUrl = await this.StoreFullImage(iRef, imageBlob);
+      await this.StoreImageData(iRef, imageBlob, fullUrl);
+      this.messageService.Info(`Added image ${shortenId(newImage.reference.id)}`)
+    } catch (err: unknown) {
+      this.messageService.Error(`Error adding image ${shortenId(newImage.reference.id)}: ${err}`)
     }
-    setDoc(img.reference, img).then(()=> {this.imgCount$.next(this.imgCount$.value + 1)})
-    return false
   }
 
   async StoreImageData(ref: DocumentReference,  blob: Blob, fullUrl: string): Promise<void> {

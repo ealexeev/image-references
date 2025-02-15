@@ -1,8 +1,12 @@
+@use 'sass:color';
 @use '../../variables' as theme;
 
 .mat-sidenav-container {
-  background: #eee;
   height: 100%;
+
+  mat-sidenav {
+    background-color: color.adjust(theme.$background, $lightness:5%);
+  }
 
   .filler {
     background: theme.$background;

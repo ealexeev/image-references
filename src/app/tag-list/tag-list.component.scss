@@ -1,4 +1,4 @@
-@use '../../_variables.scss' as theme;
+@use '../../variables' as theme;
 
 .tag-list {
 	mat-form-field {
@@ -19,7 +19,7 @@
 			mat-icon {
 				vertical-align: middle;
 			}
-		}	
+		}
 	}
 
 }

@@ -1,3 +1,5 @@
+@use '../_variables' as theme;
+
 body {
 
 	.flex-container{
@@ -23,8 +25,8 @@ body {
     flex-flow: row nowrap;
     align-items: center;
 
-		--mat-toolbar-container-text-color: lightgrey;
-		--mat-toolbar-container-background-color: #1d3141;
+		--mat-toolbar-container-text-color: #{theme.$text-color};
+		--mat-toolbar-container-background-color: #{theme.$toolbar-background};
 
 		.toolbar-spacer {
 			flex: 1 1 auto;
@@ -54,10 +56,10 @@ body {
       mat-button-toggle {
         font-family: "Roboto", sans-serif;
         font-size: 0.625em;
-        color: lightgrey;
+        color: theme.$text-color;
         padding: 0 !important;
         margin: 0 !important;
-        --mat-standard-button-toggle-selected-state-background-color: rgba(98, 166, 179, 0.86);
+        --mat-standard-button-toggle-selected-state-background-color: #{rgba(theme.$btn-highlight-color, 0.86)};
       }
 
     }
@@ -70,6 +72,6 @@ body {
   app-status-bar {
     flex: 0 0 auto;
     padding: 0.2rem;
-    background-color: #1d3141;
+    background-color: theme.$toolbar-background;
   }
 }

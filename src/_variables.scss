@@ -1,6 +1,9 @@
 @use '@angular/material' as mat;
 
 $background: #2f2c2c;
+$toolbar-background: #1d3141;
+$text-color: lightgrey;
+$btn-highlight-color: rgb(98, 166, 179);
 
 $custom-primary-palette: (
   50: #e6e9ff,

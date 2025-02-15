@@ -38,7 +38,7 @@ const authRequired = false;
     MatButtonToggleModule,
   ],
   templateUrl: './app.component.html',
-  styleUrl: './app.component.scss'
+  styleUrls: ['./app.component.scss', '../_variables.scss'],
 })
 export class AppComponent implements OnInit, OnDestroy {
   private auth = inject(Auth);

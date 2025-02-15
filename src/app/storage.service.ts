@@ -28,7 +28,7 @@ import {
 
 import { HmacService } from './hmac.service';
 import {
-  BehaviorSubject, debounceTime, distinctUntilChanged, firstValueFrom, from, interval, map,
+  BehaviorSubject, combineLatest, debounceTime, distinctUntilChanged, firstValueFrom, from, interval, map,
   Observable, shareReplay,
   Subject, tap, withLatestFrom,
 } from 'rxjs';
@@ -143,8 +143,8 @@ export class StorageService implements OnDestroy {
   private unsubTagCollection: any;
   private unsubImageCount: any;
   private imageCache: LRUCache<string, LiveImageData> = new LRUCache({'max': 100})
-  private imgCount: number = 0;
-  private tagCount: number = 0;
+  private imgCount$: BehaviorSubject<number> = new BehaviorSubject<number>(0)
+  private tagCount$: BehaviorSubject<number> = new BehaviorSubject<number>(0)
 
   // All tags known to the storage service.
   tags$ = new BehaviorSubject<LiveTag[]>([]);
@@ -190,12 +190,16 @@ export class StorageService implements OnDestroy {
         this.tagsByName = Object.fromEntries(liveTags.map(t => [t.name, t]))
         this.tagsById = Object.fromEntries(liveTags.map(t => [t.reference.id, t]))
         this.tags$.next(liveTags.sort((a, b) => a.name.localeCompare(b.name)));
-        this.tagCount = liveTags.length;
+        this.tagCount$.next(liveTags.length);
       })
     })
-    this.unsubImageCount = interval(1000).subscribe(()=>{this.messageService.stats$.next(`${this.imgCount} images | ${this.tagCount} tags`)})
+    this.unsubImageCount = combineLatest([this.imgCount$, this.tagCount$]).subscribe(
+      ([imgCnt, tagCnt]) => {
+        this.messageService.stats$.next(`${imgCnt} images | ${tagCnt} tags`)
+      }
+    )
     getCountFromServer(this.imagesCollection)
-      .then((snap)=> {this.imgCount = snap.data().count})
+      .then((snap)=> {this.imgCount$.next(snap.data().count)})
       .catch((err) => {this.messageService.Error(`Error fetching image count: ${err}`)})
   }
 
@@ -386,7 +390,7 @@ export class StorageService implements OnDestroy {
       this.messageService.Info(`Added ${img.tags.length} to image ${shortenId(img.reference.id)})`)
       return true
     }
-    setDoc(img.reference, img)
+    setDoc(img.reference, img).then(()=> {this.imgCount$.next(this.imgCount$.value + 1)})
     return false
   }
 
@@ -421,11 +425,14 @@ export class StorageService implements OnDestroy {
       }
     }
 
-    return setDoc(doc(ref, 'data', 'thumbnail'), {
+    const data = {
       'mimeType': blob.type,
       'thumbnail': await this.BytesFromBlob(scaledDown),
       'fullUrl': fullUrl,
-    } as StoredImageData).then(()=> {this.imgCount+=1})
+    } as StoredImageData
+
+    setDoc(doc(ref, 'data', 'thumbnail'), data)
+      .catch((err: unknown)=> {this.messageService.Error(`StoreImageData(${ref.id}): ${err}`)})
   }
 
   async StoreFullImage(imageRef: DocumentReference, blob: Blob ): Promise<string> {
@@ -506,7 +513,7 @@ export class StorageService implements OnDestroy {
       deleteObject(this.GetStorageReferenceFromId(imageRef.id))
         .finally(() => {
           deleteDoc(imageRef)
-            .then(()=>{this.imgCount-=1})
+            .then(()=>{this.imgCount$.next(this.imgCount$.value-1)})
             .catch((err: unknown) => {this.messageService.Error(`Error deleting image ${shortenId(imageRef.id)}: ${err}`)})
         });
     })

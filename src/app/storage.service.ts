@@ -41,13 +41,6 @@ import {LRUCache} from 'lru-cache';
 import {MessageService} from './message.service';
 
 
-export type EncryptionMetadata = {
-  // IV used during encryption.
-  iv: Bytes
-  // Key id or reference to a wrapped key stored in Firestore.  The key used for data encryption.
-  keyReference: DocumentReference,
-}
-
 export type StoredImage = {
   // Timestamp of creation.  Facilitates sorting by latest x images.
   added: Date,
@@ -69,8 +62,6 @@ export type StoredImageData = {
   fullIV?: Bytes,
   fullKeyRef?: DocumentReference,
 }
-
-export type StoredEncryptedImage = StoredImage & EncryptionMetadata;
 
 // AppImage is an image that has been fetched from storage, had its data and tags decrypted
 // if necessary and is now being "served" from the local host.
@@ -106,9 +97,9 @@ export type LiveImageData = Readonly<{
 export type StoredTag = {
   // Bytes because it may be encrypted.
   name: Bytes,
+  iv?: Bytes,
+  keyReference?: DocumentReference,
 }
-
-export type StoredEncryptedTag = StoredTag & EncryptionMetadata;
 
 export type ImageSubscription = {
   images$: Observable<LiveImage[]>,
@@ -251,6 +242,27 @@ export class StorageService implements OnDestroy {
         const stored = doc.data() as StoredImageData;
         this.StoredImageDataToLive(stored, doc.ref, out$);
       })
+  }
+
+  LoadImageData(imageId: string): Observable<LiveImageData> {
+    const ret$ = new Subject<LiveImageData>();
+    const cached = this.imageCache.get(imageId);
+    if ( cached ) {
+      ret$.next(cached);
+      ret$.complete();
+      return ret$;
+    }
+    getDoc(doc(this.firestore, this.imagesCollection.path, imageId, 'data', 'thumbnail'))
+      .then((doc) => {
+        if ( !doc.exists() ) {
+          this.messageService.Error(`LoadImageData(${imageId}): not found`)
+          return;
+        }
+        const stored = doc.data() as StoredImageData;
+        this.StoredImageDataToLive(stored, doc.ref, ret$)
+          .catch((err: unknown) => {this.messageService.Error(`LoadImageData(${imageId}): ${err}`)})
+      })
+    return ret$;
   }
 
   SubscribeToLatestImages(last_n_images: number): ImageSubscription {
@@ -528,7 +540,7 @@ export class StorageService implements OnDestroy {
       .catch( e => this.messageService.Error(`ReplaceImageTags error: ${e}`));
   }
 
-  async LiveTagToStorage(tag: LiveTag): Promise<StoredTag|StoredEncryptedTag> {
+  async LiveTagToStorage(tag: LiveTag): Promise<StoredTag> {
     const encodedName = (new TextEncoder()).encode(tag.name);
     if ( !(await firstValueFrom(this.encryption.currentState$)) ) {
       return {'name': Bytes.fromUint8Array(encodedName) } as StoredTag;
@@ -538,19 +550,18 @@ export class StorageService implements OnDestroy {
       'name': Bytes.fromUint8Array(new Uint8Array(res.ciphertext)),
       'iv': Bytes.fromUint8Array(new Uint8Array(res.iv)),
       'keyReference': res.keyReference,
-    } as StoredEncryptedTag;
+    } as StoredTag;
   }
 
-  async LiveTagFromStorage(tag: StoredTag|StoredEncryptedTag, ref: DocumentReference): Promise<LiveTag> {
-    if ( !( tag.hasOwnProperty('iv') || tag.hasOwnProperty('key') ) ) {
+  async LiveTagFromStorage(tag: StoredTag, ref: DocumentReference): Promise<LiveTag> {
+    if ( !( tag?.iv || tag?.keyReference ) ) {
       return {
         'name': tag.name.toString(),
         'reference': ref,
       } as LiveTag;
     }
-    const encrypted = tag as StoredEncryptedTag;
     const name = await this.encryption.Decrypt(
-      {'ciphertext': encrypted.name.toUint8Array(), 'iv': encrypted.iv.toUint8Array(), keyReference: encrypted.keyReference})
+      {'ciphertext': tag.name.toUint8Array(), 'iv': tag.iv!.toUint8Array(), keyReference: tag.keyReference!})
     return {
       'name': (new TextDecoder()).decode(name),
       reference: ref

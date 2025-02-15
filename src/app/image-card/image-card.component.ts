@@ -51,6 +51,7 @@ export class ImageCardComponent implements OnInit, OnDestroy{
 
   constructor(private renderer: Renderer2, private storage: StorageService){
     this.imageData.pipe(
+      // TODO:  Should this be a take one? or first()  Subscribing here is probably a waste.
       takeUntilDestroyed()
     ).subscribe(
       imageData => {

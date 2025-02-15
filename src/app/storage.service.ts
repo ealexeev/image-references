@@ -89,7 +89,7 @@ export type LiveTag = Readonly<{
 export type LiveImageData = Readonly<{
   mimeType: string,
   thumbnailUrl: string,
-  fullUrl: ()=>Promise<string>,
+  fullUrl: ()=>Promise<Blob>,
 }>
 
 
@@ -463,7 +463,7 @@ export class StorageService implements OnDestroy {
         const ret = {
           mimeType: stored.mimeType,
           thumbnailUrl: URL.createObjectURL(thumb),
-          fullUrl: () => Promise.resolve(stored.fullUrl),
+          fullUrl: () => Promise.resolve(fetch(stored.fullUrl).then(r=>r.blob())),
         } as LiveImageData
         // Image data is stored under image/data/thumb, so we need the id of the parent image.
         this.imageCache.set(ref.parent!.parent!.id, ret)
@@ -501,7 +501,7 @@ export class StorageService implements OnDestroy {
               .then(enc => enc.arrayBuffer())
               .then(buf => this.encryption.Decrypt(
                 {ciphertext: buf, iv: stored.fullIV!.toUint8Array(), keyReference: stored.fullKeyRef!}))
-              .then(plain => resolve(URL.createObjectURL(new Blob([plain!], {'type': stored.mimeType}))))
+              .then(plain => resolve(new Blob([plain!], {'type': stored.mimeType})))
               .catch(e => reject(e));
           })
         },

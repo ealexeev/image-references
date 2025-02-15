@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import {mergeWith, Observable, Subject} from 'rxjs';
+import {BehaviorSubject, mergeWith, Observable, Subject} from 'rxjs';
 
 export type Message = {
   type: "error" | "info"
@@ -14,6 +14,7 @@ export class MessageService {
   private info$: Subject<Message> = new Subject<Message>();
   private error$: Subject<Message> = new Subject<Message>();
   messages$: Observable<Message>;
+  stats$: BehaviorSubject<string> = new BehaviorSubject<string>('Nothing to report');
 
   constructor() {
     this.messages$ = this.info$.pipe(
@@ -29,4 +30,5 @@ export class MessageService {
   Info(msg :string): void {
     this.info$.next({type: "info", message: msg});
   }
+
 }

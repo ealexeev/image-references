@@ -7,7 +7,7 @@ import {
   doc,
   DocumentReference,
   DocumentSnapshot,
-  Firestore,
+  Firestore, getCountFromServer,
   getDoc,
   limit, onSnapshot,
   orderBy,
@@ -28,7 +28,7 @@ import {
 
 import { HmacService } from './hmac.service';
 import {
-  BehaviorSubject, debounceTime, distinctUntilChanged, firstValueFrom, map,
+  BehaviorSubject, debounceTime, distinctUntilChanged, firstValueFrom, from, interval, map,
   Observable, shareReplay,
   Subject, tap, withLatestFrom,
 } from 'rxjs';
@@ -141,7 +141,10 @@ export class StorageService implements OnDestroy {
   private tagsByName: TagMap = {};
   private tagsById: TagMap = {};
   private unsubTagCollection: any;
+  private unsubImageCount: any;
   private imageCache: LRUCache<string, LiveImageData> = new LRUCache({'max': 100})
+  private imgCount: number = 0;
+  private tagCount: number = 0;
 
   // All tags known to the storage service.
   tags$ = new BehaviorSubject<LiveTag[]>([]);
@@ -172,7 +175,6 @@ export class StorageService implements OnDestroy {
       distinctUntilChanged(),
       shareReplay(),
     )
-
     this.startSubscriptions()
   }
 
@@ -188,12 +190,18 @@ export class StorageService implements OnDestroy {
         this.tagsByName = Object.fromEntries(liveTags.map(t => [t.name, t]))
         this.tagsById = Object.fromEntries(liveTags.map(t => [t.reference.id, t]))
         this.tags$.next(liveTags.sort((a, b) => a.name.localeCompare(b.name)));
+        this.tagCount = liveTags.length;
       })
     })
+    this.unsubImageCount = interval(1000).subscribe(()=>{this.messageService.stats$.next(`${this.imgCount} images | ${this.tagCount} tags`)})
+    getCountFromServer(this.imagesCollection)
+      .then((snap)=> {this.imgCount = snap.data().count})
+      .catch((err) => {this.messageService.Error(`Error fetching image count: ${err}`)})
   }
 
   ngOnDestroy() {
     this.unsubTagCollection();
+    this.unsubImageCount();
   }
 
   // Obtain a subscription to supplied tag that will return the last n images that have
@@ -417,7 +425,7 @@ export class StorageService implements OnDestroy {
       'mimeType': blob.type,
       'thumbnail': await this.BytesFromBlob(scaledDown),
       'fullUrl': fullUrl,
-    } as StoredImageData)
+    } as StoredImageData).then(()=> {this.imgCount+=1})
   }
 
   async StoreFullImage(imageRef: DocumentReference, blob: Blob ): Promise<string> {
@@ -498,6 +506,8 @@ export class StorageService implements OnDestroy {
       deleteObject(this.GetStorageReferenceFromId(imageRef.id))
         .finally(() => {
           deleteDoc(imageRef)
+            .then(()=>{this.imgCount-=1})
+            .catch((err: unknown) => {this.messageService.Error(`Error deleting image ${shortenId(imageRef.id)}: ${err}`)})
         });
     })
   }

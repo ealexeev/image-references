@@ -4,11 +4,13 @@ import {MatButtonModule} from '@angular/material/button';
 import {Message, MessageService} from '../message.service';
 import {interval} from 'rxjs';
 import {MatTooltipModule} from '@angular/material/tooltip';
+import {AsyncPipe} from '@angular/common';
 
 @Component({
   selector: 'app-status-bar',
   standalone: true,
   imports: [
+    AsyncPipe,
     MatButtonModule,
     MatIconModule,
     MatTooltipModule,
@@ -23,7 +25,7 @@ export class StatusBarComponent {
   messages: Array<Message> = [];
   queue: Array<Message> = []
 
-  private messageService: MessageService = inject(MessageService)
+  messageService: MessageService = inject(MessageService)
 
   msgCount: WritableSignal<number>
   msgIndex: WritableSignal<number>

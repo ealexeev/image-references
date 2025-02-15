@@ -240,29 +240,30 @@ export class StorageService implements OnDestroy {
           return;
         }
         const stored = doc.data() as StoredImageData;
-        this.StoredImageDataToLive(stored, doc.ref, out$);
+        this.StoredImageDataToLive(stored, doc.ref)
+          .then(imageData => {out$.next(imageData as LiveImageData)})
+          .catch((err) => {this.messageService.Error(`SubImageData(${imageId}): ${err}`)})
       })
   }
 
-  LoadImageData(imageId: string): Observable<LiveImageData> {
-    const ret$ = new Subject<LiveImageData>();
-    const cached = this.imageCache.get(imageId);
-    if ( cached ) {
-      ret$.next(cached);
-      ret$.complete();
-      return ret$;
-    }
-    getDoc(doc(this.firestore, this.imagesCollection.path, imageId, 'data', 'thumbnail'))
-      .then((doc) => {
-        if ( !doc.exists() ) {
-          this.messageService.Error(`LoadImageData(${imageId}): not found`)
-          return;
-        }
-        const stored = doc.data() as StoredImageData;
-        this.StoredImageDataToLive(stored, doc.ref, ret$)
-          .catch((err: unknown) => {this.messageService.Error(`LoadImageData(${imageId}): ${err}`)})
-      })
-    return ret$;
+  async LoadImageData(imageId: string): Promise<LiveImageData> {
+    return new Promise(async(resolve, reject) => {
+      const cached = this.imageCache.get(imageId);
+      if ( cached ) {
+        resolve(cached);
+      }
+      getDoc(doc(this.firestore, this.imagesCollection.path, imageId, 'data', 'thumbnail'))
+        .then((doc) => {
+          if ( !doc.exists() ) {
+            this.messageService.Error(`LoadImageData(${imageId}): not found`)
+            return;
+          }
+          const stored = doc.data() as StoredImageData;
+          this.StoredImageDataToLive(stored, doc.ref)
+            .then(imageData => {resolve(imageData as LiveImageData)})
+            .catch((err: unknown) => {this.messageService.Error(`LoadImageData(${imageId}): ${err}`)})
+        })
+    })
   }
 
   SubscribeToLatestImages(last_n_images: number): ImageSubscription {
@@ -455,53 +456,60 @@ export class StorageService implements OnDestroy {
   }
 
   // Given StoredImageData convert to LiveIMagedata and ship via out.
-  async StoredImageDataToLive(stored: StoredImageData, ref: DocumentReference, out$: Subject<LiveImageData>) {
-    if ( !(stored?.thumbnailIV || stored?.thumbnailKeyRef || stored?.fullIV || stored?.fullKeyRef) ) {
-      const thumb = new Blob([stored.thumbnail.toUint8Array()], {type: stored.mimeType})
+  async StoredImageDataToLive(stored: StoredImageData, ref: DocumentReference): Promise<LiveImageData> {
+    return new Promise(async (resolve, reject) => {
+      if (!(stored?.thumbnailIV || stored?.thumbnailKeyRef || stored?.fullIV || stored?.fullKeyRef)) {
+        const thumb = new Blob([stored.thumbnail.toUint8Array()], {type: stored.mimeType})
+        const ret = {
+          mimeType: stored.mimeType,
+          thumbnailUrl: URL.createObjectURL(thumb),
+          fullUrl: () => Promise.resolve(stored.fullUrl),
+        } as LiveImageData
+        // Image data is stored under image/data/thumb, so we need the id of the parent image.
+        this.imageCache.set(ref.parent!.parent!.id, ret)
+        resolve(ret);
+      }
+      if (!stored?.thumbnailIV) {
+        reject(new Error(`Encrypted image data ${ref.id} is missing .thumbnailIV`))
+      }
+      if (!stored?.thumbnailKeyRef) {
+        reject(new Error(`Encrypted image data ${ref.id} is missing .thumbnailKeyRef`))
+      }
+      if (!stored?.fullIV) {
+        reject(new Error(`Encrypted image data ${ref.id} is missing .fullIV`))
+      }
+      if (!stored?.fullKeyRef) {
+        reject(new Error(`Encrypted image data ${ref.id} is missing .fullKeyRef`))
+      }
+      let decryptedThumb: ArrayBuffer | undefined
+      try {
+        decryptedThumb = await this.encryption.Decrypt({
+          ciphertext: stored.thumbnail.toUint8Array(),
+          iv: stored.thumbnailIV!.toUint8Array(),
+          keyReference: stored.thumbnailKeyRef!,
+        })
+      } catch (e) {
+        reject(new Error(`Error decrypting ${ref.id} encrypted thumbnail: ${e}`))
+      }
       const ret = {
         mimeType: stored.mimeType,
-        thumbnailUrl: URL.createObjectURL(thumb),
-        fullUrl: ()=>Promise.resolve(stored.fullUrl),
+        thumbnailUrl: URL.createObjectURL(new Blob([decryptedThumb!], {'type': stored.mimeType})),
+        fullUrl: () => {
+          return new Promise((resolve, reject) => {
+            fetch(stored.fullUrl)
+              .then(res => res.blob())
+              .then(enc => enc.arrayBuffer())
+              .then(buf => this.encryption.Decrypt(
+                {ciphertext: buf, iv: stored.fullIV!.toUint8Array(), keyReference: stored.fullKeyRef!}))
+              .then(plain => resolve(URL.createObjectURL(new Blob([plain!], {'type': stored.mimeType}))))
+              .catch(e => reject(e));
+          })
+        },
       } as LiveImageData
       // Image data is stored under image/data/thumb, so we need the id of the parent image.
       this.imageCache.set(ref.parent!.parent!.id, ret)
-      out$.next(ret)
-      out$.complete();
-      return;
-    }
-    if ( !stored?.thumbnailIV ) { throw new Error(`Encrypted image data ${ref.id} is missing .thumbnailIV`)}
-    if ( !stored?.thumbnailKeyRef ) { throw new Error(`Encrypted image data ${ref.id} is missing .thumbnailKeyRef`)}
-    if ( !stored?.fullIV ) { throw new Error(`Encrypted image data ${ref.id} is missing .fullIV`)}
-    if ( !stored?.fullKeyRef ) { throw new Error(`Encrypted image data ${ref.id} is missing .fullKeyRef`)}
-    let decryptedThumb: ArrayBuffer | undefined
-    try {
-      decryptedThumb = await this.encryption.Decrypt({
-        ciphertext: stored.thumbnail.toUint8Array(),
-        iv: stored.thumbnailIV.toUint8Array(),
-        keyReference: stored.thumbnailKeyRef,
-      })
-    } catch (e){
-      throw new Error(`Error decrypting ${ref.id} encrypted thumbnail: ${e}`);
-    }
-    const ret = {
-      mimeType: stored.mimeType,
-      thumbnailUrl: URL.createObjectURL(new Blob([decryptedThumb!], {'type': stored.mimeType})),
-      fullUrl: ()=> {
-        return new Promise((resolve, reject) => {
-          fetch(stored.fullUrl)
-            .then(res => res.blob())
-            .then(enc => enc.arrayBuffer())
-            .then(buf => this.encryption.Decrypt(
-              {ciphertext: buf, iv: stored.fullIV!.toUint8Array(), keyReference: stored.fullKeyRef!}))
-            .then(plain => resolve(URL.createObjectURL(new Blob([plain!], {'type': stored.mimeType}))))
-            .catch(e => reject(e));
-        })
-      },
-    } as LiveImageData
-    // Image data is stored under image/data/thumb, so we need the id of the parent image.
-    this.imageCache.set(ref.parent!.parent!.id, ret)
-    out$.next(ret)
-    out$.complete()
+      resolve(ret)
+    })
   }
 
   // Remove the specified tag from the specified image.

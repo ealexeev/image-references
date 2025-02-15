@@ -1,25 +1,23 @@
 @use '../../variables' as theme;
 
 .tag-list {
+  display: flex;
+  flex-flow: column nowrap;
+  align-items: center;
+
 	mat-form-field {
-		margin: 20px 20px 10px;
+		margin: 0.6em;
 	}
 
 	.create-button {
-		margin: 0px 20px 0px;
-		color: red;
+    background-color: rgba(theme.$btn-highlight-color, 0.5);
+		font-family: Roboto, sans-serif;
 	}
 
 	mat-chip-listbox {
-		max-width: 300px;
-		mat-chip-option {
-			max-width: 200px;
-			margin: 5px 20px;
-
-			mat-icon {
-				vertical-align: middle;
-			}
-		}
+    max-width: 32ch;
+    padding: 0.3em;
+    margin: 1ch 1ch;
 	}
 
 }

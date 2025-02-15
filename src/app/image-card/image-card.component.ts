@@ -66,7 +66,7 @@ export class ImageCardComponent implements OnInit, OnDestroy{
   }
 
   ngOnDestroy(): void{
-    this.unsubscribe();
+    this.unsubscribe()
   }
 
   getImageTags(): string[] {

@@ -43,6 +43,7 @@ export class ZipDownloaderComponent {
         link.setAttribute('download', `${this.fileName}.zip`);
         link.click();
         link.remove();
+        URL.revokeObjectURL(url);
       })
   }
 }

@@ -11,17 +11,27 @@ $grid_gap: 20px;
   flex-flow: column;
   height: 100%;
 
-  h1 {
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     background: theme.$background;
     margin: 0 0 0 0;
     margin-top: 0.5em;
     margin-bottom: 0.1em;
-    text-align: center;
-    font-family: "Teko", serif;
-    font-optical-sizing: auto;
-    font-weight: 400;
-    font-style: normal;
     color: lightgrey;
+
+    .spacer{
+      min-width: 2ch;
+    }
+
+    .text {
+      font-family: "Teko", serif;
+      font-optical-sizing: auto;
+      font-weight: 400;
+      font-style: normal;
+      font-size: 2rem;
+    }
   }
 
   .image-grid {

@@ -1,6 +1,10 @@
 <div class="dropzone" appDragDrop (files)="filesDropped($event)">
   <div class="image-gallery" >
-    <h1> {{ title() }} <app-zip-downloader [images]="images" [fileName]="mode === 'tag' ? optTagName() : mode" /> </h1>
+    <div class="header">
+      <span class="text">{{ title() }}</span>
+      <span class="spacer"></span>
+      <app-zip-downloader [images]="images" [fileName]="mode === 'tag' ? optTagName() : mode" />
+    </div>
     <div class="image-grid">
       @for (liveImage of images(); track liveImage.reference.id) {
         <app-image-card

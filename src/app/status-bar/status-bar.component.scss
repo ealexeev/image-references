@@ -1,10 +1,14 @@
 @use '../../variables' as theme;
 
+// Should this come from the theme?
+$error-color: rgb(165, 91, 18);
+$ok-color: #3f753c;
+
 .bar {
   display: flex;
   flex-flow: row nowrap;
   justify-content: space-evenly;
-  color: lightgrey;
+  color: theme.$text-color;
   font-family: Roboto, sans-serif;
   font-weight: 500;
   font-size: 0.875rem;
@@ -23,11 +27,11 @@
     margin: 1px 6px;
 
     .ok {
-      color: #3f753c;
+      color: $ok-color;
     }
 
     .error {
-      color: rgba(165, 91, 18);
+      color: $error-color
     }
   }
 
@@ -44,11 +48,11 @@
     }
 
     .info-message {
-      background-color: rgba(211, 211, 211, 0.50);
+      background-color: rgba(theme.$text-color, 0.20);
     }
 
     .error-message {
-      background-color: rgba(165, 91, 18, 0.82);
+      background-color: rgba($error-color, 0.80);
     }
 
     .message-content {
@@ -73,6 +77,6 @@
     border-radius: 0.5em;
     margin: 2px;
     padding: 0.25em 1ch;
-    background-color: #3c6675;
+    background-color: rgba(theme.$btn-highlight-color, 0.4);
   }
 }

@@ -26,7 +26,10 @@ import {ZipDownloaderComponent} from '../zip-downloader/zip-downloader.component
     ZipDownloaderComponent,
   ],
   templateUrl: './image-gallery.component.html',
-  styleUrl: './image-gallery.component.scss',
+  styleUrls: [
+    './image-gallery.component.scss',
+    '../../_variables.scss',
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ImageGalleryComponent implements OnInit, OnDestroy {

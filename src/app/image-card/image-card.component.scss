@@ -1,7 +1,10 @@
+@use '../../_variables' as theme;
+
 .image-card {
 
-  --mdc-icon-button-icon-color: rgba(211, 211, 211, 0.9);
-  --mat-badge-background-color: rgba(157, 215, 220, 0.6);
+  --mdc-icon-button-icon-color: #{rgba(theme.$text-color, 0.9)};
+  --mat-badge-background-color: #{rgba(theme.$btn-highlight-color, 0.7)};
+  // Need to read-up more on using theme colors for this kind of deal.  Ok for now.
   --mat-badge-text-color: #1e1e1e;
 
 	img {
@@ -25,17 +28,14 @@
     position-anchor: --image-actions;
     position-area: bottom;
   }
-  .lds-spinner {
-    /* change color here */
-    color: #1c4c5b
-  }
+
   .lds-spinner,
   .lds-spinner div,
   .lds-spinner div:after {
     box-sizing: border-box;
   }
   .lds-spinner {
-    color: currentColor;
+    color: #1e1e1e;
     display: inline-block;
     position: relative;
     width: 80px;

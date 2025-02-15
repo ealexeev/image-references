@@ -16,7 +16,10 @@ import {AsyncPipe} from '@angular/common';
     MatTooltipModule,
   ],
   templateUrl: './status-bar.component.html',
-  styleUrl: './status-bar.component.scss'
+  styleUrls: [
+    './status-bar.component.scss',
+    '../../_variables.scss'
+  ],
 })
 export class StatusBarComponent {
   // Max number of messages to keep in memory.

@@ -35,7 +35,10 @@ import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
     TagSelectComponent,
     ],
   templateUrl: './image-card.component.html',
-  styleUrl: './image-card.component.scss',
+  styleUrls: [
+    './image-card.component.scss',
+    '../../_variables.scss',
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ImageCardComponent implements OnInit, OnDestroy{

@@ -24,24 +24,12 @@ export class ZipDownloaderComponent {
 
   async onClick() {
     const zipFile = new JSZip();
-    const promises = [];
-    for (const image of this.images()) {
-      const imgData$ = this.storage.LoadImageData(image.reference.id)
-      imgData$.pipe(first())
-        .subscribe(
-          (imageData) => {
-            promises.push(
-              imageData.fullUrl()
-                .then(url => fetch(url))
-                .then(res => res.blob())
-                .then(blob => {
-                  zipFile.file(`${image.reference.id}.${extFromMime(blob.type)}`, blob)
-                })
-                .catch(err => console.log(`Download promise error: ${err}`)))
-          },
-          (err) => console.log(`Download sub error: ${err}`)
-        )
-    }
+    const liveImageData = [this.images().map(li=>this.storage.LoadImageData(li.reference.id))];
+    Promise.all(liveImageData)
+      .then((data) => {
+        // Want access to the blob here, not a URL.
+
+      })
 
   }
 }

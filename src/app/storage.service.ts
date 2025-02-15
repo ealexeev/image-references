@@ -396,7 +396,7 @@ export class StorageService implements OnDestroy {
       await setDoc(newImage.reference, newImage).then(()=> {this.imgCount$.next(this.imgCount$.value + 1)})
       const fullUrl = await this.StoreFullImage(iRef, imageBlob);
       await this.StoreImageData(iRef, imageBlob, fullUrl);
-      this.messageService.Info(`Added image ${shortenId(newImage.reference.id)}`)
+      this.messageService.Info(`Added new image ${shortenId(newImage.reference.id)}`)
     } catch (err: unknown) {
       this.messageService.Error(`Error adding image ${shortenId(newImage.reference.id)}: ${err}`)
     }

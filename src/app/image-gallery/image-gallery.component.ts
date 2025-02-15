@@ -15,13 +15,15 @@ import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {ImageCardComponent} from '../image-card/image-card.component';
 import {DragDropDirective, FileHandle} from '../drag-drop.directive';
 import {MessageService} from '../message.service';
+import {ZipDownloaderComponent} from '../zip-downloader/zip-downloader.component';
 
 @Component({
   selector: 'app-image-gallery',
   standalone: true,
   imports: [
     ImageCardComponent,
-    DragDropDirective
+    DragDropDirective,
+    ZipDownloaderComponent,
   ],
   templateUrl: './image-gallery.component.html',
   styleUrl: './image-gallery.component.scss',

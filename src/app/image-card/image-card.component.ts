@@ -1,7 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
-  EventEmitter,
+  EventEmitter, inject,
   Input,
   OnDestroy,
   OnInit,
@@ -45,6 +45,9 @@ export class ImageCardComponent implements OnInit, OnDestroy{
   @Input() tagCountFrom: number = 2;
   @Output() imageDeleted = new EventEmitter<string>;
 
+  private storage = inject(StorageService);
+  private renderer = inject(Renderer2);
+
   showTagSelection = signal(false);
   imageData: Subject<LiveImageData> = new Subject();
   thumbnailUrl: WritableSignal<string> = signal('');
@@ -53,7 +56,7 @@ export class ImageCardComponent implements OnInit, OnDestroy{
 
   private unsubscribe: () => void = () => {return};
 
-  constructor(private renderer: Renderer2, private storage: StorageService){
+  constructor(){
     this.imageData.pipe(
       // TODO:  Should this be a take one? or first()  Subscribing here is probably a waste.
       takeUntilDestroyed()

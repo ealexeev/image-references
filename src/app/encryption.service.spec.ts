@@ -1,29 +1,22 @@
 import {EncryptionService} from './encryption.service';
-import {connectFirestoreEmulator, Firestore, getFirestore, provideFirestore} from '@angular/fire/firestore';
+import {Firestore, provideFirestore} from '@angular/fire/firestore';
 import {WindowRef} from './window-ref.service';
 import {FirebaseApp, initializeApp, provideFirebaseApp} from '@angular/fire/app';
 import {environment} from './environments/environment.dev';
 import {TestBed} from '@angular/core/testing';
+import {EmulatedFirestore} from './test-providers';
+import {signal} from '@angular/core';
 
 describe('EncryptionService', () => {
   let service: EncryptionService;
   jasmine.DEFAULT_TIMEOUT_INTERVAL = 20000;
-  let connected = false;
+  const connected = signal(false);
 
   beforeEach(() => {
-      const emulatedFirestore = () => {
-      const firestore = getFirestore()
-      if ( !connected ) {
-        connectFirestoreEmulator(firestore, 'localhost', 8080, {})
-        connected = true;
-      }
-      return firestore;
-    }
-
     TestBed.configureTestingModule({
       providers: [
         provideFirebaseApp(() => initializeApp(environment)),
-        provideFirestore(()=> emulatedFirestore()),
+        provideFirestore(()=> EmulatedFirestore(connected)),
         {provide: EncryptionService},
         {provide: WindowRef},
       ]

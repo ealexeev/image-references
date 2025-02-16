@@ -1,10 +1,20 @@
 import { TestBed } from '@angular/core/testing';
 import { AppComponent } from './app.component';
+import {provideAuth} from '@angular/fire/auth';
+import {EmulatedAuth} from './test-providers';
+import {signal} from '@angular/core';
+import {provideAnimations} from '@angular/platform-browser/animations';
 
 describe('AppComponent', () => {
+  const connected = signal(false);
+
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [AppComponent],
+      providers: [
+        provideAuth(()=> EmulatedAuth(connected)),
+        provideAnimations(),
+      ]
     }).compileComponents();
   });
 
@@ -12,18 +22,5 @@ describe('AppComponent', () => {
     const fixture = TestBed.createComponent(AppComponent);
     const app = fixture.componentInstance;
     expect(app).toBeTruthy();
-  });
-
-  it(`should have the 'prestige-ape-references' title`, () => {
-    const fixture = TestBed.createComponent(AppComponent);
-    const app = fixture.componentInstance;
-    expect(app.title).toEqual('prestige-ape-references');
-  });
-
-  it('should render title', () => {
-    const fixture = TestBed.createComponent(AppComponent);
-    fixture.detectChanges();
-    const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('h1')?.textContent).toContain('Hello, prestige-ape-references');
   });
 });

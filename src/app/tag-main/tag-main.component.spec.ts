@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { TagMainComponent } from './tag-main.component';
+import { provideAnimations } from '@angular/platform-browser/animations';
 
 describe('TagMainComponent', () => {
   let component: TagMainComponent;
@@ -8,7 +9,10 @@ describe('TagMainComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [TagMainComponent]
+      imports: [TagMainComponent],
+      providers: [
+        provideAnimations(),
+      ]
     })
     .compileComponents();
 

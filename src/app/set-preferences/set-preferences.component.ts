@@ -11,7 +11,6 @@ import {MatSelectChange, MatSelectModule} from '@angular/material/select';
   selector: 'app-set-preferences',
   standalone: true,
   imports: [
-    AsyncPipe,
     MatSlideToggleModule,
     MatSliderModule,
     MatFormFieldModule,

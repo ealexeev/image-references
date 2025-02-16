@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { SetPreferencesComponent } from './set-preferences.component';
+import { provideAnimations } from '@angular/platform-browser/animations';
 
 describe('SetPreferencesComponent', () => {
   let component: SetPreferencesComponent;
@@ -8,7 +9,10 @@ describe('SetPreferencesComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [SetPreferencesComponent]
+      imports: [SetPreferencesComponent],
+      providers: [
+        provideAnimations(),
+      ]
     })
     .compileComponents();
 

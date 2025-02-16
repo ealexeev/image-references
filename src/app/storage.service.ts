@@ -15,7 +15,7 @@ import {
   QueryConstraint,
   serverTimestamp,
   setDoc, updateDoc,
-  where
+  where, writeBatch
 } from '@angular/fire/firestore';
 
 import {
@@ -522,17 +522,23 @@ export class StorageService implements OnDestroy {
   }
 
   async DeleteImage(imageRef: DocumentReference) {
-    getDoc(imageRef).then((snapshot) => {
-      if ( !snapshot.exists() ) {
-        return;
-      }
-      deleteObject(this.GetStorageReferenceFromId(imageRef.id))
-        .finally(() => {
-          deleteDoc(imageRef)
-            .then(()=>{this.imgCount$.next(this.imgCount$.value-1)})
-            .catch((err: unknown) => {this.messageService.Error(`Error deleting image ${shortenId(imageRef.id)}: ${err}`)})
-        });
-    })
+    try {
+      await deleteObject(this.GetStorageReferenceFromId(imageRef.id))
+    } catch (err: unknown) {
+      this.messageService.Error(`Error deleting cloud image ${shortenId(imageRef.id)}: ${err}`)
+      return Promise.reject(err)
+    }
+
+    const batch = writeBatch(this.firestore)
+    batch.delete(doc(this.firestore, this.imagesCollection, imageRef.id, 'data', 'thumbnail'));
+    batch.delete(imageRef);
+    try {
+      await batch.commit()
+    } catch (err: unknown) {
+      this.messageService.Error(`Error deleting image ${shortenId(imageRef.id)}: ${err}`)
+      return Promise.reject(err)
+    }
+    return Promise.resolve()
   }
 
   // Replace image tags with those in the live image.  If the tag list is empty delete the image instead.

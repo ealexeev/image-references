@@ -530,7 +530,7 @@ export class StorageService implements OnDestroy {
     }
 
     const batch = writeBatch(this.firestore)
-    batch.delete(doc(this.firestore, this.imagesCollection, imageRef.id, 'data', 'thumbnail'));
+    batch.delete(doc(this.firestore, this.imagesCollection.path, imageRef.id, 'data', 'thumbnail'));
     batch.delete(imageRef);
     try {
       await batch.commit()

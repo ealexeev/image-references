@@ -3,7 +3,7 @@ import { provideRouter, withComponentInputBinding } from '@angular/router';
 
 import { routes } from './app.routes';
 import { initializeApp, provideFirebaseApp } from '@angular/fire/app';
-import { getAuth, provideAuth } from '@angular/fire/auth';
+import {connectAuthEmulator, getAuth, provideAuth} from '@angular/fire/auth';
 import {connectFirestoreEmulator, getFirestore, provideFirestore} from '@angular/fire/firestore';
 import {connectStorageEmulator, getStorage, provideStorage} from '@angular/fire/storage';
 import { provideAnimations } from '@angular/platform-browser/animations';
@@ -15,7 +15,7 @@ export const appConfig: ApplicationConfig = {
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(routes, withComponentInputBinding()),
     provideFirebaseApp(() => initializeApp(environment)),
-    provideAuth(() => getAuth()),
+    provideAuth(() => getAuthOrEmulator(environment)),
     provideFirestore(() => getFirestoreOrEmulator(environment)),
     provideStorage(() => getStorageOrEmulator(environment)),
     provideAnimations(),
@@ -36,4 +36,12 @@ function getStorageOrEmulator(environment: any) {
     connectStorageEmulator(storage, "127.0.0.1", 9199);
   }
   return storage
+}
+
+function getAuthOrEmulator(environment: any) {
+  const auth = getAuth();
+  if ( environment?.firebaseAuthUseLocal ) {
+    connectAuthEmulator(auth, "http://127.0.0.1:9099");
+  }
+  return auth
 }

@@ -19,7 +19,7 @@ import {MatButtonToggleModule} from '@angular/material/button-toggle';
 
 // Don't show UI to users with a UID other than this.  Storage and Firebase APIs are also gated by this requirement.
 const permittedUid = "***REDACTED UID***";
-const authRequired = false;
+const authRequired = true;
 
 @Component({
   selector: 'app-root',

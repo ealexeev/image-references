@@ -26,11 +26,6 @@ import { MatInputModule } from '@angular/material/input';
 export class LoginFormComponent {
   private auth = inject(Auth);
 
-  // Remove eventually
-  constructor() {
-    connectAuthEmulator(this.auth, "http://127.0.0.1:9099");
-  }
-
   readonly dialogRef = inject(MatDialogRef<LoginFormComponent>);
   email = '';
   password = '';

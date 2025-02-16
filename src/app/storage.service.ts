@@ -169,7 +169,7 @@ export class StorageService implements OnDestroy {
     this.startSubscriptions()
   }
 
-  async startSubscriptions(){
+  private async startSubscriptions(){
     // Bootstrap listening for all tags
     const allTagsQuery = query(this.tagsCollection);
     this.unsubTagCollection = onSnapshot(allTagsQuery, (querySnapshot) => {
@@ -551,7 +551,7 @@ export class StorageService implements OnDestroy {
       .catch( e => this.messageService.Error(`ReplaceImageTags error: ${e}`));
   }
 
-  async LiveTagToStorage(tag: LiveTag): Promise<StoredTag> {
+  private async LiveTagToStorage(tag: LiveTag): Promise<StoredTag> {
     const encodedName = (new TextEncoder()).encode(tag.name);
     if ( !(await firstValueFrom(this.encryption.currentState$)) ) {
       return {'name': Bytes.fromUint8Array(encodedName) } as StoredTag;
@@ -564,7 +564,7 @@ export class StorageService implements OnDestroy {
     } as StoredTag;
   }
 
-  async LiveTagFromStorage(tag: StoredTag, ref: DocumentReference): Promise<LiveTag> {
+  private async LiveTagFromStorage(tag: StoredTag, ref: DocumentReference): Promise<LiveTag> {
     if ( !( tag?.iv || tag?.keyReference ) ) {
       return {
         'name': tag.name.toString(),
@@ -580,11 +580,11 @@ export class StorageService implements OnDestroy {
   }
 
   // Convert a blob to a firestore Bytes object.
-  async BytesFromBlob(b: Blob): Promise<Bytes> {
+  private async BytesFromBlob(b: Blob): Promise<Bytes> {
     return Bytes.fromUint8Array(new Uint8Array(await b.arrayBuffer()))
   }
 
-  imageToFirestore(liveImage: LiveImage) {
+  private imageToFirestore(liveImage: LiveImage) {
     // Need to store thumbnail.
     // Need to store raw image.
     return {
@@ -594,7 +594,7 @@ export class StorageService implements OnDestroy {
     };
   }
 
-  imageFromFirestore(snapshot:DocumentSnapshot, options: SnapshotOptions): LiveImage {
+  private imageFromFirestore(snapshot:DocumentSnapshot, options: SnapshotOptions): LiveImage {
     const data = snapshot.data(options) as StoredImage;
     if ( !snapshot.exists() ) {
       this.messageService.Error(`Error loading ${snapshot.id} from Firestore:  does not exist.`)
@@ -606,14 +606,14 @@ export class StorageService implements OnDestroy {
     } as LiveImage;
   }
 
-  imageConverter() {
+  private imageConverter() {
     return {
       'toFirestore': this.imageToFirestore,
       'fromFirestore': this.imageFromFirestore,
     }
   }
 
-  scaleImage(blob: Blob): Promise<Blob> {
+  private scaleImage(blob: Blob): Promise<Blob> {
     return new Promise((resolve, reject) => {
       const height = 400;
       const width = 0;

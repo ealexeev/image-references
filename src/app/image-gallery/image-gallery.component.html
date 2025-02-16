@@ -3,7 +3,9 @@
     <div class="header">
       <span class="text">{{ title() }}</span>
       <span class="spacer"></span>
-      <app-zip-downloader [images]="images" [fileName]="mode === 'tag' ? optTagName() : mode" />
+      @defer {
+        <app-zip-downloader [images]="images" [fileName]="mode === 'tag' ? optTagName() : mode" />
+      }
     </div>
     <div class="image-grid">
       @for (liveImage of images(); track liveImage.reference.id) {

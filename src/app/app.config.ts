@@ -8,7 +8,7 @@ import {connectFirestoreEmulator, getFirestore, provideFirestore} from '@angular
 import {connectStorageEmulator, getStorage, provideStorage} from '@angular/fire/storage';
 import { provideAnimations } from '@angular/platform-browser/animations';
 
-import { environment } from './environments/environment';
+import { environment } from './environments/environment.prod';
 
 export const appConfig: ApplicationConfig = {
   providers: [

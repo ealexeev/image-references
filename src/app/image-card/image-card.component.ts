@@ -49,7 +49,9 @@ export class ImageCardComponent implements OnInit, OnDestroy{
   showTagSelection = signal(false);
   imageData: Subject<LiveImageData> = new Subject();
   thumbnailUrl: WritableSignal<string> = signal('');
-  fullUrl: WritableSignal<string> = signal('');
+  fullUrlAvailable: WritableSignal<Boolean> = signal(false);
+  fetchFull: any; /// ()=>Promise<Blob>;
+
   private unsubscribe: () => void = () => {return};
 
   constructor(private renderer: Renderer2, private storage: StorageService){
@@ -58,8 +60,9 @@ export class ImageCardComponent implements OnInit, OnDestroy{
       takeUntilDestroyed()
     ).subscribe(
       imageData => {
-        this.thumbnailUrl.set(imageData.thumbnailUrl);
-        imageData.fullUrl().then(blob => {this.fullUrl.set(URL.createObjectURL(blob))});
+        this.thumbnailUrl.set(imageData.thumbnailUrl)
+        this.fetchFull = imageData.fullUrl
+        this.fullUrlAvailable.set(true)
       }
     )
   }
@@ -83,13 +86,22 @@ export class ImageCardComponent implements OnInit, OnDestroy{
     this.imageDeleted.emit(this.imageSource?.reference.id || "");
   }
 
-  onDownload() {
+  async onDownload() {
     const link = this.renderer.createElement('a');
+    let blob: Blob;
+    try {
+      blob = await this.fetchFull();
+    } catch (err: unknown) {
+     console.error(`Error fetching image blob: ${err}`);
+     return;
+    }
+    const url = URL.createObjectURL(blob)
     link.setAttribute('target', '_blank');
-    link.setAttribute('href', this.fullUrl());
-    link.setAttribute('download', new URL(this.fullUrl()).pathname.slice(1));
+    link.setAttribute('href', url);
+    link.setAttribute('download', `${this.imageSource.reference.id}.${extFromMime(blob.type)}`);
     link.click();
     link.remove();
+    URL.revokeObjectURL(url);
   }
 
   manageTags() {
@@ -103,4 +115,8 @@ export class ImageCardComponent implements OnInit, OnDestroy{
       tags.map(t => this.storage.TagByName(t)?.reference)
         .filter(t => t !== undefined))
   }
+}
+
+function extFromMime(mimeType: string): string {
+  return mimeType.slice('image/'.length)
 }

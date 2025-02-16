@@ -23,7 +23,9 @@
         (selectionChange)="onSelectionChange($event)"
       />
     }
-		<button mat-icon-button (click)="onDownload()">
+		<button mat-icon-button
+            (click)="onDownload()"
+            [disabled]="!fullUrlAvailable()">
 			<mat-icon fontIcon="download"></mat-icon>
 		</button>
 		<button mat-icon-button (click)="onDelete()">

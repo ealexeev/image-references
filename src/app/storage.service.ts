@@ -29,7 +29,7 @@ import {
 import { HmacService } from './hmac.service';
 import {
   BehaviorSubject, combineLatest, debounceTime, distinctUntilChanged, firstValueFrom, from, interval, map,
-  Observable, shareReplay,
+  Observable, shareReplay, startWith,
   Subject, tap, withLatestFrom,
 } from 'rxjs';
 import {
@@ -150,7 +150,7 @@ export class StorageService implements OnDestroy {
     this.cloudStorage = ref(this.storage, cloudDataPath)
     this.recentTags$ = this.appliedTags$.pipe(
       takeUntilDestroyed(),
-      withLatestFrom(this.lastRecentlyUsed$, this.tags$),
+      withLatestFrom(this.lastRecentlyUsed$.pipe(startWith([])), this.tags$),
       map(([applied, lastEmission, stored]) => {
         const appliedIds = applied.map(t=>t.reference.id)
         let ret: LiveTag[];
@@ -301,7 +301,7 @@ export class StorageService implements OnDestroy {
   }
 
   // GetTagReference returns a document reference to a tag based on the tag's name
-  async GetTagReference(name: string): Promise<DocumentReference> {
+  private async GetTagReference(name: string): Promise<DocumentReference> {
     const cached = this.TagByName(name)?.reference
     if ( cached !== undefined ) {
       return cached;
@@ -310,7 +310,7 @@ export class StorageService implements OnDestroy {
     return doc(this.firestore,  this.tagsCollection.path, id);
   }
 
-  async GetImageReferenceFromBlob(image: Blob): Promise<DocumentReference> {
+  private async GetImageReferenceFromBlob(image: Blob): Promise<DocumentReference> {
     const hmac = await this.hmac.getHmacHex(image)
     return doc(this.firestore, imagesCollectionPath, hmac).withConverter(this.imageConverter())
   }
@@ -338,6 +338,28 @@ export class StorageService implements OnDestroy {
     });
   }
 
+  async LoadTagByReference(ref: DocumentReference): Promise<LiveTag> {
+    const cached = this.TagById(ref.id)
+    if ( cached ) {
+      return cached as LiveTag;
+    }
+    return new Promise(async (resolve, reject) => {
+      return getDoc(ref)
+        .then((snapshot: DocumentSnapshot) => {
+          if ( snapshot.exists() ) {
+            resolve(this.LiveTagFromStorage(snapshot.data() as StoredTag, ref));
+          } else {
+            const msg = `LoadTagByReference(${ref.id}): not found`
+            this.messageService.Error(msg)
+            reject(msg);
+          }
+        })
+        .catch((err: Error) => {
+          this.messageService.Error(err)
+        })
+    })
+  }
+
   // Load a tag from firestore.  If provided with a reference, it is assumed to have been made using
   // GetTagReference which makes use of a converter.
   async LoadTagByName(name: string): Promise<LiveTag> {
@@ -346,23 +368,8 @@ export class StorageService implements OnDestroy {
       this.messageService.Info(`Fetched (cached) tag: ${name}`)
       return cached
     }
-
-    return new Promise(async (resolve, reject) => {
-      const tagRef = await this.GetTagReference(name)
-     return  getDoc(tagRef)
-        .then((snapshot: DocumentSnapshot) => {
-          if ( snapshot.exists() ) {
-            this.messageService.Info(`Fetched (stored) tag: ${name}`)
-            resolve(this.LiveTagFromStorage(snapshot.data() as StoredTag, snapshot.ref));
-          } else {
-            this.messageService.Error(`LoadTagByName(${name}): not found`)
-            reject(`LoadTagByName(${name}): not found`);
-          }
-        })
-        .catch((err: Error) => {
-          this.messageService.Error(`Error loading tag by reference ${(tagRef as DocumentReference).id}: ${err.message}`)
-        })
-    })
+    const tagRef = await this.GetTagReference(name)
+    return this.LoadTagByReference(tagRef)
   }
 
   // Add specified tags to this image.
@@ -403,7 +410,7 @@ export class StorageService implements OnDestroy {
     }
   }
 
-  async StoreImageData(ref: DocumentReference,  blob: Blob, fullUrl: string): Promise<void> {
+  private async StoreImageData(ref: DocumentReference,  blob: Blob, fullUrl: string): Promise<void> {
     let scaledDown: Blob;
     try {
       scaledDown = await this.scaleImage(blob)
@@ -444,7 +451,7 @@ export class StorageService implements OnDestroy {
       .catch((err: unknown)=> {this.messageService.Error(`StoreImageData(${ref.id}): ${err}`)})
   }
 
-  async StoreFullImage(imageRef: DocumentReference, blob: Blob ): Promise<string> {
+  private async StoreFullImage(imageRef: DocumentReference, blob: Blob ): Promise<string> {
     const storageRef = ref(this.cloudStorage, imageRef.id);
     try {
       await uploadBytes(storageRef, blob)
@@ -456,7 +463,7 @@ export class StorageService implements OnDestroy {
   }
 
   // Given StoredImageData convert to LiveIMagedata and ship via out.
-  async StoredImageDataToLive(stored: StoredImageData, ref: DocumentReference): Promise<LiveImageData> {
+  private async StoredImageDataToLive(stored: StoredImageData, ref: DocumentReference): Promise<LiveImageData> {
     return new Promise(async (resolve, reject) => {
       if (!(stored?.thumbnailIV || stored?.thumbnailKeyRef || stored?.fullIV || stored?.fullKeyRef)) {
         const thumb = new Blob([stored.thumbnail.toUint8Array()], {type: stored.mimeType})

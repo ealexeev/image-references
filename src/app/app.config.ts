@@ -23,7 +23,7 @@ export const appConfig: ApplicationConfig = {
 };
 
 function getFirestoreOrEmulator(environment: any) {
-  const firestore = getFirestore();
+  const firestore = getFirestore(environment.databaseId);
   if ( environment?.firestoreUseLocal ) {
     connectFirestoreEmulator(firestore, 'localhost', 8080, {})
   }

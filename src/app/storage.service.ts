@@ -522,18 +522,12 @@ export class StorageService implements OnDestroy {
   }
 
   async DeleteImage(imageRef: DocumentReference) {
-    try {
-      await deleteObject(this.GetStorageReferenceFromId(imageRef.id))
-    } catch (err: unknown) {
-      this.messageService.Error(`Error deleting cloud image ${shortenId(imageRef.id)}: ${err}`)
-      return Promise.reject(err)
-    }
-
     const batch = writeBatch(this.firestore)
     batch.delete(doc(this.firestore, this.imagesCollection.path, imageRef.id, 'data', 'thumbnail'));
     batch.delete(imageRef);
     try {
       await batch.commit()
+      await deleteObject(this.GetStorageReferenceFromId(imageRef.id))
     } catch (err: unknown) {
       this.messageService.Error(`Error deleting image ${shortenId(imageRef.id)}: ${err}`)
       return Promise.reject(err)

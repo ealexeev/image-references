@@ -17,9 +17,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatChipsModule } from '@angular/material/chips';
 import { LiveImage, LiveImageData, StorageService } from '../storage.service';
 import { TagSelectComponent } from '../tag-select/tag-select.component';
-import {QuerySnapshot} from '@angular/fire/compat/firestore';
-import {Observable, Subject} from 'rxjs';
-import {AsyncPipe} from '@angular/common';
+import { Subject } from 'rxjs';
+import { AsyncPipe } from '@angular/common';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 
 @Component({

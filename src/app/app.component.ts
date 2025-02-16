@@ -10,7 +10,7 @@ import { Subscription } from 'rxjs';
 
 import { LoginFormComponent } from './login-form/login-form.component';
 import {SetPreferencesComponent} from './set-preferences/set-preferences.component';
-import {EncryptionService} from './encryption.service';
+import {EncryptionService, State as EncryptionState} from './encryption.service';
 import {AsyncPipe} from '@angular/common';
 import {StatusBarComponent} from './status-bar/status-bar.component';
 import {MatTooltipModule} from '@angular/material/tooltip';
@@ -61,7 +61,7 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-    this.encryption.initialize('***REDACTED***')
+    this.encryption.Enable('***REDACTED***')
   }
 
   ngOnDestroy() {
@@ -77,4 +77,5 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   title = 'prestige-ape-references';
+  protected readonly EncryptionState = EncryptionState;
 }

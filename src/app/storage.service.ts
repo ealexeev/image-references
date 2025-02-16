@@ -402,15 +402,18 @@ export class StorageService implements OnDestroy {
 
     try {
       await setDoc(newImage.reference, newImage).then(()=> {this.imgCount$.next(this.imgCount$.value + 1)})
-      const fullUrl = await this.StoreFullImage(iRef, imageBlob);
-      await this.StoreImageData(iRef, imageBlob, fullUrl);
+      if (this.encryption.enabled()) {
+        await this.StoreEncryptedImageData(iRef, imageBlob)
+      } else {
+        await this.StorePlainImageData(iRef, imageBlob)
+      }
       this.messageService.Info(`Added new image ${shortenId(newImage.reference.id)}`)
     } catch (err: unknown) {
       this.messageService.Error(`Error adding image ${shortenId(newImage.reference.id)}: ${err}`)
     }
   }
 
-  private async StoreImageData(ref: DocumentReference,  blob: Blob, fullUrl: string): Promise<void> {
+  private async StorePlainImageData (ref: DocumentReference,  blob: Blob): Promise<void> {
     let scaledDown: Blob;
     try {
       scaledDown = await this.scaleImage(blob)
@@ -419,36 +422,43 @@ export class StorageService implements OnDestroy {
       return;
     }
 
-    // There needs to be a better way of doing this.  There is probably some app-wide mode that indicates
-    // whether encryption is wanted or not.
-    if ( (await firstValueFrom(this.encryption.currentState$) == this.encryption.ReadyStateReady()) ){
-      try {
-        const encryptedThumb = await this.encryption.Encrypt(await scaledDown.arrayBuffer())
-        const encryptedFull = await this.encryption.Encrypt(await blob.arrayBuffer())
-        const fullUrl = await this.StoreFullImage(ref, new Blob([encryptedFull.ciphertext], {type: blob.type}))
-        return setDoc(doc(ref, 'data', 'thumbnail'), {
-          'mimeType': blob.type,
-          'thumbnail': await this.BytesFromBlob(new Blob([encryptedThumb.ciphertext], { type: blob.type })),
-          'thumbnailIV': Bytes.fromUint8Array(new Uint8Array(encryptedThumb.iv)),
-          'thumbnailKeyRef': encryptedThumb.keyReference,
-          'fullUrl': fullUrl,
-          'fullIV': Bytes.fromUint8Array(new Uint8Array(encryptedFull.iv)),
-          'fullKeyRef': encryptedFull.keyReference,
-        } as StoredImageData)
-      } catch (err: unknown) {
-        this.messageService.Error(`Error encrypting ${shortenId(ref.id)} thumbnail: ${err}`)
-        throw new Error(`Error encrypting ${ref.id} thumbnail: ${err}`)
-      }
-    }
-
     const data = {
       'mimeType': blob.type,
       'thumbnail': await this.BytesFromBlob(scaledDown),
-      'fullUrl': fullUrl,
+      'fullUrl': await this.StoreFullImage(ref, blob),
     } as StoredImageData
 
     setDoc(doc(ref, 'data', 'thumbnail'), data)
-      .catch((err: unknown)=> {this.messageService.Error(`StoreImageData(${ref.id}): ${err}`)})
+      .catch((err: unknown)=> {this.messageService.Error(`StorePlainImageData(${ref.id}): ${err}`)})
+    return
+  }
+
+  private async StoreEncryptedImageData(ref: DocumentReference, blob: Blob): Promise<void> {
+    let scaledDown: Blob;
+    try {
+      scaledDown = await this.scaleImage(blob)
+    } catch (err: unknown) {
+      this.messageService.Error(`Error scaling down image ${ref.id}: ${err}`)
+      return;
+    }
+
+    try {
+      const encryptedThumb = await this.encryption.Encrypt(await scaledDown.arrayBuffer())
+      const encryptedFull = await this.encryption.Encrypt(await blob.arrayBuffer())
+      const fullUrl = await this.StoreFullImage(ref, new Blob([encryptedFull.ciphertext], {type: blob.type}))
+      return setDoc(doc(ref, 'data', 'thumbnail'), {
+        'mimeType': blob.type,
+        'thumbnail': await this.BytesFromBlob(new Blob([encryptedThumb.ciphertext], {type: blob.type})),
+        'thumbnailIV': Bytes.fromUint8Array(new Uint8Array(encryptedThumb.iv)),
+        'thumbnailKeyRef': encryptedThumb.keyReference,
+        'fullUrl': fullUrl,
+        'fullIV': Bytes.fromUint8Array(new Uint8Array(encryptedFull.iv)),
+        'fullKeyRef': encryptedFull.keyReference,
+      } as StoredImageData)
+    } catch (err: unknown) {
+      this.messageService.Error(`Error encrypting ${shortenId(ref.id)} thumbnail: ${err}`)
+      throw new Error(`Error encrypting ${ref.id} thumbnail: ${err}`)
+    }
   }
 
   private async StoreFullImage(imageRef: DocumentReference, blob: Blob ): Promise<string> {

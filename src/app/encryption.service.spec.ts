@@ -2,9 +2,8 @@ import {EncryptionService} from './encryption.service';
 import {connectFirestoreEmulator, Firestore, getFirestore, provideFirestore} from '@angular/fire/firestore';
 import {WindowRef} from './window-ref.service';
 import {FirebaseApp, initializeApp, provideFirebaseApp} from '@angular/fire/app';
-import {environment} from './environments/environment';
-import {fakeAsync, TestBed, tick} from '@angular/core/testing';
-import {firstValueFrom, lastValueFrom} from 'rxjs';
+import {environment} from './environments/environment.dev';
+import {TestBed} from '@angular/core/testing';
 
 describe('EncryptionService', () => {
   let service: EncryptionService;
@@ -12,7 +11,7 @@ describe('EncryptionService', () => {
   let connected = false;
 
   beforeEach(() => {
-    const emulatedFirestore = () => {
+      const emulatedFirestore = () => {
       const firestore = getFirestore()
       if ( !connected ) {
         connectFirestoreEmulator(firestore, 'localhost', 8080, {})
@@ -44,25 +43,25 @@ describe('EncryptionService', () => {
     expect(service.subtle).toBeTruthy();
     expect(service.crypto).toBeTruthy();
     expect(service.wrap_key).toBeNull();
-    expect(service.ready()).toBeFalse();
+    expect(service.enabled()).toBeFalse();
   })
 
   it('should initialize wrap_key', async () => {
-    await service.initialize('test');
-    expect(service.ready()).toBeTrue();
+    await service.Enable('test');
+    expect(service.enabled()).toBeTrue();
     expect(service.wrap_key).toBeTruthy();
   })
 
   it('should clear keys', async () => {
-    await service.initialize('test')
-    service.clear();
-    expect(service.ready()).toBeFalse();
+    await service.Enable('test')
+    service.Disable();
+    expect(service.enabled()).toBeFalse();
     expect(service.wrap_key).toBeNull();
   })
 
   it('should generate and wrap encryption key', async () => {
-    await service.initialize('test');
-    expect(service.ready()).toBeTrue();
+    await service.Enable('test');
+    expect(service.enabled()).toBeTrue();
     expect( await service.GenerateEncryptionKey()
       .then(k=> service.WrapKey(k))
       .then(w => service.UnwrapKey(w))
@@ -70,7 +69,7 @@ describe('EncryptionService', () => {
   })
 
   it('should store and load keys', async () => {
-    await service.initialize('test');
+    await service.Enable('test');
     const key = await service.GenerateEncryptionKey();
     const wrapped = await service.WrapKey(key)
     const ref = await service.StoreWrappedKey(wrapped);
@@ -84,16 +83,16 @@ describe('EncryptionService', () => {
   })
 
   it('should initialize encryption_key', async () => {
-    await service.initialize('test');
-    expect(service.ready()).toBeTrue();
+    await service.Enable('test');
+    expect(service.enabled()).toBeTrue();
     expect(service.encryption_key).toBeTruthy();
   })
 
   // We have issues if initialize is called with a different passphrase and there are wrapped keys in the db.
   it('should not unwrap with different phrase', async () => {
-    await service.initialize('test')
-    return service.initialize('test-123')
-      .then(()=> expect(service.ready()).toBeFalse())
+    await service.Enable('test')
+    return service.Enable('test-123')
+      .then(()=> expect(service.enabled()).toBeFalse())
       .catch(r=> expect(r).toContain('OperationError')
     )
   })

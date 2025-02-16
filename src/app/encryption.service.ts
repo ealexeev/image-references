@@ -1,4 +1,4 @@
-import {inject, Injectable, OnDestroy, Query, signal} from '@angular/core';
+import {inject, Injectable, OnDestroy, Query, signal, WritableSignal} from '@angular/core';
 import { WindowRef } from './window-ref.service';
 import {BehaviorSubject, first, firstValueFrom, Observable, shareReplay, Subject, takeUntil, tap, timeout} from 'rxjs';
 import {
@@ -78,6 +78,8 @@ export class EncryptionService implements OnDestroy {
   windowRef = inject(WindowRef);
   firestore = inject(Firestore);
 
+  // Whether encryption is desired.  Only if the service is enabled should its states be considered.
+  enabled: WritableSignal<boolean> = signal(false);
   subtle: SubtleCrypto | null = null;
   crypto: Crypto | null = null;
   wrap_key: CryptoKey | null = null;
@@ -101,7 +103,7 @@ export class EncryptionService implements OnDestroy {
     )
   }
 
-  async initialize(passphrase: string) {
+  async Enable(passphrase: string) {
     this.readyStateChanged$.next(State.Initializing)
     await this.subtle!.importKey("raw", stringToArrayBuffer(passphrase), {name: "PBKDF2"}, false, ["deriveKey"])
       .then((static_passphrase: CryptoKey) => this.subtle!.deriveKey(pbkdf2Params, static_passphrase, aesKWParams, true, ['wrapKey', 'unwrapKey']))
@@ -112,11 +114,14 @@ export class EncryptionService implements OnDestroy {
     } catch (err: unknown) {
       this.error$.next(err as Error)
       this.readyStateChanged$.next(State.Error)
+      this.enabled.set(false)
       return
     }
     if ( latest ) {
       this.encryption_key = latest
       this.readyStateChanged$.next(State.Ready);
+      this.enabled.set(true);
+
       return;
     }
     const key = await this.GenerateEncryptionKey()
@@ -127,16 +132,20 @@ export class EncryptionService implements OnDestroy {
       used: 0,
     } as LiveKey
     this.readyStateChanged$.next(State.Ready);
+    this.enabled.set(true);
+  }
+
+  // Used to undo "initialize" and make encryption/decryption impossible.
+  Disable() {
+    this.wrap_key = null;
+    this.encryption_key = null;
+    this.readyStateChanged$.next(State.NotReady);
+    this.enabled.set(false)
   }
 
   ngOnDestroy() {
-    this.clear()
+    this.Disable()
   }
-
-  ReadyStateReady() {return State.Ready}
-  ReadyStateNotReady() {return State.NotReady}
-  ReadyStateInitializing() {return State.Initializing}
-  ReadyStateError() {return State.Error}
 
   // Ideally we make a wrapped copy right now and store it.
   // We should also set this.encryption.key
@@ -263,13 +272,6 @@ export class EncryptionService implements OnDestroy {
   // Delete in production.
   debugme() {
     console.log('Debug me called');
-  }
-
-  // Used to undo "initialize" and make encryption/decryption impossible.
-  clear() {
-    this.wrap_key = null;
-    this.encryption_key = null;
-    this.readyStateChanged$.next(State.NotReady);
   }
 
   async forTestOnlyClearAllKeys() {

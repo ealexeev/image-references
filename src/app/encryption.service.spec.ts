@@ -22,9 +22,6 @@ describe('EncryptionService', () => {
     }).compileComponents()
 
     service = TestBed.inject(EncryptionService)
-    // TestBed.inject(FirebaseApp)
-    // TestBed.inject(Firestore)
-    // TestBed.inject(WindowRef)
   })
 
   afterEach(async () => {

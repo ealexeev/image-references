@@ -1,4 +1,4 @@
-import {ChangeDetectionStrategy, Component, EventEmitter, Output} from '@angular/core';
+import {ChangeDetectionStrategy, Component, EventEmitter, inject, Output} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { LiveTag, StorageService } from '../storage.service';
 import { catchError, combineLatestWith, debounceTime, distinctUntilChanged, map, of, startWith, tap, Observable, BehaviorSubject } from 'rxjs';
@@ -31,7 +31,6 @@ import {FormControl, FormsModule, ReactiveFormsModule} from '@angular/forms';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class TagListComponent {
-
   @Output() tagSelectionEvent = new EventEmitter<string>()
 
   tags$: Observable<LiveTag[]>;
@@ -40,8 +39,10 @@ export class TagListComponent {
 
   readonly searchText = new FormControl('')
 
-  constructor(private storage: StorageService) {
-    var search = this.searchText.valueChanges.pipe(
+  private storage: StorageService = inject(StorageService);
+
+  constructor() {
+    let search = this.searchText.valueChanges.pipe(
       startWith(''),
       takeUntilDestroyed(),
       debounceTime(500),

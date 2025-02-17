@@ -1,6 +1,15 @@
 import { CommonModule, Location } from '@angular/common';
 
-import {ChangeDetectionStrategy, Component, Input, OnChanges, OnInit, signal, WritableSignal} from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  inject,
+  Input,
+  OnChanges,
+  OnInit,
+  signal,
+  WritableSignal
+} from '@angular/core';
 import { MatSidenavModule } from '@angular/material/sidenav';
 
 import { ImageGalleryComponent } from '../image-gallery/image-gallery.component';
@@ -27,12 +36,14 @@ export class TagMainComponent {
     }
   }
 
+  private location = inject(Location);
+
   selectedTag: WritableSignal<string> = signal('');
 
-  constructor(private _location: Location){ }
+  constructor(){ }
 
   onTagSelection(tagName: string) {
     this.selectedTag.set(tagName);
-    this._location.go('/tags/' +tagName);
+    this.location.go('/tags/' +tagName);
   }
 }

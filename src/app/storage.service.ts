@@ -114,7 +114,6 @@ export class StorageService implements OnDestroy {
   private storage = inject(Storage);
 
   private imagesCollection: any;
-  private tagsCollection: any;
   private cloudStorage: any;
   private unsubTagCollection: any;
   private unsubImageCount: any;

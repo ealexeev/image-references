@@ -1,13 +1,14 @@
 import {inject, Injectable, OnDestroy, Query} from '@angular/core';
 import {
+  arrayRemove,
   Bytes,
   collection, doc,
   DocumentReference,
   DocumentSnapshot,
   Firestore,
-  getDoc,
+  getDoc, getDocs,
   onSnapshot,
-  query, setDoc
+  query, setDoc, where, writeBatch
 } from '@angular/fire/firestore';
 import {EncryptionService} from './encryption.service';
 import {MessageService} from './message.service';
@@ -22,6 +23,8 @@ import {
   withLatestFrom
 } from 'rxjs';
 import {HmacService} from './hmac.service';
+import {runTransaction} from '@angular/fire/database';
+import {QueryDocumentSnapshot} from '@angular/fire/compat/firestore';
 
 export type Tag = {
   name: string,
@@ -229,9 +232,14 @@ export class TagService implements OnDestroy {
    * Remove this tag from all images that reference it and delete the tag document.
    */
   async DeleteTag(ref: DocumentReference): Promise<void> {
-    // This will require a transaction based approach where we'll read images and modify all images that
-    // reference the tag.  Should also decrement current tagsCount$
-    throw new Error('Not Implemented')
+    const q = query(collection(this.firestore, 'images'), where("tags", "array-contains", ref))
+    const images = await getDocs(q);
+    const batch = writeBatch(this.firestore)
+    images.forEach(image => {
+        batch.update(image.ref, {'tags': arrayRemove(ref)})
+      })
+    batch.delete(ref);
+    return batch.commit()
   }
 }
 

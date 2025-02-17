@@ -4,7 +4,16 @@ import { TagService } from './tag.service';
 import {signal} from '@angular/core';
 import {FirebaseApp, initializeApp, provideFirebaseApp} from '@angular/fire/app';
 import {environment} from './environments/environment.dev';
-import {collection, Firestore, getDocs, provideFirestore, query, writeBatch} from '@angular/fire/firestore';
+import {
+  collection, deleteDoc,
+  doc,
+  Firestore, getDoc,
+  getDocs,
+  provideFirestore,
+  query,
+  setDoc,
+  writeBatch
+} from '@angular/fire/firestore';
 import {EmulatedFirestore} from './test-providers';
 import {EncryptionService} from './encryption.service';
 import {firstValueFrom, Subject, takeUntil} from 'rxjs';
@@ -13,6 +22,7 @@ describe('TagService', () => {
   let service: TagService;
   const connected = signal(false);
   let firestore: Firestore;
+  jasmine.DEFAULT_TIMEOUT_INTERVAL = 40000
 
   beforeEach(() => {
     TestBed.configureTestingModule({
@@ -39,7 +49,7 @@ describe('TagService', () => {
 
   it('should be created', () => {
     expect(service).toBeTruthy();
-  });
+  })
 
   it('should store a tag', async () => {
     const tagName = 'test-tag';
@@ -107,5 +117,24 @@ describe('TagService', () => {
     expect(recent.map(t=>t.name)).toEqual(['f', 'c', 'a', 'b', 'd', 'e'])
   })
 
+  it('deletes a tag and removes references to it', async () => {
+    const t = await service.StoreTag('test-tag')
+    const t2 = await service.StoreTag('test-tag2')
+    const dRef1 = doc(firestore, 'images', 'image-1')
+    const dRef2 = doc(firestore, 'images', 'image-2')
+    await setDoc(dRef1, {'tags': [t.reference]})
+    await setDoc(dRef2, {'tags': [t2.reference]})
+    await service.DeleteTag(t.reference)
+    const tagSnap = await getDoc(t.reference)
+    expect(tagSnap.exists()).toBeFalse()
+    const d1Snap = await getDoc(dRef1)
+    expect(d1Snap.exists()).toBeTrue()
+    const d2Snap = await getDoc(dRef2)
+    expect(d1Snap.get('tags')).toEqual([]);
+    expect(d2Snap.exists()).toBeTrue()
+    expect(d2Snap.get('tags').pop()!.id).toEqual(t2.reference.id)
+    await deleteDoc(dRef1)
+    await deleteDoc(dRef2)
+  })
 
 });

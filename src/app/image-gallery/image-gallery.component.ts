@@ -16,6 +16,7 @@ import {ImageCardComponent} from '../image-card/image-card.component';
 import {DragDropDirective, FileHandle} from '../drag-drop.directive';
 import {MessageService} from '../message.service';
 import {ZipDownloaderComponent} from '../zip-downloader/zip-downloader.component';
+import {Tag, TagService} from '../tag.service';
 
 @Component({
   selector: 'app-image-gallery',
@@ -38,6 +39,9 @@ export class ImageGalleryComponent implements OnInit, OnDestroy {
   set tagName(value: string) {
     if ( value !== this.optTagName() ) {
       this.optTagName.set(value);
+      this.tagService.LoadTagByName(value)
+        .then(tag => {this.tag = tag})
+        .catch(err => {this.messageService.Error(`LoadTagByName(${value}): ${err}`);})
       this.ngOnDestroy();
       this.ngOnInit();
     }
@@ -46,7 +50,10 @@ export class ImageGalleryComponent implements OnInit, OnDestroy {
   private messageService: MessageService = inject(MessageService);
   private preferences: PreferenceService = inject(PreferenceService);
   private storage: StorageService = inject(StorageService);
+  private tagService: TagService = inject(TagService);
 
+  // Maybe this replaces optTagName?  Why are we getting a name, and not a Tag to begin with?
+  private tag: Tag | undefined = undefined;
   title: WritableSignal<string> = signal('');
   optTagName: WritableSignal<string> = signal('');
   images: WritableSignal<LiveImage[]> = signal([]);
@@ -98,8 +105,8 @@ export class ImageGalleryComponent implements OnInit, OnDestroy {
         subscription = this.storage.SubscribeToLatestImages(this.preferences.showImageCount$.value)
         break
       case 'tag':
-        const tag = await this.storage.LoadTagByName(this.optTagName())
-        subscription = this.storage.SubscribeToTag(tag, this.preferences.showImageCount$.value)
+        const tag = await this.tagService.LoadTagByName(this.optTagName())
+        subscription = this.storage.SubscribeToTag(tag.reference, this.preferences.showImageCount$.value)
         break;
       default:
         throw new Error(`Unsupported mode: ${this.mode}`);
@@ -126,7 +133,7 @@ export class ImageGalleryComponent implements OnInit, OnDestroy {
         if (img.tags.length == 1) {
           return this.storage.DeleteImage(this.storage.GetImageReferenceFromId(id))
         }
-        return this.storage.DeleteImageTag(img, this.optTagName());
+        return this.storage.DeleteImageTag(img, (await this.tagService.LoadTagByName(this.optTagName())).reference);
       case 'latest':
         return this.storage.DeleteImage(this.storage.GetImageReferenceFromId(id))
       case 'inbox':

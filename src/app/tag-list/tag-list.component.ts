@@ -1,7 +1,6 @@
 import {ChangeDetectionStrategy, Component, EventEmitter, inject, Output} from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { LiveTag, StorageService } from '../storage.service';
-import { catchError, combineLatestWith, debounceTime, distinctUntilChanged, map, of, startWith, tap, Observable, BehaviorSubject } from 'rxjs';
+import { combineLatestWith, debounceTime, distinctUntilChanged, map, of, startWith, tap, Observable, BehaviorSubject } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import {MatButtonModule} from '@angular/material/button';
@@ -11,7 +10,7 @@ import {MatIconModule} from '@angular/material/icon';
 import {MatListModule} from '@angular/material/list';
 import {MatInputModule} from '@angular/material/input';
 import {FormControl, FormsModule, ReactiveFormsModule} from '@angular/forms';
-import {TagService} from '../tag.service';
+import {Tag, TagService} from '../tag.service';
 
 @Component({
   selector: 'app-tag-list',
@@ -34,7 +33,7 @@ import {TagService} from '../tag.service';
 export class TagListComponent {
   @Output() tagSelectionEvent = new EventEmitter<string>()
 
-  tags$: Observable<LiveTag[]>;
+  tags$: Observable<Tag[]>;
   tagsFilteredCount$: BehaviorSubject<number> = new BehaviorSubject(0);
   enableCreateButton$: BehaviorSubject<boolean> = new BehaviorSubject(false);
 
@@ -77,7 +76,7 @@ export class TagListComponent {
       .catch((err)=> { console.log(`app-tag-list:  error in StoreTag: ${err.message}`)})
   }
 
-  onChipSelectionChange(event: any, tag: LiveTag) {
+  onChipSelectionChange(event: any, tag: Tag) {
     this.tagSelectionEvent.emit(tag.name);
     setTimeout(()=>this.clearSearchText(), 1500);
   }

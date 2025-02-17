@@ -1,5 +1,4 @@
 import {Component, EventEmitter, OnInit, Input, Output, ChangeDetectionStrategy, inject} from '@angular/core';
-import {LiveTag, StorageService} from '../storage.service';
 import {MatSelectModule} from '@angular/material/select';
 import {AsyncPipe} from '@angular/common';
 import {FormControl, FormsModule, ReactiveFormsModule} from '@angular/forms';

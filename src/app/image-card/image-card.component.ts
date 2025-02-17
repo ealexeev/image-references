@@ -20,6 +20,8 @@ import { TagSelectComponent } from '../tag-select/tag-select.component';
 import { Subject } from 'rxjs';
 import { AsyncPipe } from '@angular/common';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
+import {TagService} from '../tag.service';
+import {MessageService} from '../message.service';
 
 @Component({
   selector: 'app-image-card',
@@ -46,7 +48,9 @@ export class ImageCardComponent implements OnInit, OnDestroy{
   @Output() imageDeleted = new EventEmitter<string>;
 
   private storage = inject(StorageService);
+  private tagService = inject(TagService);
   private renderer = inject(Renderer2);
+  private messages = inject(MessageService);
 
   showTagSelection = signal(false);
   imageData: Subject<LiveImageData> = new Subject();
@@ -79,7 +83,7 @@ export class ImageCardComponent implements OnInit, OnDestroy{
 
   getImageTags(): string[] {
     return this.imageSource.tags
-      .map(t=> this.storage.TagById(t.id)?.name)
+      .map(t=> this.tagService.TagById(t.id)?.name)
       .filter(n => n !== undefined)
       .sort()
   }
@@ -110,12 +114,11 @@ export class ImageCardComponent implements OnInit, OnDestroy{
     this.showTagSelection.update(v => !v);
   }
 
-  onSelectionChange(tags: string[]) {
+  async onSelectionChange(tags: string[]) {
     this.manageTags();
-    this.storage.ReplaceImageTags(
-      this.imageSource.reference,
-      tags.map(t => this.storage.TagByName(t)?.reference)
-        .filter(t => t !== undefined))
+    Promise.all(tags.map(name => this.tagService.LoadTagByName(name)))
+      .then(tags => {this.storage.ReplaceImageTags(this.imageSource.reference, tags.map(t=>t.reference))})
+      .catch(e=>this.messages.Error(`Error updating tags on image ${this.imageSource.reference}: ${e}`))
   }
 }
 

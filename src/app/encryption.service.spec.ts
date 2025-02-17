@@ -10,22 +10,21 @@ import {signal} from '@angular/core';
 describe('EncryptionService', () => {
   let service: EncryptionService;
   jasmine.DEFAULT_TIMEOUT_INTERVAL = 20000;
-  const connected = signal(false);
 
   beforeEach(() => {
     TestBed.configureTestingModule({
       providers: [
         provideFirebaseApp(() => initializeApp(environment)),
-        provideFirestore(()=> EmulatedFirestore(connected)),
+        provideFirestore(()=> EmulatedFirestore()),
         {provide: EncryptionService},
         {provide: WindowRef},
       ]
     }).compileComponents()
 
     service = TestBed.inject(EncryptionService)
-    TestBed.inject(FirebaseApp)
-    TestBed.inject(Firestore)
-    TestBed.inject(WindowRef)
+    // TestBed.inject(FirebaseApp)
+    // TestBed.inject(Firestore)
+    // TestBed.inject(WindowRef)
   })
 
   afterEach(async () => {

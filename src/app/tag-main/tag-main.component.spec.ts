@@ -2,25 +2,25 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { TagMainComponent } from './tag-main.component';
 import { provideAnimations } from '@angular/platform-browser/animations';
-import {LiveTag, StorageService} from '../storage.service';
-import {Subject} from 'rxjs';
+import {FakeTagService, TagService} from '../tag.service';
+import {DocumentReference} from '@angular/fire/firestore';
 
 describe('TagMainComponent', () => {
   let component: TagMainComponent;
   let fixture: ComponentFixture<TagMainComponent>;
-  let storage: any;
-  const tags$ = new Subject<LiveTag>();
+  let tagService: FakeTagService
 
   beforeEach(async () => {
-    storage = jasmine.createSpyObj('StorageService', ['StoreTag'], ['tags$'])
-    //@ts-ignore
-    Object.getOwnPropertyDescriptor(storage, "tags$").get.and.returnValue(tags$);
+    tagService = new FakeTagService([
+      {name: 'tag-1', reference: {id: "1"} as DocumentReference},
+      {name: 'tag-2', reference: {id: "2"} as DocumentReference},
+    ])
 
     await TestBed.configureTestingModule({
       imports: [TagMainComponent],
       providers: [
         provideAnimations(),
-        { provide: StorageService, useValue: storage },
+        { provide: TagService, useValue: tagService },
       ]
     })
     .compileComponents();

@@ -1,8 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { TagListComponent } from './tag-list.component';
-import {LiveTag, StorageService} from '../storage.service';
-import {Subject} from 'rxjs';
 import {provideAnimations} from '@angular/platform-browser/animations';
 import {FakeTagService, TagService} from '../tag.service';
 import {DocumentReference} from '@angular/fire/firestore';

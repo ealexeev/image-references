@@ -20,14 +20,13 @@ import {firstValueFrom, Subject, takeUntil} from 'rxjs';
 
 describe('TagService', () => {
   let service: TagService;
-  const connected = signal(false);
   let firestore: Firestore;
 
   beforeEach(() => {
     TestBed.configureTestingModule({
       providers: [
         provideFirebaseApp(() => initializeApp(environment)),
-        provideFirestore(()=> EmulatedFirestore(connected)),
+        provideFirestore(()=> EmulatedFirestore()),
         {provide: EncryptionService},
       ]
     }).compileComponents()

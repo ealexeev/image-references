@@ -17,7 +17,7 @@ import {
   BehaviorSubject,
   distinctUntilChanged,
   map,
-  Observable,
+  Observable, ReplaySubject,
   shareReplay,
   startWith, takeUntil,
   withLatestFrom
@@ -57,7 +57,7 @@ export class TagService implements OnDestroy {
   // Tags used most recently.  Contains the entire tags$ output, but in order of use.
   recentTags$: Observable<Tag[]>
   // Complete set of tags known to TagService.  Eventually catches up to Firestore.
-  tags$ = new BehaviorSubject<Tag[]>([])
+  tags$ = new ReplaySubject<Tag[]>()
   // Number of tags known to the TagService
   tagsCount$ = new BehaviorSubject<number>(0)
   // Tags applied during the last operation.  Supplied externally.  Ideally this is the only point of contact
@@ -70,7 +70,7 @@ export class TagService implements OnDestroy {
   constructor() {
     this.recentTags$ = this.appliedTags$.pipe(
       takeUntilDestroyed(),
-      withLatestFrom(this.lastRecentlyUsed$.pipe(startWith([])), this.tags$),
+      withLatestFrom(this.lastRecentlyUsed$, this.tags$),
       map(([applied, lastEmission, stored]) => {
         const appliedIds = applied.map(t=>t.reference.id)
         let ret: Tag[];

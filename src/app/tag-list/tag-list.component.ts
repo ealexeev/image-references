@@ -11,6 +11,7 @@ import {MatIconModule} from '@angular/material/icon';
 import {MatListModule} from '@angular/material/list';
 import {MatInputModule} from '@angular/material/input';
 import {FormControl, FormsModule, ReactiveFormsModule} from '@angular/forms';
+import {TagService} from '../tag.service';
 
 @Component({
   selector: 'app-tag-list',
@@ -39,7 +40,7 @@ export class TagListComponent {
 
   readonly searchText = new FormControl('')
 
-  private storage: StorageService = inject(StorageService);
+  private tagService: TagService = inject(TagService);
 
   constructor() {
     let search = this.searchText.valueChanges.pipe(
@@ -48,7 +49,7 @@ export class TagListComponent {
       debounceTime(500),
     );
 
-    this.tags$ = this.storage.tags$.pipe(
+    this.tags$ = this.tagService.tags$.pipe(
       distinctUntilChanged(),
       combineLatestWith(search),
       map( ([tags, searchText]) => {
@@ -69,7 +70,7 @@ export class TagListComponent {
     if ( !this.searchText?.value?.length ) {
       return;
     }
-    this.storage.StoreTag(this.searchText.value)
+    this.tagService.StoreTag(this.searchText.value)
       .then((unused)=> {
         this.searchText.setValue(this.searchText.value)
       })

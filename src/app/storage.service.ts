@@ -99,11 +99,8 @@ export type ImageSubscription = {
   unsubscribe: () => void,
 }
 
-const LOCAL_STORAGE_KEY_IMAGES = "prestige-ape-images";
 
-const keysCollectionPath = 'keys'
 const imagesCollectionPath = 'images'
-const tagsCollectionPath = 'tags'
 const cloudDataPath = 'data'
 
 @Injectable({

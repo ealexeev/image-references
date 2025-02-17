@@ -1,6 +1,7 @@
 import {Auth, connectAuthEmulator, getAuth} from '@angular/fire/auth';
 import {connectFirestoreEmulator, Firestore, getFirestore} from '@angular/fire/firestore';
 import {WritableSignal} from '@angular/core';
+import {connectStorageEmulator, getStorage} from '@angular/fire/storage';
 
 export function EmulatedAuth(connected: WritableSignal<boolean>): Auth {
   const auth = getAuth()
@@ -19,4 +20,12 @@ export function EmulatedFirestore(): Firestore {
     connectFirestoreEmulator(firestore, 'localhost', 8080, {})
   }
   return firestore;
+}
+
+export function EmulatedStorage() {
+  const storage = getStorage();
+  if ( storage ) {
+    connectStorageEmulator(storage, "127.0.0.1", 9199);
+  }
+  return storage
 }

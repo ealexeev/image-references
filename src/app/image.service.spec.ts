@@ -4,9 +4,9 @@ import { ImageService } from './image.service';
 import {initializeApp, provideFirebaseApp} from '@angular/fire/app';
 import {environment} from './environments/environment.dev';
 import {provideFirestore} from '@angular/fire/firestore';
-import {EmulatedFirestore} from './test-providers';
+import {EmulatedFirestore, EmulatedStorage} from './test-providers';
 import {EncryptionService} from './encryption.service';
-import {WindowRef} from './window-ref.service';
+import { provideStorage } from '@angular/fire/storage';
 
 describe('ImageService', () => {
   let service: ImageService;
@@ -16,6 +16,7 @@ describe('ImageService', () => {
       providers: [
         provideFirebaseApp(() => initializeApp(environment)),
         provideFirestore(()=> EmulatedFirestore()),
+        provideStorage(() => EmulatedStorage()),
         {provide: EncryptionService},
       ],
     });

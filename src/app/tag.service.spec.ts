@@ -77,7 +77,6 @@ describe('TagService', () => {
   })
 
   it('storing tags should increment count', async () => {
-    const initial = await firstValueFrom(service.tagsCount$)
     let latest = 0;
     const done$ = new Subject<void>();
     service.tagsCount$.pipe(

@@ -1,7 +1,7 @@
 <mat-form-field subscriptSizing="dynamic">
   <mat-select [formControl]="selected" multiple>
     <div (mouseleave)="onMouseLeave()">
-      @for (tag of storage.recentTags$ | async; track tag.reference.id) {
+      @for (tag of tags.recentTags$ | async; track tag.reference.id) {
         <mat-option [value]="tag.name">{{ tag.name }}</mat-option>
       }
     </div>

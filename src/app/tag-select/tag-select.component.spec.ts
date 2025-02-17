@@ -1,29 +1,27 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { TagSelectComponent } from './tag-select.component';
-import {BehaviorSubject} from 'rxjs';
-import {LiveTag, StorageService} from '../storage.service';
-import {DocumentReference} from '@angular/fire/firestore';
 import {provideAnimations} from '@angular/platform-browser/animations';
+import {FakeTagService, TagService} from '../tag.service';
 
 describe('TagSelectComponent', () => {
   let component: TagSelectComponent;
   let fixture: ComponentFixture<TagSelectComponent>;
-  let FakeStorageService: any;
+  let tagService: FakeTagService;
 
   beforeEach(async () => {
-    FakeStorageService = new FakeStorage();
+    tagService = new FakeTagService([]);
     await TestBed.configureTestingModule({
       imports: [TagSelectComponent],
       providers: [
         provideAnimations(),
-        { provide: StorageService, useValue: FakeStorageService },
+        { provide: TagService, useValue: tagService },
       ]
     })
     .compileComponents();
 
     fixture = TestBed.createComponent(TagSelectComponent);
-    TestBed.inject(StorageService);
+    TestBed.inject(TagService);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });
@@ -33,6 +31,3 @@ describe('TagSelectComponent', () => {
   });
 });
 
-class FakeStorage {
-  recentTags$: BehaviorSubject<LiveTag[]> = new BehaviorSubject([{name:"test-tag", reference: {id: "123"} as DocumentReference}]);
-}

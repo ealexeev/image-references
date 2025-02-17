@@ -4,6 +4,7 @@ import {MatSelectModule} from '@angular/material/select';
 import {AsyncPipe} from '@angular/common';
 import {FormControl, FormsModule, ReactiveFormsModule} from '@angular/forms';
 import {MatFormFieldModule} from '@angular/material/form-field';
+import {TagService} from '../tag.service';
 
 @Component({
   selector: 'app-tag-select',
@@ -24,7 +25,7 @@ export class TagSelectComponent implements OnInit{
   @Output() selectionChange = new EventEmitter<string[]>();
 
   selected: FormControl<string[]> = new FormControl();
-  storage: StorageService = inject(StorageService);
+  tags: TagService = inject(TagService);
 
   ngOnInit() {
     this.selected.setValue(this.selectedTags, {emitEvent:false});

@@ -19,7 +19,7 @@ import {
   map,
   Observable,
   shareReplay,
-  startWith,
+  startWith, takeUntil,
   withLatestFrom
 } from 'rxjs';
 import {HmacService} from './hmac.service';
@@ -264,7 +264,6 @@ export class FakeTagService {
   constructor(tags: Tag[]) {
     this.tags = tags;
     this.recentTags$ = this.appliedTags$.pipe(
-      takeUntilDestroyed(),
       withLatestFrom(this.lastRecentlyUsed$.pipe(startWith([])), this.tags$),
       map(([applied, lastEmission, stored]) => {
         const appliedIds = applied.map(t=>t.reference.id)

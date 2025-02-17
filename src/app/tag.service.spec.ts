@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 
-import { TagService } from './tag.service';
+import {Tag, TagService} from './tag.service';
 import {signal} from '@angular/core';
 import {FirebaseApp, initializeApp, provideFirebaseApp} from '@angular/fire/app';
 import {environment} from './environments/environment.dev';
@@ -22,7 +22,6 @@ describe('TagService', () => {
   let service: TagService;
   const connected = signal(false);
   let firestore: Firestore;
-  jasmine.DEFAULT_TIMEOUT_INTERVAL = 40000
 
   beforeEach(() => {
     TestBed.configureTestingModule({
@@ -87,6 +86,19 @@ describe('TagService', () => {
     }
     done$.next()
     expect(latest).toBe(3);
+  })
+
+  it('storing tags should update tags$', async () => {
+    let latest: Tag[] = [];
+    const done$ = new Subject<void>();
+    service.tags$.pipe(
+      takeUntil(done$)
+    ).subscribe(tags => {
+      latest = tags;
+    })
+    await service.StoreTag('foobar')
+    expect(latest.length).toBe(1)
+    expect(latest.pop()!.name).toEqual('foobar')
   })
 
   it('stored tags are cached', async () => {

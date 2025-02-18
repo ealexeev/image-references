@@ -18,6 +18,7 @@ import {EncryptionService, FakeEncryptionService} from './encryption.service';
 import {SnapshotOptions} from '@angular/fire/compat/firestore';
 import {hex, shortenId} from './common';
 import {ImageScaleService} from './image-scale.service';
+import {LiveImage} from './storage.service-deprecated';
 
 export type Image = {
   // Tags that this image is associated with.
@@ -242,6 +243,30 @@ export class ImageService {
     })
 
     return {images$: imagesObservable, unsubscribe: () => { unsub(); imagesObservable.complete()}} as ImageSubscription;
+  }
+
+  /**
+   * Subscribe to the latest images added to storage up to last N images based on creation time.
+   */
+  SubscribeToLatestImages(last_n_images: number): ImageSubscription {
+    const constraints: QueryConstraint[] = [orderBy("added", "desc")]
+    if ( last_n_images > 0 ) {
+      constraints.push(limit(last_n_images));
+    }
+    const q = query(this.imagesCollection, ...constraints)
+
+    const imagesObservable = new Subject<LiveImage[]>();
+
+    const unsub = onSnapshot(q, (querySnapshot) => {
+      const images: LiveImage[] = [];
+      querySnapshot.forEach((doc) => {
+        images.push(doc.data() as LiveImage)
+      })
+      imagesObservable.next(images);
+      this.message.Info(`Fetched ${images.length} latest images`)
+    })
+
+    return {images$: imagesObservable, unsubscribe: ()=>{unsub(); imagesObservable.complete()}} as ImageSubscription;
   }
 
   private imageToFirestore(liveImage: Image): StoredImage {
@@ -490,10 +515,27 @@ export class FakeImageService {
     const images: Image[] = []
     for (const img of this.images.values()) {
       if (img.tags.map(t=>t.id).includes(tagRef.id)) {
-        images.unshift(img)
+        images.push(img)
         if (images.length == last_n_images) {
           break
         }
+      }
+    }
+    sub.next(images)
+    return ret
+  }
+
+  SubscribeToLatestImages(last_n_images: number): ImageSubscription {
+    const sub = new Subject<Image[]>()
+    const ret = {
+      images$: sub,
+      unsubscribe: () => {sub.complete()}
+    } as ImageSubscription
+    const images: Image[] = []
+    for (const img of this.images.values()) {
+      images.push(img)
+      if (images.length == last_n_images) {
+        break
       }
     }
     sub.next(images)

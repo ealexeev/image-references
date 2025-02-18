@@ -134,7 +134,7 @@ describe('ImageService', () => {
     expect(image.tags.map(t=>t.id)).toEqual(['1', '2', '3'])
   })
 
-  it('add tags should be no-op for non-exsitent images', async () => {
+  it('add tags should be no-op for non-existent images', async () => {
     const blob = new Blob(['stuff'], {type: 'image/png'});
     const ref = doc(firestore, 'images',  await service['hmac'].getHmacHex(blob))
     await service.AddTags(ref, [{id: "3"} as DocumentReference])
@@ -229,13 +229,28 @@ describe('ImageService', () => {
 
   it('it should subscribe to images associated with tag', async () => {
     const blob = new Blob(['stuff'], {type: 'image/png'});
-    const ref = doc(firestore, 'images',  await service['hmac'].getHmacHex(blob))
     const tags = [doc(firestore, 'tags', '1'), doc(firestore, 'tags', '2')]
     await service.StoreImage(blob, tags)
     const subscription = service.SubscribeToTag(tags[0], 5)
     const images = await firstValueFrom(subscription.images$)
     expect(images.length).toEqual(1)
     expect(images.pop()!.tags.length).toEqual(2)
+    subscription.unsubscribe()
+  })
+
+  it('should subscribe to latest', async ()=> {
+    const blob1 = new Blob(['stuff'], {type: 'image/png'});
+    const blob2 = new Blob(['stuff2'], {type: 'image/png'});
+    const tags = [doc(firestore, 'tags', '1'), doc(firestore, 'tags', '2')]
+    await service.StoreImage(blob1, tags)
+    const subscription = service.SubscribeToLatestImages(1)
+    let images = await firstValueFrom(subscription.images$)
+    expect(images.length).toEqual(1)
+    expect(images.pop()!.tags.length).toEqual(2)
+    await service.StoreImage(blob2, [])
+    images = await firstValueFrom(subscription.images$)
+    expect(images.length).toEqual(1)
+    expect(images.pop()!.tags.length).toEqual(0)
     subscription.unsubscribe()
   })
 

@@ -8,7 +8,6 @@ import {
   signal,
   WritableSignal
 } from '@angular/core';
-import {ImageSubscription, LiveImage, StorageService} from '../storage.service';
 import {Subscription} from 'rxjs';
 import {PreferenceService} from '../preference-service';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
@@ -17,6 +16,9 @@ import {DragDropDirective, FileHandle} from '../drag-drop.directive';
 import {MessageService} from '../message.service';
 import {ZipDownloaderComponent} from '../zip-downloader/zip-downloader.component';
 import {Tag, TagService} from '../tag.service';
+import {Image, ImageService, ImageSubscription} from '../image.service';
+import {LiveImage} from '../storage.service-deprecated';
+import {DocumentReference} from '@angular/fire/firestore';
 
 @Component({
   selector: 'app-image-gallery',
@@ -49,14 +51,14 @@ export class ImageGalleryComponent implements OnInit, OnDestroy {
 
   private messageService: MessageService = inject(MessageService);
   private preferences: PreferenceService = inject(PreferenceService);
-  private storage: StorageService = inject(StorageService);
+  private imageService: ImageService = inject(ImageService);
   private tagService: TagService = inject(TagService);
 
   // Maybe this replaces optTagName?  Why are we getting a name, and not a Tag to begin with?
   private tag: Tag | undefined = undefined;
   title: WritableSignal<string> = signal('');
   optTagName: WritableSignal<string> = signal('');
-  images: WritableSignal<LiveImage[]> = signal([]);
+  images: WritableSignal<Image[]> = signal([]);
   files: WritableSignal<FileHandle[]> = signal([]);
 
   dbUnsubscribe: () => void = () => {
@@ -102,25 +104,26 @@ export class ImageGalleryComponent implements OnInit, OnDestroy {
     let subscription: ImageSubscription;
     switch(this.mode) {
       case 'latest':
-        subscription = this.storage.SubscribeToLatestImages(this.preferences.showImageCount$.value)
+        subscription = this.imageService.SubscribeToLatestImages(this.preferences.showImageCount$.value)
         break
       case 'tag':
         const tag = await this.tagService.LoadTagByName(this.optTagName())
-        subscription = this.storage.SubscribeToTag(tag.reference, this.preferences.showImageCount$.value)
+        subscription = this.imageService.SubscribeToTag(tag.reference, this.preferences.showImageCount$.value)
         break;
       default:
         throw new Error(`Unsupported mode: ${this.mode}`);
     }
-    this.imagesSub = subscription.images$.subscribe((images: LiveImage[]) => this.images.set(images))
+    this.imagesSub = subscription.images$.subscribe((images: Image[]) => this.images.set(images))
     this.dbUnsubscribe = subscription.unsubscribe;
   }
 
   async receiveImageURL(url: string): Promise<void> {
-    const tagNames = []
+    const tags: DocumentReference[] = []
     if ( this.mode === 'tag' && this.optTagName() ) {
-      tagNames.push(this.optTagName())
+      tags.push(await this.tagService.LoadTagByName(this.optTagName()).then(t=>t.reference))
     }
-    return this.storage.StoreImageFromUrl(url, tagNames)
+    const blob = await fetch(url).then(res => res.blob()).then(blob => blob)
+    return this.imageService.StoreImage(blob, tags)
   }
 
   async deleteImageOrTag(id: string) {
@@ -131,15 +134,15 @@ export class ImageGalleryComponent implements OnInit, OnDestroy {
     switch (this.mode) {
       case 'tag':
         if (img.tags.length == 1) {
-          return this.storage.DeleteImage(this.storage.GetImageReferenceFromId(id))
+          return this.imageService.DeleteImage(this.imageService.GetImageReferenceFromId(id))
         }
-        return this.storage.DeleteImageTag(img, (await this.tagService.LoadTagByName(this.optTagName())).reference);
+        return this.imageService.RemoveTags(img.reference, [(await this.tagService.LoadTagByName(this.optTagName())).reference]);
       case 'latest':
-        return this.storage.DeleteImage(this.storage.GetImageReferenceFromId(id))
+        return this.imageService.DeleteImage(this.imageService.GetImageReferenceFromId(id))
       case 'inbox':
-        return this.storage.DeleteImage(this.storage.GetImageReferenceFromId(id))
+        return this.imageService.DeleteImage(this.imageService.GetImageReferenceFromId(id))
       default:
-        return this.storage.DeleteImage(this.storage.GetImageReferenceFromId(id))
+        return this.imageService.DeleteImage(this.imageService.GetImageReferenceFromId(id))
     }
   }
 

@@ -11,7 +11,6 @@ import {
   query, serverTimestamp, updateDoc
 } from '@angular/fire/firestore';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
-import {DocumentData, QueryDocumentSnapshot, QuerySnapshot} from '@angular/fire/compat/firestore';
 
 
 const saltValues = [1, 3, 3, 7, 1, 3, 3, 7, 1, 3, 3, 7, 1, 3, 3, 7];
@@ -105,6 +104,7 @@ export class EncryptionService implements OnDestroy {
 
   async Enable(passphrase: string) {
     this.readyStateChanged$.next(State.Initializing)
+    this.enabled.set(true)
     await this.subtle!.importKey("raw", stringToArrayBuffer(passphrase), {name: "PBKDF2"}, false, ["deriveKey"])
       .then((static_passphrase: CryptoKey) => this.subtle!.deriveKey(pbkdf2Params, static_passphrase, aesKWParams, true, ['wrapKey', 'unwrapKey']))
       .then((wrap_key: CryptoKey) => this.wrap_key = wrap_key)
@@ -120,8 +120,6 @@ export class EncryptionService implements OnDestroy {
     if ( latest ) {
       this.encryption_key = latest
       this.readyStateChanged$.next(State.Ready);
-      this.enabled.set(true);
-
       return;
     }
     const key = await this.GenerateEncryptionKey()
@@ -132,7 +130,6 @@ export class EncryptionService implements OnDestroy {
       used: 0,
     } as LiveKey
     this.readyStateChanged$.next(State.Ready);
-    this.enabled.set(true);
   }
 
   // Used to undo "initialize" and make encryption/decryption impossible.

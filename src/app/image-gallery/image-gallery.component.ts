@@ -39,6 +39,7 @@ export class ImageGalleryComponent implements OnInit, OnDestroy {
   @Input({required: true}) mode: "tag" | "latest" | "inbox" = "latest";
   @Input()
   set tagName(value: string) {
+    if  ( value === undefined ) {return}
     if ( value !== this.optTagName() ) {
       this.optTagName.set(value);
       this.tagService.LoadTagByName(value)

@@ -8,5 +8,6 @@ export const environment = {
   "firestoreUseLocal": false,
   "firebaseStorageUseLocal": false,
   "firebaseAuthUseLocal": false,
+  "authRequired": true,
   "databaseId": "test-references",
 };

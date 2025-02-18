@@ -15,10 +15,10 @@ import {AsyncPipe} from '@angular/common';
 import {StatusBarComponent} from './status-bar/status-bar.component';
 import {MatTooltipModule} from '@angular/material/tooltip';
 import {MatButtonToggleModule} from '@angular/material/button-toggle';
+import {environment} from './environments/environment.prod';
 
 // Don't show UI to users with a UID other than this.  Storage and Firebase APIs are also gated by this requirement.
 const permittedUid = "***REDACTED UID***";
-const authRequired = false;
 
 @Component({
   selector: 'app-root',
@@ -54,7 +54,7 @@ export class AppComponent implements OnInit, OnDestroy {
   constructor() {
     this.authStateSubscription = this.authState$.subscribe(( aUser: User | null) => {
       this.user = aUser;
-      if ( this.user == null && authRequired ) {
+      if ( this.user == null && environment.authRequired ) {
         this.dialog.open(LoginFormComponent, {disableClose: true});
       }
     });

@@ -7,5 +7,6 @@ export const environment = {
 	"messagingSenderId": "***REDACTED SENDER ID***",
   "firestoreUseLocal": true,
   "firebaseStorageUseLocal": true,
-  "firebaseAuthUseLocal": true,
+  "firebaseAuthUseLocal": false,
+  "authRequired": false,
 };

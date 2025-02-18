@@ -219,4 +219,16 @@ describe('ImageService', () => {
     subscription.unsubscribe()
   })
 
+  it('it should subscribe to images associated with tag', async () => {
+    const blob = new Blob(['stuff'], {type: 'image/png'});
+    const ref = doc(firestore, 'images',  await service['hmac'].getHmacHex(blob))
+    const tags = [doc(firestore, 'tags', '1'), doc(firestore, 'tags', '2')]
+    await service.StoreImage(blob, tags)
+    const subscription = service.SubscribeToTag(tags[0], 5)
+    const images = await firstValueFrom(subscription.images$)
+    expect(images.length).toEqual(1)
+    expect(images.pop()!.tags.length).toEqual(2)
+    subscription.unsubscribe()
+  })
+
 });

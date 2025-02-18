@@ -6,8 +6,8 @@ import {
   doc,
   DocumentReference,
   DocumentSnapshot,
-  Firestore, getDoc, onSnapshot,
-  serverTimestamp, setDoc, updateDoc, writeBatch
+  Firestore, getDoc, limit, onSnapshot, orderBy, query, QueryConstraint,
+  serverTimestamp, setDoc, updateDoc, where, writeBatch
 } from '@angular/fire/firestore';
 import {MessageService} from './message.service';
 import {BehaviorSubject, Observable, Subject} from 'rxjs';
@@ -18,6 +18,7 @@ import {EncryptionService} from './encryption.service';
 import {SnapshotOptions} from '@angular/fire/compat/firestore';
 import {shortenId} from './common';
 import {ImageScaleService} from './image-scale.service';
+import {LiveImage} from './storage.service';
 
 export type Image = {
   // Tags that this image is associated with.
@@ -214,6 +215,34 @@ export class ImageService {
       })
 
     return {imageData$: imageData$, unsubscribe: () => {imageData$.complete(); unsub()} } as ImageDataSubscription
+  }
+
+  /**
+   * Subscribe to images that contain a particular tag.  Limit results to last N images based on creation time.
+   */
+  SubscribeToTag(tagRef: DocumentReference, last_n_images: number): ImageSubscription {
+    const constraints: QueryConstraint[] = [orderBy("added", "desc")]
+    if ( last_n_images > 0 ) {
+      constraints.push(limit(last_n_images));
+    }
+
+    const q = query(
+      this.imagesCollection,
+      where("tags", "array-contains", tagRef),
+      ...constraints)
+
+    const imagesObservable = new Subject<LiveImage[]>();
+
+    const unsub = onSnapshot(q, (querySnapshot) => {
+      const images: LiveImage[] = [];
+      querySnapshot.forEach((doc) => {
+        images.push(doc.data() as LiveImage)
+      })
+      imagesObservable.next(images)
+      this.message.Info(`Tag ${shortenId(tagRef.id)} now has ${images.length} images`)
+    })
+
+    return {images$: imagesObservable, unsubscribe: () => { unsub(); imagesObservable.complete()}} as ImageSubscription;
   }
 
   private imageToFirestore(liveImage: Image): StoredImage {

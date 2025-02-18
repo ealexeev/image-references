@@ -18,7 +18,6 @@ import {EncryptionService, FakeEncryptionService} from './encryption.service';
 import {SnapshotOptions} from '@angular/fire/compat/firestore';
 import {hex, shortenId} from './common';
 import {ImageScaleService} from './image-scale.service';
-import {LiveImage} from './storage.service-deprecated';
 
 export type Image = {
   // Tags that this image is associated with.
@@ -255,18 +254,46 @@ export class ImageService {
     }
     const q = query(this.imagesCollection, ...constraints)
 
-    const imagesObservable = new Subject<LiveImage[]>();
+    const out$ = new Subject<Image[]>();
 
     const unsub = onSnapshot(q, (querySnapshot) => {
-      const images: LiveImage[] = [];
+      const images: Image[] = [];
       querySnapshot.forEach((doc) => {
-        images.push(doc.data() as LiveImage)
+        images.push(doc.data() as Image)
       })
-      imagesObservable.next(images);
+      out$.next(images);
       this.message.Info(`Fetched ${images.length} latest images`)
     })
 
-    return {images$: imagesObservable, unsubscribe: ()=>{unsub(); imagesObservable.complete()}} as ImageSubscription;
+    return {images$: out$, unsubscribe: ()=>{unsub(); out$.complete()}} as ImageSubscription;
+  }
+
+  /**
+   * Load image data associated with the specified image by its id.
+   */
+  async LoadImageData(imageId: string): Promise<ImageData> {
+    return new Promise(async(resolve, reject) => {
+      const cached = this.imageCache.get(imageId);
+      if ( cached ) {
+        resolve(cached);
+      }
+      getDoc(doc(this.firestore, this.imagesCollection.path, imageId, 'data', 'thumbnail'))
+        .then((doc) => {
+          if ( !doc.exists() ) {
+            const msg = `LoadImageData(${imageId}): not found`
+            this.message.Error(msg)
+            reject(msg)
+          }
+          const stored = doc.data() as StoredImageData;
+          this.StoredImageDataToLive(stored, doc.ref)
+            .then(imageData => {resolve(imageData as ImageData)})
+            .catch((err: unknown) => {
+              const msg = `LoadImageData(${imageId}): ${err}`
+              this.message.Error(msg)
+              reject(err)
+            })
+        })
+    })
   }
 
   private imageToFirestore(liveImage: Image): StoredImage {
@@ -540,6 +567,14 @@ export class FakeImageService {
     }
     sub.next(images)
     return ret
+  }
+
+  async LoadImageData(imageId: string): Promise<ImageData> {
+    const cached = this.imageData.get(imageId)
+    if (cached) {
+      return Promise.resolve(cached)
+    }
+    return Promise.reject(new Error(`Image ${imageId} not found`))
   }
 
 }

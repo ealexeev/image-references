@@ -1,19 +1,20 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { ZipDownloaderComponent } from './zip-downloader.component';
-import {StorageService} from '../storage.service';
+import {FakeImageService, ImageService} from '../image.service';
 
 describe('ZipDownloaderComponent', () => {
   let component: ZipDownloaderComponent;
   let fixture: ComponentFixture<ZipDownloaderComponent>;
-  let storage: any;
+  let imageService: FakeImageService;
+
 
   beforeEach(async () => {
-    storage = MakeFakeStorage();
+    imageService = new FakeImageService();
     await TestBed.configureTestingModule({
       imports: [ZipDownloaderComponent],
       providers: [
-        { provide: StorageService, useValue: storage}
+        { provide: ImageService, useValue: imageService}
       ]
     })
     .compileComponents();
@@ -27,11 +28,3 @@ describe('ZipDownloaderComponent', () => {
     expect(component).toBeTruthy();
   });
 });
-
-function MakeFakeStorage() {
-  const storage = jasmine.createSpyObj('StorageService', ['LoadImageData']);
-  // Definitely have to fix up
-  // @ts-ignore
-  // Object.getOwnPropertyDescriptor(storage, 'LoadImageData').get.and.returnValue(undefined);
-  return storage
-}

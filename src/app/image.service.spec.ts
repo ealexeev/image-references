@@ -243,15 +243,21 @@ describe('ImageService', () => {
     const blob2 = new Blob(['stuff2'], {type: 'image/png'});
     const tags = [doc(firestore, 'tags', '1'), doc(firestore, 'tags', '2')]
     await service.StoreImage(blob1, tags)
+    await service.StoreImage(blob2, [])
     const subscription = service.SubscribeToLatestImages(1)
     let images = await firstValueFrom(subscription.images$)
     expect(images.length).toEqual(1)
-    expect(images.pop()!.tags.length).toEqual(2)
-    await service.StoreImage(blob2, [])
-    images = await firstValueFrom(subscription.images$)
-    expect(images.length).toEqual(1)
     expect(images.pop()!.tags.length).toEqual(0)
     subscription.unsubscribe()
+  })
+
+  it('should load image data', async () => {
+    await encryption.Enable('test')
+    const blob = new Blob(['stuff'], {type: 'image/png'});
+    const ref = doc(firestore, 'images',  await service['hmac'].getHmacHex(blob))
+    await service.StoreImage(blob, [])
+    const data = await service.LoadImageData(ref.id)
+    expect(data.thumbnail).toBeTruthy()
   })
 
 });

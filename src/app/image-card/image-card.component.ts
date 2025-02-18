@@ -19,6 +19,7 @@ import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {TagService} from '../tag.service';
 import {MessageService} from '../message.service';
 import {Image, ImageService} from '../image.service';
+import {Subject, takeUntil} from 'rxjs';
 
 @Component({
   selector: 'app-image-card',
@@ -54,14 +55,14 @@ export class ImageCardComponent implements OnInit, OnDestroy{
   fetchFull: any; /// ()=>Promise<Blob>;
 
   private unsubscribe: () => void = () => {return};
+  private destroy$: Subject<void> = new Subject<void>();
 
   constructor(){}
 
   ngOnInit(): void {
     const subscription = this.imageService.SubscribeToImageData(this.imageSource.reference.id);
       subscription.imageData$.pipe(
-      // TODO:  Should this be a take one? or first()  Subscribing here is probably a waste.
-      takeUntilDestroyed()
+      takeUntil(this.destroy$)
     ).subscribe(
       imageData => {
         this.thumbnailUrl.set(URL.createObjectURL(imageData.thumbnail));
@@ -73,6 +74,8 @@ export class ImageCardComponent implements OnInit, OnDestroy{
 
   ngOnDestroy(): void{
     this.unsubscribe()
+    this.destroy$.next()
+    this.destroy$.complete()
   }
 
   getImageTags(): string[] {

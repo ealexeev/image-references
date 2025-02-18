@@ -2,9 +2,8 @@ import {Component, inject, Input, Renderer2, Signal} from '@angular/core';
 import {MatButtonModule} from '@angular/material/button';
 import {MatIconModule} from '@angular/material/icon';
 import {MatTooltipModule} from '@angular/material/tooltip';
-import {LiveImage, StorageService} from '../storage.service';
 import JSZip from 'jszip';
-import {first} from 'rxjs';
+import {Image, ImageData, ImageService} from '../image.service';
 
 @Component({
   selector: 'app-zip-downloader',
@@ -18,20 +17,20 @@ import {first} from 'rxjs';
   styleUrl: './zip-downloader.component.scss'
 })
 export class ZipDownloaderComponent {
-  @Input({required: true}) images!: Signal<LiveImage[]>
+  @Input({required: true}) images!: Signal<Image[]>
   @Input() fileName: string = 'images'
 
-  private storage = inject(StorageService);
+  private imageService = inject(ImageService);
   private renderer = inject(Renderer2);
 
   async onClick() {
     const images = this.images()
     const zipFile = new JSZip();
-    const liveImageData = images.map(li=>this.storage.LoadImageData(li.reference.id));
+    const liveImageData = images.map(li=>this.imageService.LoadImageData(li.reference.id));
     Promise.all(liveImageData)
-      .then((data) => Promise.all(data.map(img => img.fullUrl())))
+      .then((data) => Promise.all(data.map((img: ImageData) => img.fullSize())))
       .then(blobs => {
-        blobs.forEach((blob, index) => {
+        blobs.forEach((blob: Blob, index: number) => {
           zipFile.file(`${images[index].reference.id}.${extFromMime(blob.type)}`, blob)
         })})
       .then(()=> zipFile.generateAsync({type:"blob"}))

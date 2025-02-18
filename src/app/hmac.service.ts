@@ -39,7 +39,6 @@ export class HmacService {
       throw new ReferenceError("Could not get crypto reference!");
     }
     this.initKey();
-    console.log("HMAC Service constructor finished");
   }
 
   debugme() {

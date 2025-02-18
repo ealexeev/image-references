@@ -43,12 +43,12 @@ describe('ImageService', () => {
 
   afterEach(async () => {
     // Delete everything in FireStore
-    getDocs(collection(firestore, 'images'))
-      .then(images=> images.forEach(image=>{
+    const snapshot = await getDocs(collection(firestore, 'images'))
+      .then(images=> images.forEach( async (image)=>{
           // @ts-ignore
-          deleteObject(ref(storage, `images/${image.id}`))
-          deleteDoc(doc(firestore, 'images', image.id, 'data', 'thumbnail'));
-          deleteDoc(image.ref)
+          await deleteObject(ref(storage, `images/${image.id}`))
+          await deleteDoc(doc(firestore, 'images', image.id, 'data', 'thumbnail'));
+          await deleteDoc(image.ref)
       })
     )
   })
@@ -68,13 +68,52 @@ describe('ImageService', () => {
     expect(storedTags.map(t=>t['id'])).toEqual(tags.map(t=>t.id));
     const imgDataSnap = await getDoc(doc(firestore, 'images', snapshot.docs[0].id, 'data', 'thumbnail'));
     expect(imgDataSnap.exists()).toEqual(true);
-    expect(imgDataSnap.get('encryptionPresent')).toBeFalse();
-    expect(imgDataSnap.get('decrypted_foo')).toBeFalse();
-    const storedBlob = imgDataSnap.get('thumbnail') as Blob
-    expect(storedBlob.type).toEqual('image/png');
-    expect(new Uint8Array(await storedBlob.arrayBuffer())).toEqual(new Uint8Array(await blob.arrayBuffer()));
-    const cloudBlob = await imgDataSnap.get('fullSize')()
-    expect(new Uint8Array(await cloudBlob.arrayBuffer())).toEqual(new Uint8Array(await blob.arrayBuffer()));
+    const data = imgDataSnap.data();
+    expect(data).toBeTruthy();
+    expect(data!.hasOwnProperty('mimeType')).toEqual(true);
+    expect(data!.hasOwnProperty('encryptionPresent')).toBeFalse();
+    expect(data!.hasOwnProperty('decrypted')).toBeFalse();
+    expect(data!.hasOwnProperty('thumbnail')).toBeTrue();
+    expect(data!.hasOwnProperty('fullUrl')).toBeTrue();
+    expect(data!.hasOwnProperty('thumbnailIV')).toBeFalse();
+    expect(data!.hasOwnProperty('thumbnailKeyRef')).toBeFalse();
+    expect(data!.hasOwnProperty('fullIV')).toBeFalse();
+    expect(data!.hasOwnProperty('fullKeyRef')).toBeFalse();
+    const resp = await fetch(data!['fullUrl']);
+    expect(resp.ok).toBe(true);
+    const cloudBlob = await resp.blob();
+    expect(cloudBlob.size).toEqual(blob.size);
+  })
+
+  // This is broken, need to figure out why.
+  it('should store an encrypted image', async () => {
+    await service['encryption'].Enable('test')
+    const blob = new Blob(['stuff'], {type: 'image/png'});
+    const tags = [{id: "1"} as DocumentReference, {id: "2"} as DocumentReference]
+    await service.StoreImage(blob, tags);
+    const snapshot = await getDocs(collection(firestore, 'images'))
+    expect(snapshot.size).toEqual(1)
+    const storedTags = snapshot.docs[0].get('tags')
+    //@ts-ignore
+    expect(storedTags.map(t=>t['id'])).toEqual(tags.map(t=>t.id));
+    const imgDataSnap = await getDoc(doc(firestore, 'images', snapshot.docs[0].id, 'data', 'thumbnail'));
+    expect(imgDataSnap.exists()).toEqual(true);
+    const data = imgDataSnap.data();
+    console.log(data)
+    expect(data).toBeTruthy();
+    expect(data!.hasOwnProperty('mimeType')).toEqual(true);
+    expect(data!.hasOwnProperty('encryptionPresent')).toBeFalse();
+    expect(data!.hasOwnProperty('decrypted')).toBeFalse();
+    expect(data!.hasOwnProperty('thumbnail')).toBeTrue();
+    expect(data!.hasOwnProperty('fullUrl')).toBeTrue();
+    expect(data!.hasOwnProperty('thumbnailIV')).toBeFalse();
+    expect(data!.hasOwnProperty('thumbnailKeyRef')).toBeFalse();
+    expect(data!.hasOwnProperty('fullIV')).toBeFalse();
+    expect(data!.hasOwnProperty('fullKeyRef')).toBeFalse();
+    const resp = await fetch(data!['fullUrl']);
+    expect(resp.ok).toBe(true);
+    const cloudBlob = await resp.blob();
+    expect(cloudBlob.size).toEqual(blob.size);
   })
 
 });

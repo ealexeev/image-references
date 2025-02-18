@@ -14,7 +14,7 @@ import {BehaviorSubject, Observable, Subject} from 'rxjs';
 import {HmacService} from './hmac.service';
 import {deleteObject, getDownloadURL, ref, Storage, StorageReference, uploadBytes} from '@angular/fire/storage';
 import {LRUCache} from 'lru-cache';
-import {EncryptionService} from './encryption.service';
+import {EncryptionService, FakeEncryptionService} from './encryption.service';
 import {SnapshotOptions} from '@angular/fire/compat/firestore';
 import {shortenId} from './common';
 import {ImageScaleService} from './image-scale.service';
@@ -406,3 +406,64 @@ export class ImageService {
   }
 }
 
+export class FakeImageService {
+
+  images = new LRUCache<string, Image>({max:10});
+  imageData = new LRUCache<string, ImageData>({max:10});
+  encryption = new FakeEncryptionService();
+
+  GetImageReferenceFromId(imageId: string): DocumentReference {
+    return {id: imageId, path: `images/${imageId}`} as DocumentReference
+  }
+
+  GetStorageReferenceFromId(imageId: string): StorageReference {
+    return {fullPath: `data/${imageId}`} as StorageReference
+  }
+
+  async AddTags(iRef: DocumentReference, tags: DocumentReference[]) {
+    const img = this.images.get(iRef.id)
+    if ( img ) {
+      const existing = img.tags.map(t=>t.id)
+      for (const tag of tags) {
+        if ( !existing.includes(tag.id) ) {
+          img.tags.push(tag)
+        }
+      }
+    }
+  }
+
+  async ReplaceTags(iRef: DocumentReference, tags: DocumentReference[]) {
+    const img = this.images.get(iRef.id)
+    if ( img ) {
+      img.tags = tags
+    }
+  }
+
+  async RemoveTags(iRef: DocumentReference, tags: DocumentReference[]): Promise<void> {
+    const img = this.images.get(iRef.id)
+    if ( img ) {
+      const existing = img.tags.map(t=>t.id)
+      for (const tag of tags) {
+        if ( !existing.includes(tag.id) ) {
+          img.tags.push(tag)
+        }
+      }
+    }
+  }
+
+  async StoreImage(blob: Blob, tags: DocumentReference[]): Promise<void> {
+    
+
+  }
+
+  async DeleteImage(imageRef: DocumentReference) {}
+
+  SubscribeToImageData(imageId: string): ImageDataSubscription {
+    return {} as ImageDataSubscription;
+  }
+
+  SubscribeToTag(tagRef: DocumentReference, last_n_images: number): ImageSubscription {
+    return {} as ImageSubscription
+  }
+
+}

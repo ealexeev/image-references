@@ -134,6 +134,14 @@ describe('ImageService', () => {
     expect(image.tags.map(t=>t.id)).toEqual(['1', '2', '3'])
   })
 
+  it('add tags should be no-op for non-exsitent images', async () => {
+    const blob = new Blob(['stuff'], {type: 'image/png'});
+    const ref = doc(firestore, 'images',  await service['hmac'].getHmacHex(blob))
+    await service.AddTags(ref, [{id: "3"} as DocumentReference])
+    const snapshot = await getDoc(ref);
+    expect(snapshot.exists()).toBeFalse();
+  })
+
   it('should replace tags', async () => {
     const blob = new Blob(['stuff'], {type: 'image/png'});
     const ref = doc(firestore, 'images',  await service['hmac'].getHmacHex(blob))

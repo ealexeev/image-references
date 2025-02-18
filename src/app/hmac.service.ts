@@ -1,5 +1,6 @@
 import {Injectable, signal} from '@angular/core';
 import {WindowRef} from './window-ref.service';
+import {hex} from './common';
 
 // Leaving this static means that if there are multiple users, it is possible
 // to tell if they have stored the same file since the HMACs aren't bound
@@ -21,24 +22,6 @@ const pbkdf2Params = {
 function stringToArrayBuffer(input: string): ArrayBuffer {
   const encoder = new TextEncoder()
   return encoder.encode(input);
-}
-
-const byteToHex: string[] = [];
-
-for (let n = 0; n <= 0xff; ++n)
-{
-    const hexOctet = n.toString(16).padStart(2, "0");
-    byteToHex.push(hexOctet);
-}
-
-function hex(arrayBuffer: ArrayBuffer): string {
-    const buff = new Uint8Array(arrayBuffer);
-    const hexOctets = []; // new Array(buff.length) is even faster (preallocates necessary array size), then use hexOctets[i] instead of .push()
-
-    for (let i = 0; i < buff.length; ++i)
-        hexOctets.push(byteToHex[buff[i]]);
-
-    return hexOctets.join("");
 }
 
 @Injectable({

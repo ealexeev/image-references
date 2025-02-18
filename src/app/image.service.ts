@@ -16,7 +16,7 @@ import {deleteObject, getDownloadURL, ref, Storage, StorageReference, uploadByte
 import {LRUCache} from 'lru-cache';
 import {EncryptionService, FakeEncryptionService} from './encryption.service';
 import {SnapshotOptions} from '@angular/fire/compat/firestore';
-import {shortenId} from './common';
+import {hex, shortenId} from './common';
 import {ImageScaleService} from './image-scale.service';
 import {LiveImage} from './storage.service';
 
@@ -408,8 +408,8 @@ export class ImageService {
 
 export class FakeImageService {
 
-  images = new LRUCache<string, Image>({max:10});
-  imageData = new LRUCache<string, ImageData>({max:10});
+  images = new LRUCache<string, Image>({max:10})
+  imageData = new LRUCache<string, ImageData>({max:10})
   encryption = new FakeEncryptionService();
 
   GetImageReferenceFromId(imageId: string): DocumentReference {
@@ -452,18 +452,53 @@ export class FakeImageService {
   }
 
   async StoreImage(blob: Blob, tags: DocumentReference[]): Promise<void> {
-    
-
+    const encoded = hex(await blob.arrayBuffer())
+    const key = encoded.padEnd(16, "f").slice(0, 15)
+    this.images.set(key, { tags: tags, reference: {id: key, path: `images/${key}`} as DocumentReference })
+    const data = {
+      thumbnail: blob,
+      fullSize: ()=> Promise.resolve(blob),
+      encryptionPresent: this.encryption.enabled(),
+      decrypted: this.encryption.enabled(),
+    } as ImageData
+    this.imageData.set(key, data)
   }
 
-  async DeleteImage(imageRef: DocumentReference) {}
+  async DeleteImage(imageRef: DocumentReference) {
+    this.images.delete(imageRef.id)
+    this.imageData.delete(imageRef.id)
+  }
 
   SubscribeToImageData(imageId: string): ImageDataSubscription {
-    return {} as ImageDataSubscription;
+    const sub = new Subject<ImageData>()
+    const ret = {
+      imageData$: sub,
+      unsubscribe: () => {sub.complete()}
+    } as ImageDataSubscription
+    const cached = this.imageData.get(imageId)
+    if (cached) {
+      sub.next(cached)
+    }
+    return ret
   }
 
   SubscribeToTag(tagRef: DocumentReference, last_n_images: number): ImageSubscription {
-    return {} as ImageSubscription
+    const sub = new Subject<Image[]>()
+    const ret = {
+      images$: sub,
+      unsubscribe: () => {sub.complete()}
+    } as ImageSubscription
+    const images: Image[] = [];)
+    for (const img of this.images.values()) {
+      if (img.tags.map(t=>t.id).includes(tagRef.id)) {
+        images.unshift(img)
+        if (images.length == last_n_images) {
+          break
+        }
+      }
+    }
+    sub.next(images)
+    return ret
   }
 
 }

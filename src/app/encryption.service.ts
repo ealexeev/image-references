@@ -280,3 +280,37 @@ export class EncryptionService implements OnDestroy {
         (doc=> deleteDoc(doc.ref))))
   }
 }
+
+export class FakeEncryptionService {
+
+  iv: Uint8Array = new Uint8Array(16)
+  keyRef = {id: "123", path: "keys/123"} as DocumentReference
+  enabled: WritableSignal<boolean> = signal(false);
+
+  async Disable(){
+    this.enabled.set(false);
+  }
+
+  async Enable(passphrase: string) {
+    this.enabled.set(true);
+  }
+
+  async Encrypt(data: ArrayBuffer): Promise<EncryptionResult> {
+    if ( !this.enabled() ) {
+      return Promise.reject('Encrypt() called while not enabled.')
+    }
+    return Promise.resolve({
+      ciphertext: data,
+      iv: this.iv,
+      keyReference: this.keyRef,
+    })
+  }
+
+  async Decrypt(input: EncryptionResult): Promise<ArrayBuffer|undefined> {
+    if ( !this.enabled() ) {
+      return Promise.reject('Decrypt() called while not enabled.')
+    }
+    return Promise.resolve(input.ciphertext)
+  }
+
+}

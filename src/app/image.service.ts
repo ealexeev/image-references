@@ -102,7 +102,7 @@ export class ImageService {
   /**
    * Replace all the tags on the specified image.
    */
-  async ReplaceImageTags(iRef: DocumentReference, tags: DocumentReference[]) {
+  async ReplaceTags(iRef: DocumentReference, tags: DocumentReference[]) {
     return updateDoc(iRef, {'tags': tags})
       .then(()=>this.message.Info(`Updated tags (${tags.length}) for image ${shortenId(iRef.id)}`))
       .catch( e => this.message.Error(`ReplaceImageTags error: ${e}`));

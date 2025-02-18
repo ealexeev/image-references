@@ -85,7 +85,7 @@ export class ImageService {
   private scale = inject(ImageScaleService);
 
   private imageCache: LRUCache<string, ImageData> = new LRUCache({'max': 100})
-  private imagesCollection: any;
+  private readonly imagesCollection: any;
   private imgCount$: BehaviorSubject<number> = new BehaviorSubject<number>(0)
   private readonly cloudStorageRef = ref(this.storage, cloudDataPath)
 
@@ -488,7 +488,7 @@ export class FakeImageService {
       images$: sub,
       unsubscribe: () => {sub.complete()}
     } as ImageSubscription
-    const images: Image[] = [];)
+    const images: Image[] = []
     for (const img of this.images.values()) {
       if (img.tags.map(t=>t.id).includes(tagRef.id)) {
         images.unshift(img)

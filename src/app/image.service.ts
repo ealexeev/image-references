@@ -10,7 +10,7 @@ import {
   serverTimestamp, setDoc, updateDoc, where, writeBatch
 } from '@angular/fire/firestore';
 import {MessageService} from './message.service';
-import {BehaviorSubject, Observable, Subject} from 'rxjs';
+import {BehaviorSubject, Observable, of, Subject} from 'rxjs';
 import {HmacService} from './hmac.service';
 import {deleteObject, getDownloadURL, ref, Storage, StorageReference, uploadBytes} from '@angular/fire/storage';
 import {LRUCache} from 'lru-cache';
@@ -18,6 +18,7 @@ import {EncryptionService, FakeEncryptionService} from './encryption.service';
 import {SnapshotOptions} from '@angular/fire/compat/firestore';
 import {hex, shortenId} from './common';
 import {ImageScaleService} from './image-scale.service';
+import {TagUpdateCallback} from './tag.service';
 
 export type Image = {
   // Tags that this image is associated with.
@@ -87,6 +88,7 @@ export class ImageService {
   private readonly imagesCollection: any;
   private imgCount$: BehaviorSubject<number> = new BehaviorSubject<number>(0)
   private readonly cloudStorageRef = ref(this.storage, cloudDataPath)
+  private tagUpdateCallback: TagUpdateCallback = (tags: DocumentReference[]): Promise<void> => {return Promise.resolve()};
 
   constructor() {
     this.imagesCollection = collection(this.firestore, imagesCollectionPath).withConverter(
@@ -112,7 +114,10 @@ export class ImageService {
    */
   async AddTags(iRef: DocumentReference, tags: DocumentReference[]) {
     return updateDoc(iRef, {tags: arrayUnion(...tags)})
-      .then(()=> this.message.Info(`Added ${tags.length} to image *${shortenId(iRef.id)}`))
+      .then(()=> {
+        this.message.Info(`Added ${tags.length} to image *${shortenId(iRef.id)}`)
+        this.tagUpdateCallback(tags)
+      })
       .catch((error: Error) => {this.message.Error(`Error adding tags ${tags} ${iRef.path}: ${error}`)});
   }
 
@@ -121,7 +126,10 @@ export class ImageService {
    */
   async ReplaceTags(iRef: DocumentReference, tags: DocumentReference[]) {
     return updateDoc(iRef, {'tags': tags})
-      .then(()=>this.message.Info(`Updated tags (${tags.length}) for image ${shortenId(iRef.id)}`))
+      .then(()=> {
+        this.message.Info(`Updated tags (${tags.length}) for image ${shortenId(iRef.id)}`)
+        this.tagUpdateCallback(tags)
+      })
       .catch( e => this.message.Error(`ReplaceImageTags error: ${e}`));
   }
 
@@ -130,7 +138,10 @@ export class ImageService {
    */
   async RemoveTags(iRef: DocumentReference, tags: DocumentReference[]): Promise<void> {
     return updateDoc(iRef, {tags: arrayRemove(...tags)})
-      .then(()=>this.message.Info(`Removed ${tags.length} tags from image ${shortenId(iRef.id)}`))
+      .then(()=>{
+        this.message.Info(`Removed ${tags.length} tags from image ${shortenId(iRef.id)}`)
+        this.tagUpdateCallback(tags)
+      })
       .catch((err: Error) => {this.message.Error(`Error removing tags ${tags.map(t=>shortenId(t.id))} from image ${shortenId(iRef.id)}: ${err}`)}
     )
   }
@@ -190,12 +201,11 @@ export class ImageService {
    * Subscribe to updates about image data.  In practice there is only one update expected.
    */
   SubscribeToImageData(imageId: string): ImageDataSubscription {
-    const imageData$ = new Subject<ImageData>();
     if ( this.imageCache.has(imageId) ) {
-      imageData$.next(this.imageCache.get(imageId)!);
-      return {imageData$: imageData$, unsubscribe: ()=> {imageData$.complete()}} as ImageDataSubscription
+      return {imageData$: of(this.imageCache.get(imageId)), unsubscribe: ()=> {}} as ImageDataSubscription
     }
 
+    const imageData$ = new Subject<ImageData>();
     const unsub = onSnapshot(doc(this.firestore, this.imagesCollection.path, imageId, 'data', 'thumbnail'),
       doc => {
         if (!doc.exists()) {
@@ -293,6 +303,13 @@ export class ImageService {
             })
         })
     })
+  }
+
+  /**
+   * Register a callback to use when tags are being applied, removed, etc.
+   */
+  RegisterTagUpdateCallback(func: TagUpdateCallback): void {
+    this.tagUpdateCallback = func;
   }
 
   private imageToFirestore(liveImage: Image): StoredImage {

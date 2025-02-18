@@ -37,6 +37,8 @@ type StoredTag = {
   keyReference?: DocumentReference,
 }
 
+export type TagUpdateCallback = (tag: DocumentReference[]) => Promise<void>;
+
 type TagMap = Record<string, Tag>
 
 @Injectable({
@@ -70,7 +72,7 @@ export class TagService implements OnDestroy {
   constructor() {
     this.recentTags$ = this.appliedTags$.pipe(
       takeUntilDestroyed(),
-      withLatestFrom(this.lastRecentlyUsed$, this.tags$),
+      withLatestFrom(this.lastRecentlyUsed$.pipe(startWith([])), this.tags$),
       map(([applied, lastEmission, stored]) => {
         const appliedIds = applied.map(t=>t.reference.id)
         let ret: Tag[];
@@ -209,6 +211,7 @@ export class TagService implements OnDestroy {
       return setDoc(ref, toStorage)
         .then(()=> {
           this.messageService.Info(`Created tag: ${name}`)
+          this.RecordTagUsage([ref])
           resolve(tag)
         })
         .catch((err: Error) => {this.messageService.Error(`Error storing tag ${tag.name}: ${err}`)});
@@ -241,8 +244,16 @@ export class TagService implements OnDestroy {
     batch.delete(ref);
     return batch.commit()
   }
-}
 
+  /**
+   * Record that tags have been used to affect this.recentTags$
+   */
+  RecordTagUsage = async (tags: DocumentReference[]): Promise<void> => {
+    return Promise.all(tags.map(tag => this.LoadTagByReference(tag)))
+      .then(resolved=>this.appliedTags$.next(resolved))
+      .catch((err: Error) => {this.messageService.Error(`Error updating tag use: ${err}`)})
+  }
+}
 
 
 export class FakeTagService {

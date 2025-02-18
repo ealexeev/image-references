@@ -16,6 +16,8 @@ import {StatusBarComponent} from './status-bar/status-bar.component';
 import {MatTooltipModule} from '@angular/material/tooltip';
 import {MatButtonToggleModule} from '@angular/material/button-toggle';
 import {environment} from './environments/environment.prod';
+import {ImageService} from './image.service';
+import {TagService} from './tag.service';
 
 // Don't show UI to users with a UID other than this.  Storage and Firebase APIs are also gated by this requirement.
 const permittedUid = "***REDACTED UID***";
@@ -43,6 +45,8 @@ export class AppComponent implements OnInit, OnDestroy {
   private auth = inject(Auth);
   readonly dialog = inject(MatDialog);
   readonly encryption: EncryptionService = inject(EncryptionService);
+  readonly tagService = inject(TagService);
+  readonly imageService = inject(ImageService);
   readonly router = inject(Router);
   authState$ = authState(this.auth);
   authStateSubscription: Subscription;
@@ -58,6 +62,7 @@ export class AppComponent implements OnInit, OnDestroy {
         this.dialog.open(LoginFormComponent, {disableClose: true});
       }
     });
+    this.imageService.RegisterTagUpdateCallback(this.tagService.RecordTagUsage)
   }
 
   ngOnInit() {

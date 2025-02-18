@@ -193,8 +193,7 @@ export class ImageService {
     const imageData$ = new Subject<ImageData>();
     if ( this.imageCache.has(imageId) ) {
       imageData$.next(this.imageCache.get(imageId)!);
-      imageData$.complete();
-      return {imageData$: imageData$, unsubscribe: ()=> {}} as ImageDataSubscription
+      return {imageData$: imageData$, unsubscribe: ()=> {imageData$.complete()}} as ImageDataSubscription
     }
 
     const unsub = onSnapshot(doc(this.firestore, this.imagesCollection.path, imageId, 'data', 'thumbnail'),

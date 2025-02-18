@@ -18,7 +18,6 @@ import {EncryptionService, FakeEncryptionService} from './encryption.service';
 import {SnapshotOptions} from '@angular/fire/compat/firestore';
 import {hex, shortenId} from './common';
 import {ImageScaleService} from './image-scale.service';
-import {LiveImage} from './storage.service';
 
 export type Image = {
   // Tags that this image is associated with.
@@ -231,12 +230,12 @@ export class ImageService {
       where("tags", "array-contains", tagRef),
       ...constraints)
 
-    const imagesObservable = new Subject<LiveImage[]>();
+    const imagesObservable = new Subject<Image[]>();
 
     const unsub = onSnapshot(q, (querySnapshot) => {
-      const images: LiveImage[] = [];
+      const images: Image[] = [];
       querySnapshot.forEach((doc) => {
-        images.push(doc.data() as LiveImage)
+        images.push(doc.data() as Image)
       })
       imagesObservable.next(images)
       this.message.Info(`Tag ${shortenId(tagRef.id)} now has ${images.length} images`)

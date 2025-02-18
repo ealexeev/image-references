@@ -17,6 +17,7 @@ import {EmulatedFirestore, EmulatedStorage} from './test-providers';
 import {EncryptionService, FakeEncryptionService} from './encryption.service';
 import {deleteObject, provideStorage, ref} from '@angular/fire/storage';
 import {FakeImageScaleService, ImageScaleService} from './image-scale.service';
+import {firstValueFrom} from 'rxjs';
 
 describe('ImageService', () => {
   jasmine.DEFAULT_TIMEOUT_INTERVAL=30000;
@@ -168,6 +169,54 @@ describe('ImageService', () => {
     expect(snapshot.exists()).toBeFalse()
     const dataSnap = await getDoc(doc(firestore, 'images',  ref.id, 'data', 'thumbnail'))
     expect(dataSnap.exists()).toBeFalse()
+  })
+
+  it('it should subscribe to plain image data', async () => {
+    const blob = new Blob(['stuff'], {type: 'image/png'});
+    const ref = doc(firestore, 'images',  await service['hmac'].getHmacHex(blob))
+    const tags = [{id: "1"} as DocumentReference, {id: "2"} as DocumentReference]
+    await service.StoreImage(blob, tags)
+    const subscription = service.SubscribeToImageData(ref.id)
+    const data = await firstValueFrom(subscription.imageData$)
+    expect(data.thumbnail).toBeTruthy()
+    expect(data.encryptionPresent).toBeFalse()
+    expect(data.decrypted).toBeFalse()
+    const fullSize = await data.fullSize()
+    expect(fullSize.size).toEqual(blob.size)
+    subscription.unsubscribe()
+  })
+
+  it('it should subscribe to encrypted image data', async () => {
+    await encryption.Enable('test')
+    const blob = new Blob(['stuff'], {type: 'image/png'});
+    const ref = doc(firestore, 'images',  await service['hmac'].getHmacHex(blob))
+    const tags = [{id: "1"} as DocumentReference, {id: "2"} as DocumentReference]
+    await service.StoreImage(blob, tags)
+    const subscription = service.SubscribeToImageData(ref.id)
+    const data = await firstValueFrom(subscription.imageData$)
+    expect(data.thumbnail).toBeTruthy()
+    expect(data.encryptionPresent).toBeTrue()
+    expect(data.decrypted).toBeTrue()
+    const fullSize = await data.fullSize()
+    expect(fullSize.size).toEqual(blob.size)
+    subscription.unsubscribe()
+  })
+
+  it('it should indicate encryption present but not decrypted', async () => {
+    await encryption.Enable('test')
+    const blob = new Blob(['stuff'], {type: 'image/png'});
+    const ref = doc(firestore, 'images',  await service['hmac'].getHmacHex(blob))
+    const tags = [{id: "1"} as DocumentReference, {id: "2"} as DocumentReference]
+    await service.StoreImage(blob, tags)
+    await encryption.Disable()
+    const subscription = service.SubscribeToImageData(ref.id)
+    const data = await firstValueFrom(subscription.imageData$)
+    expect(data.thumbnail).toBeTruthy()
+    expect(data.encryptionPresent).toBeTrue()
+    expect(data.decrypted).toBeFalse()
+    const fullSize = await data.fullSize()
+    expect(fullSize.size).toEqual(blob.size)
+    subscription.unsubscribe()
   })
 
 });

@@ -106,10 +106,18 @@ export class ImageCardComponent implements OnInit, OnDestroy{
 
   manageTags() {
     this.showTagSelection.update(v => !v);
+    setTimeout(
+      ()=>{
+        if (this.showTagSelection()) {
+          this.showTagSelection.update(v => !v);
+        }
+      },
+      5000
+    )
   }
 
   async onSelectionChange(tags: string[]) {
-    this.manageTags();
+    this.showTagSelection.set(false);
     Promise.all(tags.map(name => this.tagService.LoadTagByName(name)))
       .then(tags => {this.imageService.ReplaceTags(this.imageSource.reference, tags.map(t=>t.reference))})
       .catch(e=>this.messages.Error(`Error updating tags on image ${this.imageSource.reference}: ${e}`))

@@ -50,6 +50,7 @@ export class ImageCardComponent implements OnInit, OnDestroy{
   private messages = inject(MessageService);
 
   showTagSelection = signal(false);
+  imageTagNames: WritableSignal<string[]> = signal([]);
   thumbnailUrl: WritableSignal<string> = signal('');
   fullUrlAvailable: WritableSignal<Boolean> = signal(false);
   fetchFull: any; /// ()=>Promise<Blob>;
@@ -70,19 +71,15 @@ export class ImageCardComponent implements OnInit, OnDestroy{
         this.fullUrlAvailable.set(true)
       }
     )
+    Promise.all(this.imageSource.tags.map(ref => this.tagService.LoadTagByReference(ref)))
+      .then(tags => {this.imageTagNames.set(tags.map(t=>t.name))})
+        .catch((err: unknown) => this.messages.Error(`Error resolving tag names: ${err}`))
   }
 
   ngOnDestroy(): void{
     this.unsubscribe()
     this.destroy$.next()
     this.destroy$.complete()
-  }
-
-  getImageTags(): string[] {
-    return this.imageSource.tags
-      .map(t=> this.tagService.TagById(t.id)?.name)
-      .filter(n => n !== undefined)
-      .sort()
   }
 
   onDelete() {

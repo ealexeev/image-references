@@ -19,7 +19,7 @@
     @if ( showTagSelection() ) {
       <app-tag-select
         class="tag-list-selection"
-        [selectedTags]="getImageTags()"
+        [selectedTags]="imageTagNames()"
         (selectionChange)="onSelectionChange($event)"
       />
     }

@@ -209,8 +209,7 @@ export class ImageService {
     const unsub = onSnapshot(doc(this.firestore, this.imagesCollection.path, imageId, 'data', 'thumbnail'),
       doc => {
         if (!doc.exists()) {
-          this.message.Error(`SubImageData(${imageId}): not found`)
-          return;
+          return;  // This happens right after creation, it is not an error.
         }
         const stored = doc.data() as StoredImageData;
         this.StoredImageDataToLive(stored, doc.ref)

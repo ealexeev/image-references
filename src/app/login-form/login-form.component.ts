@@ -1,10 +1,10 @@
 import {ChangeDetectionStrategy, Component, inject, signal} from '@angular/core';
-import { Auth, signInWithEmailAndPassword, connectAuthEmulator } from '@angular/fire/auth';
+import { Auth, signInWithEmailAndPassword } from '@angular/fire/auth';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatDialogRef, MatDialogActions, MatDialogClose, MatDialogContent, MatDialogTitle } from '@angular/material/dialog';
 import { MatInputModule } from '@angular/material/input';
+import {ActivatedRoute, Router} from '@angular/router';
 
 @Component({
   selector: 'app-login-form',
@@ -12,10 +12,6 @@ import { MatInputModule } from '@angular/material/input';
   imports: [
     FormsModule,
     MatButtonModule,
-    MatDialogActions,
-    MatDialogClose,
-    MatDialogContent,
-    MatDialogTitle,
     MatIconModule,
     MatInputModule
   ],
@@ -25,20 +21,21 @@ import { MatInputModule } from '@angular/material/input';
 })
 export class LoginFormComponent {
   private auth = inject(Auth);
+  private router: Router = inject(Router);
+  private route: ActivatedRoute = inject(ActivatedRoute);
 
-  readonly dialogRef = inject(MatDialogRef<LoginFormComponent>);
   email = '';
   password = '';
   hide = signal(true);
   error_text = signal('');
 
   doLogin() {
-    signInWithEmailAndPassword(this.auth, this.email, this.password).then(
-      (something) => {
-        console.log(`signInWithEmailAndPassword returned: ${JSON.stringify(something)}`);
-        this.dialogRef.close();
-      },
-      (error) => {this.error_text.set(error.message);});
+    signInWithEmailAndPassword(this.auth, this.email, this.password)
+      .then(()=> {
+        const returnUrl = this.route.snapshot.queryParams['returnUrl'] ?? 'tags'
+        this.router.navigate([returnUrl])
+      })
+      .catch((error) => {this.error_text.set(error.message)});
   }
 
   clickEvent(event: MouseEvent) {

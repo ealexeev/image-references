@@ -1,5 +1,4 @@
-<h2 mat-dialog-title>Login</h2>
-<mat-dialog-content>
+
   <mat-form-field appearance="outline">
     <input matInput placeholder="Email" [(ngModel)]="email"/>
   </mat-form-field>
@@ -23,7 +22,4 @@
   		<span>{{ error_text() }}</span>
   	</div>
   }
-</mat-dialog-content>
-<mat-dialog-actions align='end'>
-	<button mat-button (click)="doLogin()" cdkFocusInitial>Login</button>
-</mat-dialog-actions>
+    <button mat-button (click)="doLogin()" cdkFocusInitial>Login</button>

@@ -19,7 +19,7 @@ import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {TagService} from '../tag.service';
 import {MessageService} from '../message.service';
 import {Image, ImageService} from '../image.service';
-import {Subject, takeUntil} from 'rxjs';
+import {first, interval, race, raceWith, Subject, takeUntil} from 'rxjs';
 
 @Component({
   selector: 'app-image-card',
@@ -50,6 +50,7 @@ export class ImageCardComponent implements OnInit, OnDestroy{
   private messages = inject(MessageService);
 
   showTagSelection = signal(false);
+  tagSelectionFired: Subject<void> = new Subject();
   imageTagNames: WritableSignal<string[]> = signal([]);
   thumbnailUrl: WritableSignal<string> = signal('');
   fullUrlAvailable: WritableSignal<Boolean> = signal(false);
@@ -106,18 +107,19 @@ export class ImageCardComponent implements OnInit, OnDestroy{
 
   manageTags() {
     this.showTagSelection.update(v => !v);
-    setTimeout(
-      ()=>{
+    this.tagSelectionFired.pipe(
+      raceWith(interval(10000)),
+      first(),
+    ).subscribe(
+      ()=> {
         if (this.showTagSelection()) {
-          this.showTagSelection.update(v => !v);
+          this.showTagSelection.set(false)
         }
-      },
-      5000
-    )
-  }
+      })
+  };
 
   async onSelectionChange(tags: string[]) {
-    this.showTagSelection.set(false);
+    this.tagSelectionFired.next();
     Promise.all(tags.map(name => this.tagService.LoadTagByName(name)))
       .then(tags => {this.imageService.ReplaceTags(this.imageSource.reference, tags.map(t=>t.reference))})
       .catch(e=>this.messages.Error(`Error updating tags on image ${this.imageSource.reference}: ${e}`))

@@ -16,8 +16,7 @@ import {DragDropDirective, FileHandle} from '../drag-drop.directive';
 import {MessageService} from '../message.service';
 import {ZipDownloaderComponent} from '../zip-downloader/zip-downloader.component';
 import {Tag, TagService} from '../tag.service';
-import {Image, ImageService, ImageSubscription} from '../image.service';
-import {LiveImage} from '../storage.service-deprecated';
+import {Image, ImageService, ImagesSubscription} from '../image.service';
 import {DocumentReference} from '@angular/fire/firestore';
 
 @Component({
@@ -102,7 +101,7 @@ export class ImageGalleryComponent implements OnInit, OnDestroy {
   }
 
   async startSubscriptions() {
-    let subscription: ImageSubscription;
+    let subscription: ImagesSubscription;
     switch(this.mode) {
       case 'latest':
         subscription = this.imageService.SubscribeToLatestImages(this.preferences.showImageCount$.value)

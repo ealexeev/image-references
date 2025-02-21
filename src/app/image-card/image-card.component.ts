@@ -15,10 +15,9 @@ import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatChipsModule } from '@angular/material/chips';
 import { TagSelectComponent } from '../tag-select/tag-select.component';
-import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {TagService} from '../tag.service';
 import {MessageService} from '../message.service';
-import {Image, ImageService} from '../image.service';
+import {Image, ImageData, ImageService, ImageDataSubscription, ImageSubscription} from '../image.service';
 import {first, interval, race, raceWith, Subject, takeUntil} from 'rxjs';
 
 @Component({
@@ -48,6 +47,8 @@ export class ImageCardComponent implements OnInit, OnDestroy{
   private tagService = inject(TagService);
   private renderer = inject(Renderer2);
   private messages = inject(MessageService);
+  private imageSub: ImageSubscription | undefined = undefined;
+  private dataSub: ImageDataSubscription | undefined = undefined;
 
   showTagSelection = signal(false);
   tagSelectionFired: Subject<void> = new Subject();
@@ -62,19 +63,26 @@ export class ImageCardComponent implements OnInit, OnDestroy{
   constructor(){}
 
   ngOnInit(): void {
-    const subscription = this.imageService.SubscribeToImageData(this.imageSource.reference.id);
-      subscription.imageData$.pipe(
+    this.dataSub = this.imageService.SubscribeToImageData(this.imageSource.reference.id);
+    this.dataSub.imageData$.pipe(
       takeUntil(this.destroy$)
     ).subscribe(
-      imageData => {
+      (imageData: ImageData) => {
         this.thumbnailUrl.set(URL.createObjectURL(imageData.thumbnail));
         this.fetchFull = imageData.fullSize
         this.fullUrlAvailable.set(true)
       }
     )
-    Promise.all(this.imageSource.tags.map(ref => this.tagService.LoadTagByReference(ref)))
-      .then(tags => {this.imageTagNames.set(tags.map(t=>t.name))})
-        .catch((err: unknown) => this.messages.Error(`Error resolving tag names: ${err}`))
+    this.imageSub = this.imageService.SubscribeToImage(this.imageSource.reference);
+    this.imageSub.image$.pipe(
+      takeUntil(this.destroy$)
+    ).subscribe(
+      (img: Image) => {
+        this.imageSource = img;
+        this.resolveTags();
+      }
+    )
+    this.resolveTags();
   }
 
   ngOnDestroy(): void{
@@ -85,6 +93,12 @@ export class ImageCardComponent implements OnInit, OnDestroy{
 
   onDelete() {
     this.imageDeleted.emit(this.imageSource?.reference.id || "");
+  }
+
+  resolveTags() {
+    Promise.all(this.imageSource.tags.map(ref => this.tagService.LoadTagByReference(ref)))
+      .then(tags => {this.imageTagNames.set(tags.map(t=>t.name))})
+      .catch((err: unknown) => this.messages.Error(`Error resolving tag names: ${err}`))
   }
 
   async onDownload() {

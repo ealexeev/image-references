@@ -40,8 +40,12 @@ export type ImageData = {
   decrypted?: boolean
 }
 
-// Maybe reconsider this interface.  The caller to subscribe can provide the observable.  And unsub can cancel and call complete.
 export type ImageSubscription = {
+  image$: Observable<Image>,
+  unsubscribe: () => void,
+}
+
+export type ImagesSubscription = {
   images$: Observable<Image[]>,
   unsubscribe: () => void,
 }
@@ -227,7 +231,7 @@ export class ImageService {
   /**
    * Subscribe to images that contain a particular tag.  Limit results to last N images based on creation time.
    */
-  SubscribeToTag(tagRef: DocumentReference, last_n_images: number): ImageSubscription {
+  SubscribeToTag(tagRef: DocumentReference, last_n_images: number): ImagesSubscription {
     const constraints: QueryConstraint[] = [orderBy("added", "desc")]
     if ( last_n_images > 0 ) {
       constraints.push(limit(last_n_images));
@@ -249,13 +253,13 @@ export class ImageService {
       this.message.Info(`Tag ${shortenId(tagRef.id)} now has ${images.length} images`)
     })
 
-    return {images$: imagesObservable, unsubscribe: () => { unsub(); imagesObservable.complete()}} as ImageSubscription;
+    return {images$: imagesObservable, unsubscribe: () => { unsub(); imagesObservable.complete()}} as ImagesSubscription;
   }
 
   /**
    * Subscribe to the latest images added to storage up to last N images based on creation time.
    */
-  SubscribeToLatestImages(last_n_images: number): ImageSubscription {
+  SubscribeToLatestImages(last_n_images: number): ImagesSubscription {
     const constraints: QueryConstraint[] = [orderBy("added", "desc")]
     if ( last_n_images > 0 ) {
       constraints.push(limit(last_n_images));
@@ -273,7 +277,22 @@ export class ImageService {
       this.message.Info(`Fetched ${images.length} latest images`)
     })
 
-    return {images$: out$, unsubscribe: ()=>{unsub(); out$.complete()}} as ImageSubscription;
+    return {images$: out$, unsubscribe: ()=>{unsub(); out$.complete()}} as ImagesSubscription;
+  }
+
+  /**
+   * Subscribe to updates for a particular image.
+   */
+  SubscribeToImage(imageRef: DocumentReference): ImageSubscription {
+    const out = new Subject<Image>();
+    const unsub = onSnapshot(imageRef, (snapshot) => {
+      const img = this.imageFromFirestore(snapshot, {})
+      out.next(img)
+    });
+    return {
+      image$: out,
+      unsubscribe: ()=>{unsub(), out.complete()}
+    } as ImageSubscription;
   }
 
   /**
@@ -548,12 +567,12 @@ export class FakeImageService {
     return ret
   }
 
-  SubscribeToTag(tagRef: DocumentReference, last_n_images: number): ImageSubscription {
+  SubscribeToTag(tagRef: DocumentReference, last_n_images: number): ImagesSubscription {
     const sub = new Subject<Image[]>()
     const ret = {
       images$: sub,
       unsubscribe: () => {sub.complete()}
-    } as ImageSubscription
+    } as ImagesSubscription
     const images: Image[] = []
     for (const img of this.images.values()) {
       if (img.tags.map(t=>t.id).includes(tagRef.id)) {
@@ -567,12 +586,12 @@ export class FakeImageService {
     return ret
   }
 
-  SubscribeToLatestImages(last_n_images: number): ImageSubscription {
+  SubscribeToLatestImages(last_n_images: number): ImagesSubscription {
     const sub = new Subject<Image[]>()
     const ret = {
       images$: sub,
       unsubscribe: () => {sub.complete()}
-    } as ImageSubscription
+    } as ImagesSubscription
     const images: Image[] = []
     for (const img of this.images.values()) {
       images.push(img)

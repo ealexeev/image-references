@@ -2,6 +2,10 @@
   <div class="image-gallery" >
     <div class="header">
       <span class="text">{{ title() }}</span>
+      @if (totalImageCount()) {
+        <span class="spacer"></span>
+        ({{totalImageCount()}}) images
+      }
       <span class="spacer"></span>
       @defer {
         <app-zip-downloader [images]="images" [fileName]="mode === 'tag' ? optTagName() : mode" />

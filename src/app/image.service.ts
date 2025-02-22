@@ -6,7 +6,7 @@ import {
   doc,
   DocumentReference,
   DocumentSnapshot,
-  Firestore, getDoc, limit, onSnapshot, orderBy, query, QueryConstraint,
+  Firestore, getCountFromServer, getDoc, limit, onSnapshot, orderBy, query, QueryConstraint,
   serverTimestamp, setDoc, updateDoc, where, writeBatch
 } from '@angular/fire/firestore';
 import {MessageService} from './message.service';
@@ -19,6 +19,7 @@ import {SnapshotOptions} from '@angular/fire/compat/firestore';
 import {hex, shortenId} from './common';
 import {ImageScaleService} from './image-scale.service';
 import {TagUpdateCallback} from './tag.service';
+import {getCount} from '@angular/fire/firestore/lite';
 
 export type Image = {
   // Tags that this image is associated with.
@@ -328,6 +329,22 @@ export class ImageService {
    */
   RegisterTagUpdateCallback(func: TagUpdateCallback): void {
     this.tagUpdateCallback = func;
+  }
+
+  /**
+   * Get a count of images associated with a particular tag.
+   */
+  async CountTagImages(tagRef: DocumentReference): Promise<number> {
+    const q = query(this.imagesCollection,  where("tags", "array-contains", tagRef))
+    return getCountFromServer(q).then(snap=>snap.data().count)
+  }
+
+  /**
+   * Get a count of all images in the database.
+   */
+  async CountAllImages(): Promise<number> {
+    return getCountFromServer(query(this.imagesCollection))
+      .then(snap => snap.data().count)
   }
 
   private imageToFirestore(liveImage: Image): StoredImage {

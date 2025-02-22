@@ -55,7 +55,10 @@ export class ImageGalleryComponent implements OnInit, OnDestroy {
   private preferences: PreferenceService = inject(PreferenceService);
   private imageService: ImageService = inject(ImageService);
   private tagService: TagService = inject(TagService);
+  // How many image-cards are allowed to be loading their data in parallel
   readonly loadBudget: number = 25;
+
+
 
   // Maybe this replaces optTagName?  Why are we getting a name, and not a Tag to begin with?
   private tag: Tag | undefined = undefined;
@@ -63,6 +66,7 @@ export class ImageGalleryComponent implements OnInit, OnDestroy {
   optTagName: WritableSignal<string> = signal('');
   images: WritableSignal<Image[]> = signal([]);
   files: WritableSignal<FileHandle[]> = signal([]);
+  totalImageCount: WritableSignal<number> = signal(0);
 
   dbUnsubscribe: () => void = () => {
     return
@@ -114,10 +118,14 @@ export class ImageGalleryComponent implements OnInit, OnDestroy {
     let subscription: ImagesSubscription;
     switch(this.mode) {
       case 'latest':
+        this.imageService.CountAllImages().then(cnt=>this.totalImageCount.set(cnt))
         subscription = this.imageService.SubscribeToLatestImages(this.preferences.showImageCount$.value)
         break
       case 'tag':
         const tag = await this.tagService.LoadTagByName(this.optTagName())
+        this.imageService.CountTagImages(tag.reference)
+          .then(cnt => this.totalImageCount.set(cnt))
+          .catch(err => {this.messageService.Error(`<image-gallery> fetching tag image count: ${err}`)})
         subscription = this.imageService.SubscribeToTag(tag.reference, this.preferences.showImageCount$.value)
         break;
       default:
@@ -133,7 +141,7 @@ export class ImageGalleryComponent implements OnInit, OnDestroy {
       tags.push(await this.tagService.LoadTagByName(this.optTagName()).then(t=>t.reference))
     }
     const blob = await fetch(url).then(res => res.blob()).then(blob => blob)
-    return this.imageService.StoreImage(blob, tags)
+    return this.imageService.StoreImage(blob, tags).then(()=>this.totalImageCount.update(v=>v+1))
   }
 
   async deleteImageOrTag(id: string) {
@@ -148,11 +156,11 @@ export class ImageGalleryComponent implements OnInit, OnDestroy {
         }
         return this.imageService.RemoveTags(img.reference, [(await this.tagService.LoadTagByName(this.optTagName())).reference]);
       case 'latest':
-        return this.imageService.DeleteImage(this.imageService.GetImageReferenceFromId(id))
+        return this.imageService.DeleteImage(this.imageService.GetImageReferenceFromId(id)).then(()=>this.totalImageCount.update(v=>v-1))
       case 'inbox':
-        return this.imageService.DeleteImage(this.imageService.GetImageReferenceFromId(id))
+        return this.imageService.DeleteImage(this.imageService.GetImageReferenceFromId(id)).then(()=>this.totalImageCount.update(v=>v-1))
       default:
-        return this.imageService.DeleteImage(this.imageService.GetImageReferenceFromId(id))
+        return this.imageService.DeleteImage(this.imageService.GetImageReferenceFromId(id)).then(()=>this.totalImageCount.update(v=>v-1))
     }
   }
 

@@ -41,7 +41,9 @@ import {first, interval, race, raceWith, Subject, takeUntil} from 'rxjs';
 export class ImageCardComponent implements OnInit, OnDestroy{
   @Input({required: true}) imageSource!: Image;
   @Input() tagCountFrom: number = 2;
+  @Input() loadImmediately: boolean = true;
   @Output() imageDeleted = new EventEmitter<string>;
+  @Output() loadComplete: EventEmitter<void> = new EventEmitter();
 
   private imageService = inject(ImageService);
   private tagService = inject(TagService);
@@ -63,14 +65,30 @@ export class ImageCardComponent implements OnInit, OnDestroy{
   constructor(){}
 
   ngOnInit(): void {
+    if ( this.loadImmediately ) {
+      this.startSubscriptions()
+    }
+    this.resolveTags();
+  }
+
+  ngOnDestroy(): void{
+    this.unsubscribe()
+    this.destroy$.next()
+    this.destroy$.complete()
+  }
+
+  startSubscriptions() {
     this.dataSub = this.imageService.SubscribeToImageData(this.imageSource.reference.id);
     this.dataSub.imageData$.pipe(
-      takeUntil(this.destroy$)
+      first(),
     ).subscribe(
       (imageData: ImageData) => {
         this.thumbnailUrl.set(URL.createObjectURL(imageData.thumbnail));
         this.fetchFull = imageData.fullSize
         this.fullUrlAvailable.set(true)
+        this.loadComplete.emit();
+        this.dataSub!.unsubscribe();  // Unsub after getting image data.
+        this.dataSub = undefined;
       }
     )
     this.imageSub = this.imageService.SubscribeToImage(this.imageSource.reference);
@@ -82,13 +100,11 @@ export class ImageCardComponent implements OnInit, OnDestroy{
         this.resolveTags();
       }
     )
-    this.resolveTags();
   }
 
-  ngOnDestroy(): void{
-    this.unsubscribe()
-    this.destroy$.next()
-    this.destroy$.complete()
+  startLoading() {
+    this.loadImmediately = true;
+    this.ngOnInit();
   }
 
   onDelete() {

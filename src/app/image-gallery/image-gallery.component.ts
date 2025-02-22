@@ -1,11 +1,12 @@
 import {
+  AfterViewInit,
   ChangeDetectionStrategy,
   Component,
   inject,
   Input,
   OnDestroy,
-  OnInit,
-  signal,
+  OnInit, QueryList,
+  signal, ViewChildren,
   WritableSignal
 } from '@angular/core';
 import {Subscription} from 'rxjs';
@@ -48,11 +49,13 @@ export class ImageGalleryComponent implements OnInit, OnDestroy {
       this.ngOnInit();
     }
   }
+  @ViewChildren(ImageCardComponent) imageCards!: QueryList<ImageCardComponent>;
 
   private messageService: MessageService = inject(MessageService);
   private preferences: PreferenceService = inject(PreferenceService);
   private imageService: ImageService = inject(ImageService);
   private tagService: TagService = inject(TagService);
+  readonly loadBudget: number = 25;
 
   // Maybe this replaces optTagName?  Why are we getting a name, and not a Tag to begin with?
   private tag: Tag | undefined = undefined;
@@ -98,6 +101,13 @@ export class ImageGalleryComponent implements OnInit, OnDestroy {
   ngOnDestroy() {
     this.imagesSub.unsubscribe()
     this.dbUnsubscribe();
+  }
+
+  onLoadComplete() {
+    const notStarted = this.imageCards.filter(img=>!img.loadImmediately)
+    if (notStarted.length > 0) {
+      notStarted[0].startLoading()
+    }
   }
 
   async startSubscriptions() {

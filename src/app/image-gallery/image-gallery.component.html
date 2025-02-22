@@ -8,11 +8,13 @@
       }
     </div>
     <div class="image-grid">
-      @for (liveImage of images(); track liveImage.reference.id) {
-        <app-image-card
+      @for (liveImage of images(); track liveImage.reference.id; let index = $index) {
+        <app-image-card #img
           [imageSource]=liveImage
           [tagCountFrom]="mode === 'tag' ? 2 : 1"
+          [loadImmediately]="index < loadBudget"
           (imageDeleted)="deleteImageOrTag($event)"
+          (loadComplete)="onLoadComplete()"
         />
       }
     </div>

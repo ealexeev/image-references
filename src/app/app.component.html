@@ -1,8 +1,9 @@
 <html>
 <body>
   <div class="flex-container">
-    <mat-toolbar class="header">
-      <span class="app-name">Image Reference</span>
+    @if (auth.currentUser !== null) {
+      <mat-toolbar class="header">
+        <span class="app-name">Image Reference</span>
         <mat-button-toggle-group class="navigation" name="navigation" aria-label="navigation">
           <mat-button-toggle value="latest"
                              routerLink="/images/latest"
@@ -19,27 +20,30 @@
                              matTooltip="See list of tags"
           >Tags</mat-button-toggle>
         </mat-button-toggle-group>
-      <span class="toolbar-spacer"></span>
-      <span class="key-status">
+        <span class="toolbar-spacer"></span>
+        <span class="key-status">
          @if ( (encryption.currentState$ | async) == EncryptionState.Ready ) {
-            <mat-icon fontIcon="lock_open"></mat-icon>
-        } @else {
-          <button mat-icon-button class="key-status-button" (click)=encryption.debugme()>
+           <mat-icon fontIcon="lock_open"></mat-icon>
+         } @else {
+           <button mat-icon-button class="key-status-button" (click)=encryption.debugme()>
             <mat-icon fontIcon="lock"></mat-icon>
           </button>
-        }
+         }
       </span>
-      <app-set-preferences></app-set-preferences>
-      <button mat-icon-button
-              (click)="doLogOut()"
-              matTooltip="Log out">
-        <mat-icon fontIcon="logout"/>
-      </button>
-    </mat-toolbar>
+        <app-set-preferences></app-set-preferences>
+        <button mat-icon-button
+                (click)="doLogOut()"
+                matTooltip="Log out">
+          <mat-icon fontIcon="logout"/>
+        </button>
+      </mat-toolbar>
+    }
     <div class="content">
       <router-outlet></router-outlet>
     </div>
-    <app-status-bar></app-status-bar>
+    @if (auth.currentUser !== null) {
+      <app-status-bar></app-status-bar>
+    }
   </div>
 </body>
 </html>

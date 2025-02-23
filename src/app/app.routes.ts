@@ -13,22 +13,26 @@ export const routes: Routes = [
   },
 	{
     path: 'tags/:tagName',
-    component: TagMainComponent,
+    loadComponent: ()=> import('./tag-main/tag-main.component').then(m=>m.TagMainComponent),
     canActivate: [AuthenticatedGuard, AuthorizedGuard],
   },
   {
     path: 'tags',
-    component: TagMainComponent,
+    loadComponent: ()=> import('./tag-main/tag-main.component').then(m=>m.TagMainComponent),
     canActivate: [AuthenticatedGuard, AuthorizedGuard],
   },
   {
     path: 'images/:mode',
-    component: ImageGalleryComponent,
+    loadComponent: ()=> import('./image-gallery/image-gallery.component').then(m=>m.ImageGalleryComponent),
     canActivate: [AuthenticatedGuard, AuthorizedGuard],
   },
   {
     path: 'images/:mode/:tagName',
-    component: ImageGalleryComponent,
+    loadComponent: ()=> import('./image-gallery/image-gallery.component').then(m=>m.ImageGalleryComponent),
     canActivate: [AuthenticatedGuard, AuthorizedGuard],
   },
+  {
+    path: '**',
+    redirectTo: 'login',
+  }
 ];

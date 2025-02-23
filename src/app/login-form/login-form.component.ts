@@ -6,6 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import {ActivatedRoute, Router} from '@angular/router';
 import {environment} from '../environments/environment.prod';
+import {A11yModule} from '@angular/cdk/a11y';
 
 @Component({
   selector: 'app-login-form',
@@ -14,7 +15,8 @@ import {environment} from '../environments/environment.prod';
     FormsModule,
     MatButtonModule,
     MatIconModule,
-    MatInputModule
+    MatInputModule,
+    A11yModule
   ],
   templateUrl: './login-form.component.html',
   styleUrl: './login-form.component.scss',

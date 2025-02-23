@@ -34,16 +34,12 @@ import {TagService} from './tag.service';
   styleUrls: ['./app.component.scss', '../_variables.scss'],
 })
 export class AppComponent implements OnInit {
-  private auth = inject(Auth);
+  readonly auth = inject(Auth);
   readonly dialog = inject(MatDialog);
   readonly encryption: EncryptionService = inject(EncryptionService);
   readonly tagService = inject(TagService);
   readonly imageService = inject(ImageService);
   readonly router = inject(Router);
-  user: User|null = null;
-  username = '';
-  password = '';
-  passphrase = '';
 
   constructor() {
     this.imageService.RegisterTagUpdateCallback(this.tagService.RecordTagUsage)

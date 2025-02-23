@@ -1,11 +1,11 @@
 <div class="login-form-container">
 
-  <div class="form-elements">
+  <div class="form-elements" cdkTrapFocus>
     <h2>Image Reference Login</h2>
 
     <mat-form-field appearance="outline">
       <mat-label>Email</mat-label>
-      <input matInput [(ngModel)]="email"/>
+      <input matInput [(ngModel)]="email" cdkFocusRegionStart/>
     </mat-form-field>
 
 
@@ -29,8 +29,8 @@
         <span>{{ error_text() }}</span>
       </div>
     }
-    <button mat-raised-button class="login-button" (click)="doLogin()" cdkFocusInitial>Login</button>
+    <button mat-raised-button class="login-button" (click)="doLogin()" cdkFocusInitial cdkFocusRegionEnd>Login</button>
 
   </div>
 
-</div>
+</div >

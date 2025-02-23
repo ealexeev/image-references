@@ -3,7 +3,8 @@ import {MatButtonModule} from '@angular/material/button';
 import {MatIconModule} from '@angular/material/icon';
 import {MatTooltipModule} from '@angular/material/tooltip';
 import JSZip from 'jszip';
-import {Image, ImageData, ImageService} from '../image.service';
+import {ImageService} from '../image.service';
+import {Image, ImageData} from '../../lib/models/image.model';
 
 @Component({
   selector: 'app-zip-downloader',

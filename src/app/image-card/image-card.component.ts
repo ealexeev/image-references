@@ -17,7 +17,8 @@ import { MatChipsModule } from '@angular/material/chips';
 import { TagSelectComponent } from '../tag-select/tag-select.component';
 import {TagService} from '../tag.service';
 import {MessageService} from '../message.service';
-import {Image, ImageData, ImageService, ImageDataSubscription, ImageSubscription} from '../image.service';
+import {ImageService} from '../image.service';
+import {Image, ImageData, ImageSubscription} from '../../lib/models/image.model';
 import {first, interval, raceWith, Subject, takeUntil} from 'rxjs';
 
 @Component({
@@ -49,8 +50,8 @@ export class ImageCardComponent implements OnInit, OnDestroy{
   private tagService = inject(TagService);
   private renderer = inject(Renderer2);
   private messages = inject(MessageService);
-  private imageSub: ImageSubscription | undefined = undefined;
-  private dataSub: ImageDataSubscription | undefined = undefined;
+  private imageSub: ImageSubscription<Image> | undefined = undefined;
+  private dataSub: ImageSubscription<ImageData> | undefined = undefined;
 
   showTagSelection = signal(false);
   tagSelectionFired: Subject<void> = new Subject();
@@ -79,7 +80,7 @@ export class ImageCardComponent implements OnInit, OnDestroy{
 
   startSubscriptions() {
     this.dataSub = this.imageService.SubscribeToImageData(this.imageSource.reference.id);
-    this.dataSub.imageData$.pipe(
+    this.dataSub.results$.pipe(
       first(),
     ).subscribe(
       (imageData: ImageData) => {
@@ -92,7 +93,7 @@ export class ImageCardComponent implements OnInit, OnDestroy{
       }
     )
     this.imageSub = this.imageService.SubscribeToImage(this.imageSource.reference);
-    this.imageSub.image$.pipe(
+    this.imageSub.results$.pipe(
       takeUntil(this.destroy$)
     ).subscribe(
       (img: Image) => {

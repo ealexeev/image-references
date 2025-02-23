@@ -1,5 +1,4 @@
 import {
-  AfterViewInit,
   ChangeDetectionStrategy,
   Component, computed,
   inject,
@@ -9,7 +8,7 @@ import {
   signal, ViewChildren,
   WritableSignal
 } from '@angular/core';
-import {catchError, concatMap, from, queueScheduler, Subscription} from 'rxjs';
+import {concatMap, from, Subscription} from 'rxjs';
 import {PreferenceService} from '../preference-service';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {ImageCardComponent} from '../image-card/image-card.component';
@@ -17,7 +16,8 @@ import {DragDropDirective, FileHandle} from '../drag-drop.directive';
 import {MessageService} from '../message.service';
 import {ZipDownloaderComponent} from '../zip-downloader/zip-downloader.component';
 import {Tag, TagService} from '../tag.service';
-import {Image, ImageService, ImagesSubscription} from '../image.service';
+import {ImageService} from '../image.service';
+import {Image, ImageSubscription} from '../../lib/models/image.model';
 import {DocumentReference} from '@angular/fire/firestore';
 import {MatProgressBarModule} from '@angular/material/progress-bar';
 
@@ -119,7 +119,7 @@ export class ImageGalleryComponent implements OnInit, OnDestroy {
   }
 
   async startSubscriptions() {
-    let subscription: ImagesSubscription;
+    let subscription: ImageSubscription<Image[]>;
     switch(this.mode) {
       case 'latest':
         this.imageService.CountAllImages().then(cnt=>this.totalImageCount.set(cnt))
@@ -135,7 +135,7 @@ export class ImageGalleryComponent implements OnInit, OnDestroy {
       default:
         throw new Error(`Unsupported mode: ${this.mode}`);
     }
-    this.imagesSub = subscription.images$.subscribe((images: Image[]) => this.images.set(images))
+    this.imagesSub = subscription.results$.subscribe((images: Image[]) => this.images.set(images))
     this.dbUnsubscribe = subscription.unsubscribe;
   }
 

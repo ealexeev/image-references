@@ -10,7 +10,7 @@ import {
   serverTimestamp, setDoc, updateDoc, where, writeBatch
 } from '@angular/fire/firestore';
 import {MessageService} from './message.service';
-import {BehaviorSubject, Observable, of, ReplaySubject, Subject} from 'rxjs';
+import {BehaviorSubject, of, ReplaySubject, Subject} from 'rxjs';
 import {HmacService} from './hmac.service';
 import {deleteObject, getDownloadURL, ref, Storage, StorageReference, uploadBytes} from '@angular/fire/storage';
 import {LRUCache} from 'lru-cache';
@@ -19,42 +19,7 @@ import {SnapshotOptions} from '@angular/fire/compat/firestore';
 import {hex, shortenId} from './common';
 import {ImageScaleService} from './image-scale.service';
 import {TagUpdateCallback} from './tag.service';
-import {getCount} from '@angular/fire/firestore/lite';
-
-export type Image = {
-  // Tags that this image is associated with.
-  tags: DocumentReference[]
-  // Reference to this image.
-  reference: DocumentReference
-  // This is lazily loaded and cached.
-  data?: ImageData
-}
-
-export type ImageData = {
-  // The thumbnail blob.  Can be served up as a URL.
-  thumbnail: Blob
-  // A lazy loading function for fetching the full-sized image.
-  fullSize: ()=>Promise<Blob>
-  // Was the data encrypted in storage?
-  encryptionPresent?: boolean
-  // Was it successfully decrypted?
-  decrypted?: boolean
-}
-
-export type ImageSubscription = {
-  image$: Observable<Image>,
-  unsubscribe: () => void,
-}
-
-export type ImagesSubscription = {
-  images$: Observable<Image[]>,
-  unsubscribe: () => void,
-}
-
-export type ImageDataSubscription = {
-  imageData$: Observable<ImageData>,
-  unsubscribe: () => void,
-}
+import { Image, ImageData, ImageSubscription } from '../lib/models/image.model';
 
 type StoredImage = {
   added: unknown
@@ -205,9 +170,9 @@ export class ImageService {
   /**
    * Subscribe to updates about image data.  In practice there is only one update expected.
    */
-  SubscribeToImageData(imageId: string): ImageDataSubscription {
+  SubscribeToImageData(imageId: string): ImageSubscription<ImageData> {
     if ( this.imageCache.has(imageId) ) {
-      return {imageData$: of(this.imageCache.get(imageId)), unsubscribe: ()=> {}} as ImageDataSubscription
+      return {results$: of(this.imageCache.get(imageId)), unsubscribe: ()=> {}} as ImageSubscription<ImageData>
     }
 
     const imageData$ = new Subject<ImageData>();
@@ -226,13 +191,13 @@ export class ImageService {
           })
       })
 
-    return {imageData$: imageData$, unsubscribe: () => {imageData$.complete(); unsub()} } as ImageDataSubscription
+    return {results$: imageData$, unsubscribe: () => {imageData$.complete(); unsub()} } as ImageSubscription<ImageData>
   }
 
   /**
    * Subscribe to images that contain a particular tag.  Limit results to last N images based on creation time.
    */
-  SubscribeToTag(tagRef: DocumentReference, last_n_images: number): ImagesSubscription {
+  SubscribeToTag(tagRef: DocumentReference, last_n_images: number): ImageSubscription<Image[]> {
     const constraints: QueryConstraint[] = [orderBy("added", "desc")]
     if ( last_n_images > 0 ) {
       constraints.push(limit(last_n_images));
@@ -254,13 +219,13 @@ export class ImageService {
       this.message.Info(`Tag ${shortenId(tagRef.id)} now has ${images.length} images`)
     })
 
-    return {images$: imagesObservable, unsubscribe: () => { unsub(); imagesObservable.complete()}} as ImagesSubscription;
+    return {results$: imagesObservable, unsubscribe: () => { unsub(); imagesObservable.complete()}} as ImageSubscription<Image[]>;
   }
 
   /**
    * Subscribe to the latest images added to storage up to last N images based on creation time.
    */
-  SubscribeToLatestImages(last_n_images: number): ImagesSubscription {
+  SubscribeToLatestImages(last_n_images: number): ImageSubscription<Image[]> {
     const constraints: QueryConstraint[] = [orderBy("added", "desc")]
     if ( last_n_images > 0 ) {
       constraints.push(limit(last_n_images));
@@ -278,25 +243,25 @@ export class ImageService {
       this.message.Info(`Fetched ${images.length} latest images`)
     })
 
-    return {images$: out$, unsubscribe: ()=>{unsub(); out$.complete()}} as ImagesSubscription;
+    return {results$: out$, unsubscribe: ()=>{unsub(); out$.complete()}} as ImageSubscription<Image[]>;
   }
 
   /**
    * Subscribe to updates for a particular image.
    */
-  SubscribeToImage(imageRef: DocumentReference): ImageSubscription {
+  SubscribeToImage(imageRef: DocumentReference): ImageSubscription<Image> {
     const out = new Subject<Image>();
     const unsub = onSnapshot(imageRef, (snapshot) => {
       const img = this.imageFromFirestore(snapshot, {})
       out.next(img)
     });
     return {
-      image$: out,
+      results$: out,
       unsubscribe: ()=>{
         unsub()
         out.complete()
       }
-    } as ImageSubscription;
+    } as ImageSubscription<Image>;
   }
 
   /**
@@ -574,12 +539,12 @@ export class FakeImageService {
     this.imageData.delete(imageRef.id)
   }
 
-  SubscribeToImageData(imageId: string): ImageDataSubscription {
+  SubscribeToImageData(imageId: string): ImageSubscription<ImageData> {
     const sub = new Subject<ImageData>()
     const ret = {
-      imageData$: sub,
+      results$: sub,
       unsubscribe: () => {sub.complete()}
-    } as ImageDataSubscription
+    } as ImageSubscription<ImageData>
     const cached = this.imageData.get(imageId)
     if (cached) {
       sub.next(cached)
@@ -587,12 +552,12 @@ export class FakeImageService {
     return ret
   }
 
-  SubscribeToTag(tagRef: DocumentReference, last_n_images: number): ImagesSubscription {
+  SubscribeToTag(tagRef: DocumentReference, last_n_images: number): ImageSubscription<Image[]> {
     const sub = new Subject<Image[]>()
     const ret = {
-      images$: sub,
+      results$: sub,
       unsubscribe: () => {sub.complete()}
-    } as ImagesSubscription
+    } as ImageSubscription<Image[]>
     const images: Image[] = []
     for (const img of this.images.values()) {
       if (img.tags.map(t=>t.id).includes(tagRef.id)) {
@@ -606,12 +571,12 @@ export class FakeImageService {
     return ret
   }
 
-  SubscribeToLatestImages(last_n_images: number): ImagesSubscription {
+  SubscribeToLatestImages(last_n_images: number): ImageSubscription<Image[]> {
     const sub = new Subject<Image[]>()
     const ret = {
-      images$: sub,
+      results$: sub,
       unsubscribe: () => {sub.complete()}
-    } as ImagesSubscription
+    } as ImageSubscription<Image[]>
     const images: Image[] = []
     for (const img of this.images.values()) {
       images.push(img)
@@ -631,12 +596,12 @@ export class FakeImageService {
     return Promise.reject(new Error(`Image ${imageId} not found`))
   }
 
-  SubscribeToImage(imageRef: DocumentReference): ImageSubscription {
+  SubscribeToImage(imageRef: DocumentReference): ImageSubscription<Image> {
     const sub = new ReplaySubject<Image>()
     const ret = {
-      image$: sub,
+      results$: sub,
       unsubscribe: () => {sub.complete()},
-    } as ImageSubscription
+    } as ImageSubscription<Image>
     const cached = this.images.get(imageRef.id)
     if (cached) {
       sub.next(cached)

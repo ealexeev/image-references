@@ -1,4 +1,4 @@
-import {ChangeDetectionStrategy, Component, inject, OnInit, signal} from '@angular/core';
+import {ChangeDetectionStrategy, Component, ElementRef, inject, OnInit, signal, ViewChild} from '@angular/core';
 import { Auth, signInWithEmailAndPassword } from '@angular/fire/auth';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -6,7 +6,6 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import {ActivatedRoute, Router} from '@angular/router';
 import {environment} from '../environments/environment.prod';
-import {A11yModule} from '@angular/cdk/a11y';
 
 @Component({
   selector: 'app-login-form',
@@ -16,7 +15,6 @@ import {A11yModule} from '@angular/cdk/a11y';
     MatButtonModule,
     MatIconModule,
     MatInputModule,
-    A11yModule
   ],
   templateUrl: './login-form.component.html',
   styleUrl: './login-form.component.scss',
@@ -26,6 +24,8 @@ export class LoginFormComponent implements OnInit {
   private auth = inject(Auth);
   private router: Router = inject(Router);
   private route: ActivatedRoute = inject(ActivatedRoute);
+
+  @ViewChild('pass') passwordInput!: ElementRef;
 
   email = '';
   password = '';
@@ -46,9 +46,15 @@ export class LoginFormComponent implements OnInit {
     event.stopPropagation();
   }
 
-  onKeyUp(event: KeyboardEvent) {
+  onPasswordKeyUp(event: KeyboardEvent) {
     if (event.key === 'Enter') {
       this.doLogin();
+    }
+  }
+
+  onUsernameKeyUp(event: KeyboardEvent) {
+    if (event.key === 'Enter') {
+      this.passwordInput!.nativeElement.focus();
     }
   }
 

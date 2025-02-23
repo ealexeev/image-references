@@ -233,8 +233,12 @@ export class ImageService {
   SubscribeToImage(imageRef: DocumentReference): ImageSubscription<Image> {
     const out = new Subject<Image>();
     const unsub = onSnapshot(imageRef, (snapshot) => {
+      if (!snapshot.exists()) {
+        return
+      }
       this.convert.snapshotToImage(snapshot)
         .then(img=>out.next(img))
+        .catch((err) => {this.message.Error(`SubscribeToImage(${shortenId(imageRef.id)}): ${err}`)})
     });
     return {
       results$: out,

@@ -21,6 +21,7 @@ import {Image, ImageSubscription} from '../../lib/models/image.model';
 import {DocumentReference} from '@angular/fire/firestore';
 import {MatProgressBarModule} from '@angular/material/progress-bar';
 
+
 @Component({
   selector: 'app-image-gallery',
   standalone: true,

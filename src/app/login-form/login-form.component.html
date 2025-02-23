@@ -4,12 +4,13 @@
     <h2>Image Reference Login</h2>
 
     <mat-form-field appearance="outline">
-      <input matInput placeholder="Email" [(ngModel)]="email"/>
+      <mat-label>Email</mat-label>
+      <input matInput [(ngModel)]="email"/>
     </mat-form-field>
 
 
     <mat-form-field appearance="outline">
-      <mat-label>Enter your password</mat-label>
+      <mat-label>Password</mat-label>
       <input matInput [type]="hide() ? 'password' : 'text'" [(ngModel)]="password"/>
       <button
         class="reveal-password-button"

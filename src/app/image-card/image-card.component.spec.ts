@@ -3,7 +3,8 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ImageCardComponent } from './image-card.component';
 import {DocumentReference} from '@angular/fire/firestore';
 import {FakeTagService, TagService} from '../tag.service';
-import {FakeImageService, Image, ImageService} from '../image.service';
+import {FakeImageService, ImageService} from '../image.service';
+import {Image} from '../../lib/models/image.model';
 
 describe('ImageCardComponent', () => {
   let component: ImageCardComponent;

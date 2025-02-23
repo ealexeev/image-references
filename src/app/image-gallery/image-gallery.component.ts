@@ -19,6 +19,7 @@ import {ZipDownloaderComponent} from '../zip-downloader/zip-downloader.component
 import {Tag, TagService} from '../tag.service';
 import {Image, ImageService, ImagesSubscription} from '../image.service';
 import {DocumentReference} from '@angular/fire/firestore';
+import {MatProgressBarModule} from '@angular/material/progress-bar';
 
 @Component({
   selector: 'app-image-gallery',
@@ -27,6 +28,7 @@ import {DocumentReference} from '@angular/fire/firestore';
     ImageCardComponent,
     DragDropDirective,
     ZipDownloaderComponent,
+    MatProgressBarModule,
   ],
   templateUrl: './image-gallery.component.html',
   styleUrls: [
@@ -64,6 +66,9 @@ export class ImageGalleryComponent implements OnInit, OnDestroy {
   optTagName: WritableSignal<string> = signal('');
   images: WritableSignal<Image[]> = signal([]);
   totalImageCount: WritableSignal<number> = signal(0);
+  uploading: WritableSignal<boolean> = signal(false);
+  uploadImageCount: WritableSignal<number> = signal(0);
+  uploadPercentage: WritableSignal<string> = signal("0");
 
   dbUnsubscribe: () => void = () => {
     return
@@ -175,18 +180,30 @@ export class ImageGalleryComponent implements OnInit, OnDestroy {
 
   filesDropped(files: FileHandle[]) {
     this.messageService.Info(`Received ${files.length} ${files.length > 1 ? 'files' : 'file'}`);
-    const queueCount = 5;
+    const queueCount = 10;
     const batchSize = Math.ceil(files.length / queueCount);
+    let countDone = 0;
+    if (files.length > queueCount * 4) {
+      this.uploading.set(true)
+      this.uploadImageCount.set(files.length)
+    }
     console.log(`Batch size: ${batchSize}`);
     for (let i = 0; i < queueCount; i++) {
       const start = i*batchSize;
       const end = start+batchSize;
       from(files.slice(start, end)).pipe(
         concatMap((file: FileHandle, index: number) => {
-          console.log(`Processing batch ${start}:${end} -- ${index}`);
           return from(this.receiveImageURL(file.url))
         })
-      ).subscribe(()=>console.log(`Finished upload`));
+      ).subscribe(()=>{
+        countDone++
+        this.uploadPercentage.set(Math.floor(countDone/files.length*100).toString());
+        console.log(`Progress: ${this.uploadPercentage()}`);
+        if (countDone == files.length) {
+          // Need to handle errors as well.
+          this.uploading.set(false);
+        }
+      });
     }
   }
 

@@ -11,6 +11,20 @@ $grid_gap: 20px;
   flex-flow: column;
   height: 100%;
 
+  .upload-progress {
+    width: 80%;
+    align-self: center;
+    --mdc-linear-progress-active-indicator-color: #{theme.$btn-highlight-color};
+    --mdc-linear-progress-track-color: #{theme.$toolbar-background}
+  }
+
+  .upload-heading {
+    align-self: center;
+    margin-bottom: 1em;
+    font-family: Roboto, sans-serif;
+    color: theme.$text-color;
+  }
+
   .header {
     display: flex;
     align-items: center;

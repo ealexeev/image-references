@@ -11,16 +11,24 @@
         <app-zip-downloader [images]="images" [fileName]="mode === 'tag' ? optTagName() : mode" />
       }
     </div>
-    <div class="image-grid">
-      @for (liveImage of images(); track liveImage.reference.id; let index = $index) {
-        <app-image-card #img
-          [imageSource]=liveImage
-          [tagCountFrom]="mode === 'tag' ? 2 : 1"
-          [loadImmediately]="index < loadBudget"
-          (imageDeleted)="deleteImageOrTag($event)"
-          (loadComplete)="onLoadComplete()"
-        />
-      }
-    </div>
+    @if (uploading()) {
+      <h3 class="upload-heading">Uploading {{uploadImageCount()}} Images</h3>
+      <mat-progress-bar mode="determinate"
+                        [value]="uploadPercentage()"
+                        class="upload-progress"
+      />
+    } @else {
+      <div class="image-grid">
+        @for (liveImage of images(); track liveImage.reference.id; let index = $index) {
+          <app-image-card #img
+                          [imageSource]=liveImage
+                          [tagCountFrom]="mode === 'tag' ? 2 : 1"
+                          [loadImmediately]="index < loadBudget"
+                          (imageDeleted)="deleteImageOrTag($event)"
+                          (loadComplete)="onLoadComplete()"
+          />
+        }
+      </div>
+    }
   </div>
 </div>

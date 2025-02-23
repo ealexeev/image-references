@@ -6,7 +6,7 @@ import {
   doc,
   DocumentReference, DocumentSnapshot,
   Firestore, getCountFromServer, getDoc, getDocs, limit, onSnapshot, orderBy, query, QueryConstraint,
-  setDoc, updateDoc, where, writeBatch
+  setDoc, updateDoc, where, writeBatch, startAfter
 } from '@angular/fire/firestore';
 import {MessageService} from './message.service';
 import {BehaviorSubject, of, ReplaySubject, Subject} from 'rxjs';
@@ -20,7 +20,6 @@ import {TagUpdateCallback} from './tag.service';
 import { Image, ImageData, ImageSubscription } from '../lib/models/image.model';
 import {ImageConversionService, StoredImageData} from './image-conversion.service';
 import {ImageDataCacheService} from './image-data-cache.service';
-import {startAt} from '@angular/fire/database';
 
 const imagesCollectionPath = 'images'
 const cloudDataPath = 'data'
@@ -246,17 +245,18 @@ export class ImageService {
     } as ImageSubscription<Image>;
   }
 
-  async LoadImagesBatched(batchSize: number, constraint?: QueryConstraint, lastSeen?: DocumentSnapshot): Promise<{images: Image[], last: DocumentSnapshot}> {
+  async LoadImagesBatched(params: {batchSize: number, constraint?: QueryConstraint, lastSeen?: DocumentSnapshot}): Promise<{images: Image[], last: DocumentSnapshot}> {
     return new Promise(async (resolve, reject) => {
-      const queryContraints: unknown[] =  [orderBy("added", "desc"), limit(batchSize)]
-      if ( lastSeen !== undefined ) {
+      const queryContraints: unknown[] =  [orderBy("added", "desc"), limit(params.batchSize)]
+      if ( params.lastSeen !== undefined ) {
         //@ts-ignore
-        queryContraints.push(startAt(lastSeen))
+        queryContraints.push(startAfter(params.lastSeen))
       }
-      if ( constraint !== undefined ) {
-        queryContraints.push(constraint)
+      if ( params.constraint !== undefined ) {
+        queryContraints.push(params.constraint)
       }
-      const snapshot = await getDocs(query(this.imagesCollection, ...queryContraints as QueryConstraint[]))
+      const q = query(this.imagesCollection, ...queryContraints as QueryConstraint[])
+      const snapshot = await getDocs(q)
       //@ts-ignore
       Promise.all(snapshot.docs.map(doc => this.convert.snapshotToImage(doc)))
         //@ts-ignore

@@ -25,16 +25,20 @@ export class ZipDownloaderComponent {
   private renderer = inject(Renderer2);
 
   async onClick() {
-    const images = this.images()
     const zipFile = new JSZip();
-    const liveImageData = images.map(li=>this.imageService.LoadImageData(li.reference.id));
-    Promise.all(liveImageData)
-      .then((data) => Promise.all(data.map((img: ImageData) => img.fullSize())))
-      .then(blobs => {
-        blobs.forEach((blob: Blob, index: number) => {
-          zipFile.file(`${images[index].reference.id}.${extFromMime(blob.type)}`, blob)
-        })})
-      .then(()=> zipFile.generateAsync({type:"blob"}))
+    let batch = await this.imageService.LoadImagesBatched({batchSize: 25})
+    let cnt = 1;
+    while (batch.images.length > 0) {
+      const liveImageData = batch.images.map(li=>this.imageService.LoadImageData(li.reference.id));
+      const imageData = await Promise.all(liveImageData)
+      const fullSize = await Promise.all(imageData.map((img: ImageData) => img.fullSize()))
+      fullSize.forEach((blob: Blob, index: number) => {
+        zipFile.file(`${batch.images[index].reference.id}.${extFromMime(blob.type)}`, blob)
+      })
+      console.log(`Finished batch ${cnt++}`)
+      batch = await this.imageService.LoadImagesBatched({batchSize: 25, lastSeen: batch.last})
+    }
+    zipFile.generateAsync({type:"blob"})
       .then(blob=> {
         const url = URL.createObjectURL(blob);
         const link = this.renderer.createElement('a');

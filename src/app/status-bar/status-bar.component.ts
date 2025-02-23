@@ -45,7 +45,7 @@ export class StatusBarComponent {
         if ( this.queue.length < this.max ) {
           this.queue.unshift(message);
         } else {
-          console.error(`Status bar queue exceeds ${this.max}}`)
+          // console.error(`Status bar queue exceeds ${this.max}}`)
         }
       }
     )

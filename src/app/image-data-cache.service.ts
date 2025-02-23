@@ -9,7 +9,7 @@ const size = 500;
 })
 export class ImageDataCacheService {
 
-  private readonly cache: LRUCache<string, ImageData> = new LRUCache<string, ImageData>({maxSize: size});
+  private readonly cache: LRUCache<string, ImageData> = new LRUCache<string, ImageData>({max: size});
 
   constructor() {}
 

@@ -363,7 +363,7 @@ export class ImageService {
       this.message.Error(`Error loading ${snapshot.id} from Firestore:  does not exist.`)
     }
     return {
-      tags: data['tags'],
+      tags: data?.tags ?? [],
       reference: snapshot.ref,
     } as Image;
   }

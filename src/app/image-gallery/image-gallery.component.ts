@@ -9,7 +9,7 @@ import {
   signal, ViewChildren,
   WritableSignal
 } from '@angular/core';
-import {Subscription} from 'rxjs';
+import {concatMap, from, queueScheduler, Subscription} from 'rxjs';
 import {PreferenceService} from '../preference-service';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {ImageCardComponent} from '../image-card/image-card.component';
@@ -58,14 +58,11 @@ export class ImageGalleryComponent implements OnInit, OnDestroy {
   // How many image-cards are allowed to be loading their data in parallel
   readonly loadBudget: number = 25;
 
-
-
   // Maybe this replaces optTagName?  Why are we getting a name, and not a Tag to begin with?
   private tag: Tag | undefined = undefined;
   title: WritableSignal<string> = signal('');
   optTagName: WritableSignal<string> = signal('');
   images: WritableSignal<Image[]> = signal([]);
-  files: WritableSignal<FileHandle[]> = signal([]);
   totalImageCount: WritableSignal<number> = signal(0);
 
   dbUnsubscribe: () => void = () => {
@@ -138,7 +135,9 @@ export class ImageGalleryComponent implements OnInit, OnDestroy {
   async receiveImageURL(url: string): Promise<void> {
     const tags: DocumentReference[] = []
     if ( this.mode === 'tag' && this.optTagName() ) {
-      tags.push(await this.tagService.LoadTagByName(this.optTagName()).then(t=>t.reference))
+      if ( this.tag?.reference ) {
+        tags.push(this.tag?.reference)
+      }
     }
     const blob = await fetch(url).then(res => res.blob()).then(blob => blob)
     return this.imageService.StoreImage(blob, tags).then(()=>this.totalImageCount.update(v=>v+1))
@@ -176,12 +175,19 @@ export class ImageGalleryComponent implements OnInit, OnDestroy {
 
   filesDropped(files: FileHandle[]) {
     this.messageService.Info(`Received ${files.length} ${files.length > 1 ? 'files' : 'file'}`);
-    this.files.set(files);
-    for (const f of files) {
-      this.receiveImageURL(f.url.toString())
-        .catch((err: unknown) => {this.messageService.Error(`<image-gallery> receiveImageURL(): ${err}`)})
+    const queueCount = 5;
+    const batchSize = Math.ceil(files.length / queueCount);
+    console.log(`Batch size: ${batchSize}`);
+    for (let i = 0; i < queueCount; i++) {
+      const start = i*batchSize;
+      const end = start+batchSize;
+      from(files.slice(start, end)).pipe(
+        concatMap((file: FileHandle, index: number) => {
+          console.log(`Processing batch ${start}:${end} -- ${index}`);
+          return from(this.receiveImageURL(file.url))
+        })
+      ).subscribe(()=>console.log(`Finished upload`));
     }
-    setTimeout(() => {this.files.set([])}, 1500);
   }
 
 }

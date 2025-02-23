@@ -1,25 +1,35 @@
+<div class="login-form-container">
 
-  <mat-form-field appearance="outline">
-    <input matInput placeholder="Email" [(ngModel)]="email"/>
-  </mat-form-field>
-  <p>
-  <mat-form-field appearance="outline">
-    <mat-label>Enter your password</mat-label>
-    <input matInput [type]="hide() ? 'password' : 'text'" [(ngModel)]="password"/>
-    <button
-      mat-icon-button
-      matSuffix
-      (click)="clickEvent($event)"
-      [attr.aria-label]="'Hide password'"
-      [attr.aria-pressed]="hide()"
-    >
-      <mat-icon>{{ hide() ? 'visibility' : 'visibility_off' }}</mat-icon>
-    </button>
-  </mat-form-field>
-  @if ( error_text() != '' ) {
-  	<div class="error">
-  		<mat-icon fontIcon="error"></mat-icon>
-  		<span>{{ error_text() }}</span>
-  	</div>
-  }
-    <button mat-button (click)="doLogin()" cdkFocusInitial>Login</button>
+  <div class="form-elements">
+    <h2>Image Reference Login</h2>
+
+    <mat-form-field appearance="outline">
+      <input matInput placeholder="Email" [(ngModel)]="email"/>
+    </mat-form-field>
+
+
+    <mat-form-field appearance="outline">
+      <mat-label>Enter your password</mat-label>
+      <input matInput [type]="hide() ? 'password' : 'text'" [(ngModel)]="password"/>
+      <button
+        class="reveal-password-button"
+        mat-icon-button
+        matSuffix
+        (click)="clickEvent($event)"
+        [attr.aria-label]="'Hide password'"
+        [attr.aria-pressed]="hide()"
+      >
+        <mat-icon>{{ hide() ? 'visibility' : 'visibility_off' }}</mat-icon>
+      </button>
+    </mat-form-field>
+    @if (error_text() != '') {
+      <div class="error">
+        <mat-icon fontIcon="error"></mat-icon>
+        <span>{{ error_text() }}</span>
+      </div>
+    }
+    <button mat-raised-button class="login-button" (click)="doLogin()" cdkFocusInitial>Login</button>
+
+  </div>
+
+</div>

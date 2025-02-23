@@ -1,18 +1,51 @@
 @use '@angular/material' as mat;
+@use '../../_variables' as theme;
+@use 'sass:color';
 
-h2 {
-  text-align: center;
-  margin-bottom: 10px;
-}
+.login-form-container {
+  display: flex;
+  flex-flow: column nowrap;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
 
-mat-form-field {
-  width: 100%;
-}
-
-.error {
-  color: red;
-  mat-icon {
-    vertical-align: middle;
-    margin-right: 10px;
+  .form-elements {
+    display: flex;
+    flex-flow: column nowrap;
+    align-items: center;
+    justify-content: center;
+    background-color: theme.$toolbar-background;
+    padding: 30px;
+    border-radius: 5px;
+    box-shadow: 10px 10px 5px rgba(color.adjust(theme.$toolbar-background, $lightness:-30% ), 0.4);
   }
+
+  mat-form-field  {
+   min-width: 50ch;
+  }
+
+  h2 {
+    font-family: "Teko", serif;
+    font-optical-sizing: auto;
+    font-weight: 400;
+    font-style: normal;
+    margin-bottom: 30px;
+    font-size: 3em;
+    color: theme.$text-color;
+  }
+
+  .login-button {
+    font-family: Roboto, sans-serif;
+    font-size: 1.5em;
+    padding: 1em;
+    background-color: theme.$background;
+    color: theme.$text-color;
+  }
+
+  .reveal-password-button {
+    color: lightgrey;
+    margin-right: 1ch;
+  }
+
+
 }

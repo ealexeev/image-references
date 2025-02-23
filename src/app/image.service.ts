@@ -1,13 +1,12 @@
-import {inject, Injectable} from '@angular/core';
+import {inject, Injectable, Query} from '@angular/core';
 import {
   arrayRemove,
   arrayUnion, Bytes,
   collection,
   doc,
-  DocumentReference,
-  DocumentSnapshot,
-  Firestore, getCountFromServer, getDoc, limit, onSnapshot, orderBy, query, QueryConstraint,
-  serverTimestamp, setDoc, updateDoc, where, writeBatch
+  DocumentReference, DocumentSnapshot,
+  Firestore, getCountFromServer, getDoc, getDocs, limit, onSnapshot, orderBy, query, QueryConstraint,
+  setDoc, updateDoc, where, writeBatch
 } from '@angular/fire/firestore';
 import {MessageService} from './message.service';
 import {BehaviorSubject, of, ReplaySubject, Subject} from 'rxjs';
@@ -15,29 +14,13 @@ import {HmacService} from './hmac.service';
 import {deleteObject, getDownloadURL, ref, Storage, StorageReference, uploadBytes} from '@angular/fire/storage';
 import {LRUCache} from 'lru-cache';
 import {EncryptionService, FakeEncryptionService} from './encryption.service';
-import {SnapshotOptions} from '@angular/fire/compat/firestore';
 import {hex, shortenId} from './common';
 import {ImageScaleService} from './image-scale.service';
 import {TagUpdateCallback} from './tag.service';
 import { Image, ImageData, ImageSubscription } from '../lib/models/image.model';
-
-type StoredImage = {
-  added: unknown
-  tags: DocumentReference[],
-}
-
-type StoredImageData = {
-  // Mime-type of the image.
-  mimeType: string,
-  // Thumbnail data.
-  thumbnail: Bytes,
-  thumbnailIV?: Bytes,
-  thumbnailKeyRef?: DocumentReference,
-  // URL where the full-size image is stored.  May be encrypted
-  fullUrl: string,
-  fullIV?: Bytes,
-  fullKeyRef?: DocumentReference,
-}
+import {ImageConversionService, StoredImageData} from './image-conversion.service';
+import {ImageDataCacheService} from './image-data-cache.service';
+import {startAt} from '@angular/fire/database';
 
 const imagesCollectionPath = 'images'
 const cloudDataPath = 'data'
@@ -53,16 +36,16 @@ export class ImageService {
   private message: MessageService = inject(MessageService);
   private storage = inject(Storage);
   private scale = inject(ImageScaleService);
+  private convert: ImageConversionService = inject(ImageConversionService);
+  private imageCache: ImageDataCacheService = inject(ImageDataCacheService);
 
-  private imageCache: LRUCache<string, ImageData> = new LRUCache({'max': 100})
   private readonly imagesCollection: any;
   private imgCount$: BehaviorSubject<number> = new BehaviorSubject<number>(0)
   private readonly cloudStorageRef = ref(this.storage, cloudDataPath)
   private tagUpdateCallback: TagUpdateCallback = (tags: DocumentReference[]): Promise<void> => {return Promise.resolve()};
 
   constructor() {
-    this.imagesCollection = collection(this.firestore, imagesCollectionPath).withConverter(
-      {toFirestore: this.imageToFirestore, fromFirestore: this.imageFromFirestore})
+    this.imagesCollection = collection(this.firestore, imagesCollectionPath).withConverter(this.convert.imageConverter())
   }
 
   /**
@@ -181,8 +164,7 @@ export class ImageService {
         if (!doc.exists()) {
           return;  // This happens right after creation, it is not an error.
         }
-        const stored = doc.data() as StoredImageData;
-        this.StoredImageDataToLive(stored, doc.ref)
+        this.convert.snapshotToImageData(doc)
           .then(imageData => {
             imageData$.next(imageData as ImageData)
           })
@@ -252,8 +234,8 @@ export class ImageService {
   SubscribeToImage(imageRef: DocumentReference): ImageSubscription<Image> {
     const out = new Subject<Image>();
     const unsub = onSnapshot(imageRef, (snapshot) => {
-      const img = this.imageFromFirestore(snapshot, {})
-      out.next(img)
+      this.convert.snapshotToImage(snapshot)
+        .then(img=>out.next(img))
     });
     return {
       results$: out,
@@ -262,6 +244,24 @@ export class ImageService {
         out.complete()
       }
     } as ImageSubscription<Image>;
+  }
+
+  async LoadImagesBatched(batchSize: number, constraint?: QueryConstraint, lastSeen?: DocumentSnapshot): Promise<{images: Image[], last: DocumentSnapshot}> {
+    return new Promise(async (resolve, reject) => {
+      const queryContraints: unknown[] =  [orderBy("added", "desc"), limit(batchSize)]
+      if ( lastSeen !== undefined ) {
+        //@ts-ignore
+        queryContraints.push(startAt(lastSeen))
+      }
+      if ( constraint !== undefined ) {
+        queryContraints.push(constraint)
+      }
+      const snapshot = await getDocs(query(this.imagesCollection, ...queryContraints as QueryConstraint[]))
+      //@ts-ignore
+      Promise.all(snapshot.docs.map(doc => this.convert.snapshotToImage(doc)))
+        //@ts-ignore
+        .then(imgResults => resolve({images: imgResults, last: snapshot.docs[snapshot.size - 1]}))
+    })
   }
 
   /**
@@ -280,8 +280,7 @@ export class ImageService {
             this.message.Error(msg)
             reject(msg)
           }
-          const stored = doc.data() as StoredImageData;
-          this.StoredImageDataToLive(stored, doc.ref)
+          this.convert.snapshotToImageData(doc)
             .then(imageData => {resolve(imageData as ImageData)})
             .catch((err: unknown) => {
               const msg = `LoadImageData(${imageId}): ${err}`
@@ -291,6 +290,7 @@ export class ImageService {
         })
     })
   }
+
 
   /**
    * Register a callback to use when tags are being applied, removed, etc.
@@ -315,34 +315,9 @@ export class ImageService {
       .then(snap => snap.data().count)
   }
 
-  private imageToFirestore(liveImage: Image): StoredImage {
-    return {
-      added: serverTimestamp(),
-      tags: liveImage.tags,
-    };
-  }
-
-  private imageFromFirestore(snapshot:DocumentSnapshot, options: SnapshotOptions): Image {
-    const data = snapshot.data(options) as StoredImage;
-    if ( !snapshot.exists() ) {
-      this.message.Error(`Error loading ${snapshot.id} from Firestore:  does not exist.`)
-    }
-    return {
-      tags: data?.tags ?? [],
-      reference: snapshot.ref,
-    } as Image;
-  }
-
-  private imageConverter() {
-    return {
-      'toFirestore': this.imageToFirestore,
-      'fromFirestore': this.imageFromFirestore,
-    }
-  }
-
   private async GetImageReferenceFromBlob(image: Blob): Promise<DocumentReference> {
     const hmac = await this.hmac.getHmacHex(image)
-    return doc(this.firestore, imagesCollectionPath, hmac).withConverter(this.imageConverter())
+    return doc(this.firestore, imagesCollectionPath, hmac).withConverter(this.convert.imageConverter())
   }
 
   private async StorePlainImageData (ref: DocumentReference,  blob: Blob): Promise<void> {
@@ -392,74 +367,6 @@ export class ImageService {
     }
   }
 
-  private async StoredImageDataToLive(stored: StoredImageData, ref: DocumentReference): Promise<ImageData> {
-    return new Promise(async (resolve, reject) => {
-      if (!(stored?.thumbnailIV || stored?.thumbnailKeyRef || stored?.fullIV || stored?.fullKeyRef)) {
-        const thumb = new Blob([stored.thumbnail.toUint8Array()], {type: stored.mimeType})
-        const ret = {
-          thumbnail: thumb,
-          fullSize: () => Promise.resolve(fetch(stored.fullUrl).then(r=>r.blob())),
-          encryptionPresent: false,
-          decrypted: false,
-        } as ImageData
-        // Image data is stored under image/data/thumb, so we need the id of the parent image.
-        this.imageCache.set(ref.parent!.parent!.id, ret)
-        resolve(ret);
-      }
-
-      if ( !this.encryption.enabled() ) {
-        this.message.Error(`Stored image ${ref.id} is encrypted, but encryption is not enabled.`)
-        resolve({
-          thumbnail: new Blob([stored.thumbnail.toUint8Array()], {type: stored.mimeType}),
-          fullSize: () => Promise.resolve(fetch(stored.fullUrl).then(r=>r.blob())),
-          encryptionPresent: true,
-          decrypted: false,
-        } as ImageData)
-      }
-
-      if (!stored?.thumbnailIV) {
-        reject(new Error(`Encrypted image data ${ref.id} is missing .thumbnailIV`))
-      }
-      if (!stored?.thumbnailKeyRef) {
-        reject(new Error(`Encrypted image data ${ref.id} is missing .thumbnailKeyRef`))
-      }
-      if (!stored?.fullIV) {
-        reject(new Error(`Encrypted image data ${ref.id} is missing .fullIV`))
-      }
-      if (!stored?.fullKeyRef) {
-        reject(new Error(`Encrypted image data ${ref.id} is missing .fullKeyRef`))
-      }
-      let decryptedThumb: ArrayBuffer | undefined
-      try {
-        decryptedThumb = await this.encryption.Decrypt({
-          ciphertext: stored.thumbnail.toUint8Array(),
-          iv: stored.thumbnailIV!.toUint8Array(),
-          keyReference: stored.thumbnailKeyRef!,
-        })
-      } catch (e) {
-        reject(new Error(`Error decrypting ${ref.id} encrypted thumbnail: ${e}`))
-      }
-      const ret = {
-        thumbnail: new Blob([decryptedThumb!], {'type': stored.mimeType}),
-        fullSize: () => {
-          return new Promise((resolve, reject) => {
-            fetch(stored.fullUrl)
-              .then(res => res.blob())
-              .then(enc => enc.arrayBuffer())
-              .then(buf => this.encryption.Decrypt(
-                {ciphertext: buf, iv: stored.fullIV!.toUint8Array(), keyReference: stored.fullKeyRef!}))
-              .then(plain => resolve(new Blob([plain!], {'type': stored.mimeType})))
-              .catch(e => reject(e));
-          })
-        },
-        encryptionPresent: true,
-        decrypted: true,
-      } as ImageData
-      // Image data is stored under image/data/thumb, so we need the id of the parent image.
-      this.imageCache.set(ref.parent!.parent!.id, ret)
-      resolve(ret)
-    })
-  }
 
   private async StoreFullImage(imageRef: DocumentReference, blob: Blob ): Promise<string> {
     const storageRef = ref(this.cloudStorageRef, imageRef.id);

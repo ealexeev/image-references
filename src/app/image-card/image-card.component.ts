@@ -18,7 +18,7 @@ import { TagSelectComponent } from '../tag-select/tag-select.component';
 import {TagService} from '../tag.service';
 import {MessageService} from '../message.service';
 import {Image, ImageData, ImageService, ImageDataSubscription, ImageSubscription} from '../image.service';
-import {first, interval, race, raceWith, Subject, takeUntil} from 'rxjs';
+import {first, interval, raceWith, Subject, takeUntil} from 'rxjs';
 
 @Component({
   selector: 'app-image-card',

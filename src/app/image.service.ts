@@ -10,7 +10,7 @@ import {
   serverTimestamp, setDoc, updateDoc, where, writeBatch
 } from '@angular/fire/firestore';
 import {MessageService} from './message.service';
-import {BehaviorSubject, Observable, of, Subject} from 'rxjs';
+import {BehaviorSubject, Observable, of, ReplaySubject, Subject} from 'rxjs';
 import {HmacService} from './hmac.service';
 import {deleteObject, getDownloadURL, ref, Storage, StorageReference, uploadBytes} from '@angular/fire/storage';
 import {LRUCache} from 'lru-cache';
@@ -292,7 +292,10 @@ export class ImageService {
     });
     return {
       image$: out,
-      unsubscribe: ()=>{unsub(), out.complete()}
+      unsubscribe: ()=>{
+        unsub()
+        out.complete()
+      }
     } as ImageSubscription;
   }
 
@@ -626,6 +629,19 @@ export class FakeImageService {
       return Promise.resolve(cached)
     }
     return Promise.reject(new Error(`Image ${imageId} not found`))
+  }
+
+  SubscribeToImage(imageRef: DocumentReference): ImageSubscription {
+    const sub = new ReplaySubject<Image>()
+    const ret = {
+      image$: sub,
+      unsubscribe: () => {sub.complete()},
+    } as ImageSubscription
+    const cached = this.images.get(imageRef.id)
+    if (cached) {
+      sub.next(cached)
+    }
+    return ret
   }
 
 }

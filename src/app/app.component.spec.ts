@@ -7,14 +7,20 @@ import {provideAnimations} from '@angular/platform-browser/animations';
 import {FirebaseApp, initializeApp, provideFirebaseApp} from '@angular/fire/app';
 import {environment} from './environments/environment.dev';
 import {EncryptionService} from './encryption.service';
-import {ActivatedRoute, RouterModule} from '@angular/router';
+import {Router, RouterModule} from '@angular/router';
+import {FakeTagService, TagService} from './tag.service';
+import {FakeImageService, ImageService} from './image.service';
 
 describe('AppComponent', () => {
   const connected = signal(false);
   let encryptionService: any;
+  let tagService: FakeTagService;
+  let imageService: FakeImageService;
 
   beforeEach(async () => {
     encryptionService = jasmine.createSpyObj('EncryptionService', ['Enable']);
+    tagService = new FakeTagService([]);
+    imageService = new FakeImageService();
 
     await TestBed.configureTestingModule({
       imports: [
@@ -30,6 +36,8 @@ describe('AppComponent', () => {
         provideAnimations(),
         {provide: FirebaseApp, useValue: {name: "Foo"}},
         {provide: EncryptionService, useValue: encryptionService},
+        {provide: ImageService, useValue: imageService},
+        {provide: TagService, useValue: tagService},
       ]
     }).compileComponents();
   });

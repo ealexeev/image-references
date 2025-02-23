@@ -644,4 +644,5 @@ export class FakeImageService {
     return ret
   }
 
+  RegisterTagUpdateCallback(func: TagUpdateCallback): void {}
 }

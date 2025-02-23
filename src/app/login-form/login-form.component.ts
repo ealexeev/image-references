@@ -46,6 +46,12 @@ export class LoginFormComponent implements OnInit {
     event.stopPropagation();
   }
 
+  onKeyUp(event: KeyboardEvent) {
+    if (event.key === 'Enter') {
+      this.doLogin();
+    }
+  }
+
   ngOnInit() {
     this.auth.authStateReady()
       .then(() => {

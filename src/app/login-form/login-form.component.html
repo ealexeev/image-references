@@ -11,7 +11,7 @@
 
     <mat-form-field appearance="outline">
       <mat-label>Password</mat-label>
-      <input matInput [type]="hide() ? 'password' : 'text'" [(ngModel)]="password"/>
+      <input matInput [type]="hide() ? 'password' : 'text'" [(ngModel)]="password" (keyup)="onKeyUp($event)"/>
       <button
         class="reveal-password-button"
         mat-icon-button

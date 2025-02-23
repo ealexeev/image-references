@@ -55,7 +55,7 @@ export class AppComponent implements OnInit {
 
   doLogOut() {
     signOut(this.auth).catch(err => console.error(err));
-    this.router.navigate(['login']);
+    this.router.navigateByUrl('/login');
   }
 
   protected readonly EncryptionState = EncryptionState;

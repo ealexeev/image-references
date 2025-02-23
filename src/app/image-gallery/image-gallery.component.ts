@@ -1,15 +1,15 @@
 import {
   AfterViewInit,
   ChangeDetectionStrategy,
-  Component,
+  Component, computed,
   inject,
   Input,
   OnDestroy,
-  OnInit, QueryList,
+  OnInit, QueryList, Signal,
   signal, ViewChildren,
   WritableSignal
 } from '@angular/core';
-import {concatMap, from, queueScheduler, Subscription} from 'rxjs';
+import {catchError, concatMap, from, queueScheduler, Subscription} from 'rxjs';
 import {PreferenceService} from '../preference-service';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {ImageCardComponent} from '../image-card/image-card.component';
@@ -66,9 +66,11 @@ export class ImageGalleryComponent implements OnInit, OnDestroy {
   optTagName: WritableSignal<string> = signal('');
   images: WritableSignal<Image[]> = signal([]);
   totalImageCount: WritableSignal<number> = signal(0);
+
   uploading: WritableSignal<boolean> = signal(false);
-  uploadImageCount: WritableSignal<number> = signal(0);
-  uploadPercentage: WritableSignal<string> = signal("0");
+  uploadedImageCount: WritableSignal<number> = signal(0);
+  uploadTotalCount: WritableSignal<number> = signal(0);
+  uploadPercentage: Signal<string> = computed(()=> Math.floor(this.uploadedImageCount()/this.uploadTotalCount()*100).toString())
 
   dbUnsubscribe: () => void = () => {
     return
@@ -182,28 +184,27 @@ export class ImageGalleryComponent implements OnInit, OnDestroy {
     this.messageService.Info(`Received ${files.length} ${files.length > 1 ? 'files' : 'file'}`);
     const queueCount = 10;
     const batchSize = Math.ceil(files.length / queueCount);
-    let countDone = 0;
-    if (files.length > queueCount * 4) {
+    if (files.length > queueCount) {
       this.uploading.set(true)
-      this.uploadImageCount.set(files.length)
+      this.uploadTotalCount.set(files.length)
+      this.uploadedImageCount.set(0);
     }
-    console.log(`Batch size: ${batchSize}`);
+
     for (let i = 0; i < queueCount; i++) {
       const start = i*batchSize;
       const end = start+batchSize;
-      from(files.slice(start, end)).pipe(
+      this.imagesSub.add(from(files.slice(start, end)).pipe(
         concatMap((file: FileHandle, index: number) => {
           return from(this.receiveImageURL(file.url))
-        })
-      ).subscribe(()=>{
-        countDone++
-        this.uploadPercentage.set(Math.floor(countDone/files.length*100).toString());
-        console.log(`Progress: ${this.uploadPercentage()}`);
-        if (countDone == files.length) {
-          // Need to handle errors as well.
-          this.uploading.set(false);
-        }
-      });
+        }),
+      ).subscribe({
+        next: ()=> this.uploadedImageCount.update(v=>v+1),
+        error: (err: unknown)=> {
+          this.uploadedImageCount.update(v => v + 1)
+          this.messageService.Error(`Error uploading image: ${err}`)
+        },
+        complete: ()=> this.uploading.set(false),
+      }))
     }
   }
 

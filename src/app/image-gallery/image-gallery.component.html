@@ -12,7 +12,7 @@
       }
     </div>
     @if (uploading()) {
-      <h3 class="upload-heading">Uploading {{uploadImageCount()}} Images</h3>
+      <h3 class="upload-heading">Uploading {{uploadTotalCount()}} Images</h3>
       <mat-progress-bar mode="determinate"
                         [value]="uploadPercentage()"
                         class="upload-progress"

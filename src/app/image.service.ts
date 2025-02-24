@@ -20,6 +20,7 @@ import {TagUpdateCallback} from './tag.service';
 import { Image, ImageData, ImageSubscription } from '../lib/models/image.model';
 import {ImageConversionService, StoredImageData} from './image-conversion.service';
 import {ImageDataCacheService} from './image-data-cache.service';
+import {DocumentData, QueryDocumentSnapshot} from '@angular/fire/compat/firestore';
 
 const imagesCollectionPath = 'images'
 const cloudDataPath = 'data'
@@ -249,7 +250,7 @@ export class ImageService {
     } as ImageSubscription<Image>;
   }
 
-  async LoadImagesBatched(params: {batchSize: number, constraint?: QueryConstraint, lastSeen?: DocumentSnapshot}): Promise<{images: Image[], last: DocumentSnapshot}> {
+  async loadImagesBatched(params: {batchSize: number, constraint?: QueryConstraint, lastSeen?: unknown}): Promise<{images: Image[], last: unknown}> {
     return new Promise(async (resolve, reject) => {
       const queryContraints: unknown[] =  [orderBy("added", "desc"), limit(params.batchSize)]
       if ( params.lastSeen !== undefined ) {
@@ -263,8 +264,12 @@ export class ImageService {
       const snapshot = await getDocs(q)
       //@ts-ignore
       Promise.all(snapshot.docs.map(doc => this.convert.snapshotToImage(doc)))
-        //@ts-ignore
-        .then(imgResults => resolve({images: imgResults, last: snapshot.docs[snapshot.size - 1]}))
+
+        .then(imgResults => {
+          const ret = {images: imgResults, last: snapshot.docs[snapshot.size - 1]}
+          resolve(ret)
+        })
+        .catch(err => reject(err))
     })
   }
 

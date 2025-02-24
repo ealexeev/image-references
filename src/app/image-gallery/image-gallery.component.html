@@ -8,7 +8,7 @@
       }
       <span class="spacer"></span>
       @defer {
-        <app-zip-downloader [images]="images" [fileName]="mode === 'tag' ? optTagName() : mode" />
+        <app-zip-downloader #dl [images]="images" [fileName]="mode === 'tag' ? optTagName() : mode" />
       }
     </div>
     @if (uploading()) {

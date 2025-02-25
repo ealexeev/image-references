@@ -29,6 +29,10 @@
     position-area: bottom;
   }
 
+  .multiline-tooltip {
+    white-space: pre-line;
+  }
+
   .lds-spinner,
   .lds-spinner div,
   .lds-spinner div:after {

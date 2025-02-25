@@ -10,12 +10,22 @@
   }
 	<mat-card-actions align='end' class="image-actions">
 		<button mat-icon-button
+            matTooltip="Manage image tags"
             [matBadge]="imageSource.tags.length"
             [matBadgeHidden]="imageSource.tags.length < tagCountFrom"
             (click)="manageTags()"
     >
 			<mat-icon fontIcon="list"></mat-icon>
 		</button>
+    @if (imageService.lastTagsAdded().length > 0) {
+      <button mat-icon-button
+              [matTooltip]="lastTagsText()"
+              matTooltipClass="multiline-tooltip"
+              (click)="onAddLast()"
+      >
+        <mat-icon fontIcon="post_add"></mat-icon>
+      </button>
+    }
     @if ( showTagSelection() ) {
       <app-tag-select
         class="tag-list-selection"
@@ -25,11 +35,14 @@
       />
     }
 		<button mat-icon-button
+            matTooltip="Download this image"
             (click)="onDownload()"
             [disabled]="!fullUrlAvailable()">
 			<mat-icon fontIcon="download"></mat-icon>
 		</button>
-		<button mat-icon-button (click)="onDelete()">
+		<button mat-icon-button
+            matTooltip="Delete this image"
+            (click)="onDelete()">
 			<mat-icon fontIcon="delete"></mat-icon>
 		</button>
 	</mat-card-actions>

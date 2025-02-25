@@ -1,12 +1,12 @@
 import {
   ChangeDetectionStrategy,
-  Component,
+  Component, computed, effect,
   EventEmitter, inject,
   Input,
   OnDestroy,
   OnInit,
   Output,
-  Renderer2,
+  Renderer2, Signal,
   signal, WritableSignal
 } from '@angular/core';
 import { MatBadgeModule } from '@angular/material/badge';
@@ -20,6 +20,7 @@ import {MessageService} from '../message.service';
 import {ImageService} from '../image.service';
 import {Image, ImageData, ImageSubscription} from '../../lib/models/image.model';
 import {first, interval, raceWith, Subject, takeUntil, timer} from 'rxjs';
+import {MatTooltipModule} from '@angular/material/tooltip';
 
 @Component({
   selector: 'app-image-card',
@@ -31,7 +32,8 @@ import {first, interval, raceWith, Subject, takeUntil, timer} from 'rxjs';
     MatChipsModule,
     MatIconModule,
     TagSelectComponent,
-    ],
+    MatTooltipModule,
+  ],
   templateUrl: './image-card.component.html',
   styleUrls: [
     './image-card.component.scss',
@@ -46,7 +48,7 @@ export class ImageCardComponent implements OnInit, OnDestroy{
   @Output() imageDeleted = new EventEmitter<string>;
   @Output() loadComplete: EventEmitter<void> = new EventEmitter();
 
-  private imageService = inject(ImageService);
+  protected imageService = inject(ImageService);
   private tagService = inject(TagService);
   private renderer = inject(Renderer2);
   private messages = inject(MessageService);
@@ -60,11 +62,20 @@ export class ImageCardComponent implements OnInit, OnDestroy{
   thumbnailUrl: WritableSignal<string> = signal('');
   fullUrlAvailable: WritableSignal<Boolean> = signal(false);
   fetchFull: any; /// ()=>Promise<Blob>;
+  lastTagsText: WritableSignal<string> = signal('');
 
-  private unsubscribe: () => void = () => {return};
+    private unsubscribe: () => void = () => {return};
   private destroy$: Subject<void> = new Subject<void>();
 
-  constructor(){}
+  constructor() {
+    effect(async () => {
+        const lastRefs = this.imageService.lastTagsAdded()
+        Promise.all(lastRefs.map(r => this.tagService.LoadTagByReference(r)))
+          .then((tags: { name: string }[]) => tags.map(tag => tag.name))
+          .then((names: string[]) => this.lastTagsText.set(names.join("\n")))
+      }
+    )
+  }
 
   ngOnInit(): void {
     if ( this.loadImmediately ) {
@@ -146,10 +157,7 @@ export class ImageCardComponent implements OnInit, OnDestroy{
       ).subscribe({
         next: (value) => {
           if (value === 0) {
-            console.log('timer')
             this.showTagSelection.set(false)
-          } else {
-            console.log('opened')
           }
           unsub.unsubscribe();
         }
@@ -159,6 +167,11 @@ export class ImageCardComponent implements OnInit, OnDestroy{
 
   onSelectionOpen() {
     this.tagSelectionOpened$.next()
+  }
+
+  onAddLast() {
+    this.imageService.AddLastTags(this.imageSource.reference)
+      .catch((err: unknown) => {this.messages.Error(`Error adding last tags: ${err}`)})
   }
 
 

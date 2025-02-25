@@ -1,4 +1,4 @@
-import {inject, Injectable, Query} from '@angular/core';
+import {inject, Injectable, Query, signal, WritableSignal} from '@angular/core';
 import {
   arrayRemove,
   arrayUnion, Bytes,
@@ -20,7 +20,6 @@ import {TagUpdateCallback} from './tag.service';
 import { Image, ImageData, ImageSubscription } from '../lib/models/image.model';
 import {ImageConversionService, StoredImageData} from './image-conversion.service';
 import {ImageDataCacheService} from './image-data-cache.service';
-import {DocumentData, QueryDocumentSnapshot} from '@angular/fire/compat/firestore';
 
 const imagesCollectionPath = 'images'
 const cloudDataPath = 'data'
@@ -43,6 +42,8 @@ export class ImageService {
   private imgCount$: BehaviorSubject<number> = new BehaviorSubject<number>(0)
   private readonly cloudStorageRef = ref(this.storage, cloudDataPath)
   private tagUpdateCallback: TagUpdateCallback = (tags: DocumentReference[]): Promise<void> => {return Promise.resolve()};
+
+  lastTagsAdded: WritableSignal<DocumentReference[]> = signal([]);
 
   constructor() {
     this.imagesCollection = collection(this.firestore, imagesCollectionPath).withConverter(this.convert.imageConverter())
@@ -70,8 +71,16 @@ export class ImageService {
       .then(()=> {
         this.message.Info(`Added ${tags.length} to image *${shortenId(iRef.id)}`)
         this.tagUpdateCallback(tags)
+        this.lastTagsAdded.set(tags);
       })
       .catch((error: Error) => {this.message.Error(`Error adding tags ${tags} ${iRef.path}: ${error}`)});
+  }
+
+  /**
+  * Add the last set of tags to a new image.
+  */
+  async AddLastTags(iRef: DocumentReference): Promise<void> {
+    return this.AddTags(iRef, this.lastTagsAdded());
   }
 
   /**
@@ -82,6 +91,7 @@ export class ImageService {
       .then(()=> {
         this.message.Info(`Updated tags (${tags.length}) for image ${shortenId(iRef.id)}`)
         this.tagUpdateCallback(tags)
+        this.lastTagsAdded.set(tags);
       })
       .catch( e => this.message.Error(`ReplaceImageTags error: ${e}`));
   }

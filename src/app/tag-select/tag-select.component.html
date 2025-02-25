@@ -5,7 +5,7 @@
   >
     <div (mouseleave)="onMouseLeave()">
       @for (tag of tags.recentTags$ | async; track tag.reference.id) {
-        <mat-option [value]="tag.name">{{ tag.name }}</mat-option>
+        <mat-option class="option" [value]="tag.name">{{ tag.name }}</mat-option>
       }
     </div>
   </mat-select>

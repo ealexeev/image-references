@@ -1,0 +1,10 @@
+@use '../../_variables' as theme;
+
+.option {
+  --mat-option-selected-state-label-text-color: #{theme.$btn-highlight-color};
+}
+
+// Not working!
+mat-pseudo-checkbox {
+  background: theme.$btn-highlight-color !important;
+}

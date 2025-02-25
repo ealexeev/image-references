@@ -19,7 +19,7 @@ import {TagService} from '../tag.service';
 import {MessageService} from '../message.service';
 import {ImageService} from '../image.service';
 import {Image, ImageData, ImageSubscription} from '../../lib/models/image.model';
-import {first, interval, raceWith, Subject, takeUntil} from 'rxjs';
+import {first, interval, raceWith, Subject, takeUntil, timer} from 'rxjs';
 
 @Component({
   selector: 'app-image-card',
@@ -54,7 +54,8 @@ export class ImageCardComponent implements OnInit, OnDestroy{
   private dataSub: ImageSubscription<ImageData> | undefined = undefined;
 
   showTagSelection = signal(false);
-  tagSelectionFired: Subject<void> = new Subject();
+  tagSelectionFired$: Subject<void> = new Subject();
+  tagSelectionOpened$: Subject<void> = new Subject();
   imageTagNames: WritableSignal<string[]> = signal([]);
   thumbnailUrl: WritableSignal<string> = signal('');
   fullUrlAvailable: WritableSignal<Boolean> = signal(false);
@@ -138,19 +139,31 @@ export class ImageCardComponent implements OnInit, OnDestroy{
 
   manageTags() {
     this.showTagSelection.update(v => !v);
-    this.tagSelectionFired.pipe(
-      raceWith(interval(10000)),
-      first(),
-    ).subscribe(
-      ()=> {
-        if (this.showTagSelection()) {
-          this.showTagSelection.set(false)
+    if ( this.showTagSelection() ) {
+      const unsub = timer(10000).pipe(
+        raceWith(this.tagSelectionOpened$),
+        first(),
+      ).subscribe({
+        next: (value) => {
+          if (value === 0) {
+            console.log('timer')
+            this.showTagSelection.set(false)
+          } else {
+            console.log('opened')
+          }
+          unsub.unsubscribe();
         }
       })
-  };
+    }
+  }
+
+  onSelectionOpen() {
+    this.tagSelectionOpened$.next()
+  }
+
 
   async onSelectionChange(tags: string[]) {
-    this.tagSelectionFired.next();
+    this.showTagSelection.set(false);
     Promise.all(tags.map(name => this.tagService.LoadTagByName(name)))
       .then(tags => {this.imageService.ReplaceTags(this.imageSource.reference, tags.map(t=>t.reference))})
       .catch(e=>this.messages.Error(`Error updating tags on image ${this.imageSource.reference}: ${e}`))

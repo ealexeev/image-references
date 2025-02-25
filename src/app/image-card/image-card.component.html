@@ -21,6 +21,7 @@
         class="tag-list-selection"
         [selectedTags]="imageTagNames()"
         (selectionChange)="onSelectionChange($event)"
+        (opened)="onSelectionOpen()"
       />
     }
 		<button mat-icon-button

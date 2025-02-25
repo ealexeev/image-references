@@ -22,6 +22,7 @@ import {TagService} from '../tag.service';
 export class TagSelectComponent implements OnInit{
   @Input() selectedTags: string[] = [];
   @Output() selectionChange = new EventEmitter<string[]>();
+  @Output() opened: EventEmitter<void> = new EventEmitter();
 
   selected: FormControl<string[]> = new FormControl();
   tags: TagService = inject(TagService);
@@ -32,5 +33,9 @@ export class TagSelectComponent implements OnInit{
 
   onMouseLeave() {
     this.selectionChange.emit(this.selected.value);
+  }
+
+  onOpen() {
+    this.opened.emit()
   }
 }

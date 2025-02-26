@@ -23,6 +23,7 @@ $grid_gap: 20px;
   }
 
   .spinner {
+    pointer-events: none;
     position: absolute;
     position-anchor: --dl-button;
     position-area: center;

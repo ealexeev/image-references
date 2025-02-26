@@ -5,8 +5,8 @@ import {
   Input,
   OnDestroy,
   OnInit, QueryList, Signal,
-  signal, ViewChildren, ViewChild,
-  WritableSignal, AfterViewInit
+  signal, ViewChildren,
+  WritableSignal
 } from '@angular/core';
 import {concatMap, from, Subscription} from 'rxjs';
 import {PreferenceService} from '../preference-service';
@@ -14,12 +14,16 @@ import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {ImageCardComponent} from '../image-card/image-card.component';
 import {DragDropDirective, FileHandle} from '../drag-drop.directive';
 import {MessageService} from '../message.service';
-import {ZipDownloaderComponent, BatchedStrategy} from '../zip-downloader/zip-downloader.component';
+import {ZipDownloaderComponent} from '../zip-downloader/zip-downloader.component';
 import {Tag, TagService} from '../tag.service';
 import {ImageService} from '../image.service';
 import {Image, ImageSubscription} from '../../lib/models/image.model';
 import {DocumentReference, where} from '@angular/fire/firestore';
 import {MatProgressBarModule} from '@angular/material/progress-bar';
+import {DownloadService, BatchedStrategy} from '../download.service';
+import {MatButtonModule} from '@angular/material/button';
+import {MatIconModule} from '@angular/material/icon';
+import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
 
 
 @Component({
@@ -30,6 +34,9 @@ import {MatProgressBarModule} from '@angular/material/progress-bar';
     DragDropDirective,
     ZipDownloaderComponent,
     MatProgressBarModule,
+    MatButtonModule,
+    MatIconModule,
+    MatProgressSpinnerModule,
   ],
   templateUrl: './image-gallery.component.html',
   styleUrls: [
@@ -38,7 +45,7 @@ import {MatProgressBarModule} from '@angular/material/progress-bar';
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ImageGalleryComponent implements OnInit, OnDestroy, AfterViewInit {
+export class ImageGalleryComponent implements OnInit, OnDestroy {
   @Input({required: true}) mode: "tag" | "latest" | "inbox" = "latest";
   @Input()
   set tagName(value: string) {
@@ -53,12 +60,12 @@ export class ImageGalleryComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
   @ViewChildren(ImageCardComponent) imageCards!: QueryList<ImageCardComponent>;
-  @ViewChild(ZipDownloaderComponent) zipDownloader!: ZipDownloaderComponent;
 
   private messageService: MessageService = inject(MessageService);
   private preferences: PreferenceService = inject(PreferenceService);
   private imageService: ImageService = inject(ImageService);
   private tagService: TagService = inject(TagService);
+  protected downloadService: DownloadService = inject(DownloadService);
   // How many image-cards are allowed to be loading their data in parallel
   readonly loadBudget: number = 25;
 
@@ -106,21 +113,6 @@ export class ImageGalleryComponent implements OnInit, OnDestroy, AfterViewInit {
     }
     this.startSubscriptions()
       .catch((err: unknown) => {this.messageService.Error(`<image-gallery> startSubscriptions(): ${err}`)})
-  }
-
-  ngAfterViewInit() {
-    setTimeout(() => {
-      switch (this.mode) {
-        case 'tag':
-          this.zipDownloader.setStrategy(new BatchedStrategy(this.imageService, where("tags", "array-contains", this.tag?.reference)))
-          break;
-        case 'latest':
-          this.zipDownloader.setStrategy(new BatchedStrategy(this.imageService))
-          break;
-        default:
-          break;
-      }
-    }, 5000)
   }
 
   ngOnDestroy() {
@@ -223,6 +215,14 @@ export class ImageGalleryComponent implements OnInit, OnDestroy, AfterViewInit {
         complete: ()=> this.uploading.set(false),
       }))
     }
+  }
+
+  onDownload() {
+    this.downloadService.download({
+      fileName: this.mode === 'latest' ? 'latest-images' : `${this.optTagName()}-images`,
+      filesPerZip: 500,
+      strategy: this.mode === 'latest' ? new BatchedStrategy(this.imageService) : new BatchedStrategy(this.imageService, where("tags", "array-contains", this.tag?.reference)),
+    })
   }
 
 }

@@ -7,8 +7,11 @@
         ({{totalImageCount()}}) images
       }
       <span class="spacer"></span>
-      @defer {
-        <app-zip-downloader #dl [images]="images" [fileName]="mode === 'tag' ? optTagName() : mode" />
+      <button mat-icon-button (click)="onDownload()" class="dl-button">
+        <mat-icon fontIcon="download"></mat-icon>
+      </button>
+      @if (downloadService.busy()) {
+        <mat-spinner class="spinner"></mat-spinner>
       }
     </div>
     @if (uploading()) {

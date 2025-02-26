@@ -18,6 +18,18 @@ $grid_gap: 20px;
     --mdc-linear-progress-track-color: #{theme.$toolbar-background}
   }
 
+  .dl-button {
+    anchor-name: --dl-button;
+  }
+
+  .spinner {
+    position: absolute;
+    position-anchor: --dl-button;
+    position-area: center;
+    height: 40px !important;
+    width: 40px !important;
+  }
+
   .upload-heading {
     align-self: center;
     margin-bottom: 1em;

@@ -22,7 +22,12 @@
               class="integrity-button"
               matTooltip="Run an integrity check"
       >
-        <mat-icon fontIcon="verified"></mat-icon>
+        <mat-icon fontIcon="verified"
+                  [ngClass]="{
+                      'no-errors': integrityService.completed() && integrityService.errorCount() === 0,
+                      'errors-present': integrityService.completed() && integrityService.errorCount() > 0,
+                      }"
+        ></mat-icon>
       </button>
       @if (integrityService.busy()) {
         <mat-spinner class="integrity-spinner"></mat-spinner>

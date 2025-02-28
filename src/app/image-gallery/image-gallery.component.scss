@@ -44,6 +44,14 @@ $grid_gap: 20px;
     width: 40px !important;
   }
 
+  .no-errors {
+    color: #5a6a29;
+  }
+
+  .errors-present {
+    color: #6a3129;
+  }
+
   .upload-heading {
     align-self: center;
     margin-bottom: 1em;

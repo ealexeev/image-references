@@ -48,6 +48,8 @@ export class IntegrityService {
   private storage: Storage = inject(Storage);
 
   busy: WritableSignal<boolean> = signal(false);
+  completed: WritableSignal<boolean> = signal(false);
+  errorCount: WritableSignal<number> = signal(0);
 
   constructor() { }
 
@@ -66,6 +68,8 @@ export class IntegrityService {
   getImagesReportStrategy(strategy: ImageFetchStrategy, skipValid?: boolean): Observable<ImageReport[]> {
     return defer((): Observable<ImageReport[]> => {
       this.busy.set(true);
+      this.errorCount.set(0);
+      this.completed.set(false);
       const out = new Subject<ImageReport[]>
       const sub = strategy.Fetch().pipe(
         mergeMap((images: Image[]) => from(images)),
@@ -73,8 +77,16 @@ export class IntegrityService {
         filter((report: ImageReport) => report.state != ImageState.COMPLETE || skipValid === false),
         toArray(),
       ).subscribe({
-        next: (res: ImageReport[]) => {out.next(res)},
-        complete: () => {out.complete(); sub.unsubscribe(); this.busy.set(false);}
+        next: (res: ImageReport[]) => {
+          out.next(res)
+          this.errorCount.set(res.filter(r=>r.state != ImageState.COMPLETE).length)
+        },
+        complete: () => {
+          out.complete()
+          sub.unsubscribe()
+          this.busy.set(false)
+          this.completed.set(true)
+        }
       })
       return out
     })

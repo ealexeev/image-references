@@ -26,6 +26,7 @@ import {MatIconModule} from '@angular/material/icon';
 import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
 import {ImageReport, IntegrityService} from '../integrity.service';
 import {MatTooltipModule} from '@angular/material/tooltip';
+import {NgClass} from '@angular/common';
 
 
 @Component({
@@ -40,6 +41,7 @@ import {MatTooltipModule} from '@angular/material/tooltip';
     MatIconModule,
     MatProgressSpinnerModule,
     MatTooltipModule,
+    NgClass,
   ],
   templateUrl: './image-gallery.component.html',
   styleUrls: [

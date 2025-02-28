@@ -8,7 +8,7 @@ import {
   signal, ViewChildren,
   WritableSignal
 } from '@angular/core';
-import {concatMap, from, Subscription} from 'rxjs';
+import {concatMap, from, Subscription, tap} from 'rxjs';
 import {PreferenceService} from '../preference-service';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {ImageCardComponent} from '../image-card/image-card.component';
@@ -24,6 +24,8 @@ import {DownloadService, BatchedStrategy} from '../download.service';
 import {MatButtonModule} from '@angular/material/button';
 import {MatIconModule} from '@angular/material/icon';
 import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
+import {ImageReport, IntegrityService} from '../integrity.service';
+import {MatTooltipModule} from '@angular/material/tooltip';
 
 
 @Component({
@@ -37,6 +39,7 @@ import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
     MatButtonModule,
     MatIconModule,
     MatProgressSpinnerModule,
+    MatTooltipModule,
   ],
   templateUrl: './image-gallery.component.html',
   styleUrls: [
@@ -66,6 +69,7 @@ export class ImageGalleryComponent implements OnInit, OnDestroy {
   private imageService: ImageService = inject(ImageService);
   private tagService: TagService = inject(TagService);
   protected downloadService: DownloadService = inject(DownloadService);
+  protected integrityService: IntegrityService = inject(IntegrityService);
   // How many image-cards are allowed to be loading their data in parallel
   readonly loadBudget: number = 25;
 
@@ -222,6 +226,14 @@ export class ImageGalleryComponent implements OnInit, OnDestroy {
       fileName: this.mode === 'latest' ? 'latest-images' : `${this.optTagName()}-images`,
       filesPerZip: 500,
       strategy: this.mode === 'latest' ? new BatchedStrategy(this.imageService) : new BatchedStrategy(this.imageService, where("tags", "array-contains", this.tag?.reference)),
+    })
+  }
+
+  onIntegrity() {
+    const strategy = this.mode === 'latest' ? new BatchedStrategy(this.imageService) : new BatchedStrategy(this.imageService, where("tags", "array-contains", this.tag?.reference))
+    const sub = this.integrityService.getImagesReportStrategy(strategy, true).subscribe({
+      next: (res: ImageReport[]) => {res.map(r=> console.log(r))},
+      complete: () => {sub.unsubscribe()},
     })
   }
 

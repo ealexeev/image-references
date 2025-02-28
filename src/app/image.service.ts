@@ -120,11 +120,15 @@ export class ImageService {
       reference: iRef,
     }
 
+    // This assumes brand new upload.  No inconsistencies.
     const snapshot = await getDoc(newImage.reference)
     if (snapshot.exists()) {
-      this.AddTags(newImage.reference, newImage.tags)
-        .then(()=>{this.message.Info(`Added ${newImage.tags.length} to image ${shortenId(newImage.reference.id)})`)})
-        .catch((err: Error) => {this.message.Error(`Error adding tags to image ${shortenId(newImage.reference.id)}: ${err}`)});
+      if (tags.length > 0) {
+        return this.AddTags(newImage.reference, newImage.tags)
+          .then(()=>{this.message.Info(`Added ${newImage.tags.length} to image ${shortenId(newImage.reference.id)})`)})
+          .catch((err: Error) => {this.message.Error(`Error adding tags to image ${shortenId(newImage.reference.id)}: ${err}`)});
+      }
+      // Need to add ability to deal with missing data in Firestore and Cloud storage.
       return;
     }
 

@@ -7,11 +7,25 @@
         ({{totalImageCount()}}) images
       }
       <span class="spacer"></span>
-      <button mat-icon-button (click)="onDownload()" class="dl-button">
+      <button mat-icon-button
+              (click)="onDownload()"
+              class="dl-button"
+              matTooltip="Download images"
+      >
         <mat-icon fontIcon="download"></mat-icon>
       </button>
       @if (downloadService.busy()) {
         <mat-spinner class="spinner"></mat-spinner>
+      }
+      <button mat-icon-button
+              (click)="onIntegrity()"
+              class="integrity-button"
+              matTooltip="Run an integrity check"
+      >
+        <mat-icon fontIcon="verified"></mat-icon>
+      </button>
+      @if (integrityService.busy()) {
+        <mat-spinner class="integrity-spinner"></mat-spinner>
       }
     </div>
     @if (uploading()) {

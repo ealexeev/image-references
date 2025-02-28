@@ -105,7 +105,7 @@ export class IntegrityService {
           return Promise.all([this.checkImageValidity(imageId), this.checkImageDataValidity(imageId)])
         })
         .then(([imgDetail, imgDataDetail]) => {
-          if (imgDetail == FailureDetail.NO_FAILURE && FailureDetail.NO_FAILURE) {
+          if (imgDetail == FailureDetail.NO_FAILURE && imgDataDetail == FailureDetail.NO_FAILURE) {
             resolve({id: imageId, state: ImageState.COMPLETE})
           }
           if (imgDetail != FailureDetail.NO_FAILURE) {

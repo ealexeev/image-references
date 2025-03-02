@@ -14,7 +14,6 @@ import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {ImageCardComponent} from '../image-card/image-card.component';
 import {DragDropDirective, FileHandle} from '../drag-drop.directive';
 import {MessageService} from '../message.service';
-import {ZipDownloaderComponent} from '../zip-downloader/zip-downloader.component';
 import {Tag, TagService} from '../tag.service';
 import {ImageService} from '../image.service';
 import {Image, ImageSubscription} from '../../lib/models/image.model';
@@ -35,7 +34,6 @@ import {NgClass} from '@angular/common';
   imports: [
     ImageCardComponent,
     DragDropDirective,
-    ZipDownloaderComponent,
     MatProgressBarModule,
     MatButtonModule,
     MatIconModule,

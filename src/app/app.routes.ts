@@ -32,6 +32,11 @@ export const routes: Routes = [
     canActivate: [AuthenticatedGuard, AuthorizedGuard],
   },
   {
+    path: 'image/:id',
+    loadComponent: () => import('./image-view/image-view.component').then(m=>m.ImageViewComponent),
+    canActivate: [AuthenticatedGuard, AuthorizedGuard],
+  },
+  {
     path: '**',
     redirectTo: 'login',
   }

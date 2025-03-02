@@ -8,7 +8,7 @@ import {
   signal, ViewChildren,
   WritableSignal
 } from '@angular/core';
-import {concatMap, from, Subscription, tap} from 'rxjs';
+import {concatMap, from, Subscription} from 'rxjs';
 import {PreferenceService} from '../preference-service';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {ImageCardComponent} from '../image-card/image-card.component';
@@ -208,7 +208,7 @@ export class ImageGalleryComponent implements OnInit, OnDestroy {
       const start = i*batchSize;
       const end = start+batchSize;
       this.imagesSub.add(from(files.slice(start, end)).pipe(
-        concatMap((file: FileHandle, index: number) => {
+        concatMap((file: FileHandle) => {
           return from(this.receiveImageURL(file.url))
         }),
       ).subscribe({

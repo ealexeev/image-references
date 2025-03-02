@@ -162,7 +162,8 @@ export class ImageGalleryComponent implements OnInit, OnDestroy {
       }
     }
     const blob = await fetch(url).then(res => res.blob()).then(blob => blob)
-    return this.imageService.StoreImage(blob, tags).then(()=>this.totalImageCount.update(v=>v+1))
+    await this.imageService.StoreImage(blob, tags)
+    this.totalImageCount.update(v=>v+1)
   }
 
   async deleteImageOrTag(id: string) {

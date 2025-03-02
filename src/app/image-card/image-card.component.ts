@@ -19,8 +19,9 @@ import {TagService} from '../tag.service';
 import {MessageService} from '../message.service';
 import {ImageService} from '../image.service';
 import {Image, ImageData, ImageSubscription} from '../../lib/models/image.model';
-import {first, interval, raceWith, Subject, takeUntil, timer} from 'rxjs';
+import {first, raceWith, Subject, takeUntil, timer} from 'rxjs';
 import {MatTooltipModule} from '@angular/material/tooltip';
+import {Router} from '@angular/router';
 
 @Component({
   selector: 'app-image-card',
@@ -52,6 +53,7 @@ export class ImageCardComponent implements OnInit, OnDestroy{
   private tagService = inject(TagService);
   private renderer = inject(Renderer2);
   private messages = inject(MessageService);
+  private router: Router = inject(Router);
   private imageSub: ImageSubscription<Image> | undefined = undefined;
   private dataSub: ImageSubscription<ImageData> | undefined = undefined;
 
@@ -180,6 +182,10 @@ export class ImageCardComponent implements OnInit, OnDestroy{
     Promise.all(tags.map(name => this.tagService.LoadTagByName(name)))
       .then(tags => {this.imageService.ReplaceTags(this.imageSource.reference, tags.map(t=>t.reference))})
       .catch(e=>this.messages.Error(`Error updating tags on image ${this.imageSource.reference}: ${e}`))
+  }
+
+  onFullSize() {
+    this.router.navigateByUrl(`/image/${this.imageSource.reference.id}`)
   }
 }
 

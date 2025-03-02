@@ -10,7 +10,6 @@ export interface ImageBundle {
 @Component({
   selector: 'app-image-view',
   standalone: true,
-  imports: [],
   templateUrl: './image-view.component.html',
   styleUrl: './image-view.component.scss'
 })

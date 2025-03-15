@@ -5,6 +5,7 @@ import JSZip from 'jszip';
 import {ImageService} from './image.service';
 import {QueryConstraint} from '@angular/fire/firestore';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
+import {TagService} from './tag.service';
 
 export interface ImageFetchStrategy {
   Fetch(): Observable<Image[]>
@@ -28,10 +29,11 @@ interface Stopper {
   reset(): void;
 }
 
-type ImageBlobPair = {
-  image: Image;
-  blob: Blob;
-  err?: Error;
+interface ImageBlobBundle {
+  image: Image
+  blob: Blob
+  meta: Blob
+  err?: Error
 }
 
 @Injectable({
@@ -41,6 +43,7 @@ export class DownloadService {
 
   private renderer: Renderer2;
   private imageService = inject(ImageService);
+  private tagService = inject(TagService);
 
   // Next number to use as postfix for zip file.  Not used if set to zero.
   private fileCounter = 0;
@@ -70,7 +73,7 @@ export class DownloadService {
   async _download(config: DownloadConfiguration) {
     this.fileCounter = 0 ;
     this.zipFileCount.set(0);
-    let buffer: ImageBlobPair[] = [];
+    let buffer: ImageBlobBundle[] = [];
     const done = new Subject<void>;
     const makeAndDownload = ()=> {
       const zip = this.fillZip(config, [...buffer]);
@@ -81,7 +84,7 @@ export class DownloadService {
     const stopper = pickStopper(config);
     const sub = this.getBlobs(config.strategy).subscribe(
       {
-        next: (pair: ImageBlobPair) => {
+        next: (pair: ImageBlobBundle) => {
           this.imageCount.update(v=>v+=1);
           buffer.push(pair)
           if (stopper.stop(pair.blob)) {
@@ -109,15 +112,15 @@ export class DownloadService {
 
   // Returns an observable (or should this be a signal?) that emits batches of IdBlobPairs.
   // Observable completes when all the images have been received.
-  private getBlobs(strategy: ImageFetchStrategy): Observable<ImageBlobPair> {
-    const out: Subject<ImageBlobPair> = new Subject();
+  private getBlobs(strategy: ImageFetchStrategy): Observable<ImageBlobBundle> {
+    const out: Subject<ImageBlobBundle> = new Subject();
     const sub = strategy.Fetch().pipe(
       mergeMap((images: Image[])=> from(images)),
       mergeMap((image: Image) => forkJoin([of(image), from(this.imageService.LoadImageData(image.reference.id))])),
-      mergeMap(([image, data]: [Image, ImageData]) => forkJoin([of(image), from(data.fullSize())])),
+      mergeMap(([image, data]: [Image, ImageData]) => forkJoin([of(image), from(data.fullSize()), from(this.makeMetadata(image))])),
     ).subscribe({
-      next: ([image, data]: [Image, Blob]) => {
-        out.next({image: image, blob: data})
+      next: ([image, data, meta]: [Image, Blob, Blob]) => {
+        out.next({image: image, blob: data, meta: meta});
       },
       error: error => {throw error},
       complete: ()=> {sub.unsubscribe(); out.complete();},
@@ -126,12 +129,21 @@ export class DownloadService {
   }
 
   // This is the place were we may add Image metadata to a .json side file.
-  private fillZip(config: DownloadConfiguration, pairs: ImageBlobPair[]): JSZip {
+  private fillZip(config: DownloadConfiguration, pairs: ImageBlobBundle[]): JSZip {
     const zip = new JSZip();
     for (const pair of pairs) {
       zip.file(`${pair.image.reference.id}.${extFromMime(pair.blob.type)}`, pair.blob);
+      zip.file(`${pair.image.reference.id}.json`, pair.meta);
     }
     return zip;
+  }
+
+  private async makeMetadata(image: Image): Promise<Blob> {
+    const tagNames = await Promise.all(image.tags.map(t=> this.tagService.LoadTagByReference(t)))
+    const metadata = {
+      tags: tagNames.map(t=>t.name).sort(),
+    }
+    return new Blob([JSON.stringify(metadata)], { type: 'application/json' });
   }
 
   private downloadZip(config: DownloadConfiguration, zip: JSZip): void {

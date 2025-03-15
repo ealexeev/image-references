@@ -13,6 +13,8 @@ export type Image = {
   reference: DocumentReference
   // This is lazily loaded and cached.
   data?: ImageData
+  // When the image was first added.
+  added?: Date
 }
 
 export type ImageData = {

@@ -1,5 +1,5 @@
 import {inject, Injectable} from '@angular/core';
-import {Bytes, DocumentReference, DocumentSnapshot, serverTimestamp} from '@angular/fire/firestore';
+import {Bytes, DocumentReference, DocumentSnapshot, serverTimestamp, Timestamp} from '@angular/fire/firestore';
 import {QueryDocumentSnapshot, SnapshotOptions} from '@angular/fire/compat/firestore';
 import {Image, ImageData} from '../lib/models/image.model';
 import {ImageDataCacheService} from './image-data-cache.service';
@@ -86,7 +86,7 @@ export class ImageConversionService {
    */
   imageToFirestore(img: Image): StoredImage {
     return {
-      added: serverTimestamp(),
+      added: img.added ? Timestamp.fromDate(img.added) : serverTimestamp(),
       tags: img.tags,
     } as StoredImage;
   }
@@ -99,6 +99,7 @@ export class ImageConversionService {
     return {
       tags: data?.tags ?? [],
       reference: snapshot.ref,
+      added: data?.added? (data.added as Timestamp).toDate() : new Date(0)
     } as Image;
   }
 

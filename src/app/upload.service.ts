@@ -8,6 +8,7 @@ import {ImageService} from './image.service';
 
 interface Metadata {
   tags: string[]
+  added: string
 }
 
 interface FilePair {
@@ -41,9 +42,11 @@ export class UploadService implements OnDestroy {
     if (tag) {
       tagNames.add(tag)
     }
+    let added: Date|undefined = undefined;
     if (metadata) {
       const parsed = JSON.parse(await metadata.text()) as Metadata
       parsed.tags.forEach(t => tagNames.add(t))
+      added = new Date(parsed.added)
     }
     const tags: DocumentReference[] = [];
     for (const name of tagNames) {
@@ -58,7 +61,7 @@ export class UploadService implements OnDestroy {
         }
       }
     }
-    await this.imageService.StoreImage(file, tags)
+    await this.imageService.StoreImage(file, tags, added)
     this.uploadedCount.update(v=>v+1)
   }
 

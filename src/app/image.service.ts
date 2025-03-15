@@ -112,12 +112,13 @@ export class ImageService {
   /**
    * Store a new image from its contents and tags to be associated with it.
    */
-  async StoreImage(blob: Blob, tags: DocumentReference[]): Promise<void> {
+  async StoreImage(blob: Blob, tags: DocumentReference[], added?: Date): Promise<void> {
     const iRef = await this.GetImageReferenceFromBlob(blob);
 
     const newImage: Image = {
       tags: tags,
       reference: iRef,
+      added: added,
     }
 
     // This assumes brand new upload.  No inconsistencies.
@@ -276,14 +277,9 @@ export class ImageService {
       }
       const q = query(this.imagesCollection, ...queryContraints as QueryConstraint[])
       const snapshot = await getDocs(q)
-      //@ts-ignore
-      Promise.all(snapshot.docs.map(doc => this.convert.snapshotToImage(doc)))
-
-        .then(imgResults => {
-          const ret = {images: imgResults, last: snapshot.docs[snapshot.size - 1]}
-          resolve(ret)
-        })
-        .catch(err => reject(err))
+      resolve({
+        images: snapshot.docs.map(doc => doc.data() as Image),
+        last: snapshot.docs[snapshot.size - 1]})
     })
   }
 

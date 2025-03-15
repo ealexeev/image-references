@@ -142,6 +142,7 @@ export class DownloadService {
     const tagNames = await Promise.all(image.tags.map(t=> this.tagService.LoadTagByReference(t)))
     const metadata = {
       tags: tagNames.map(t=>t.name).sort(),
+      added: image.added,
     }
     return new Blob([JSON.stringify(metadata)], { type: 'application/json' });
   }

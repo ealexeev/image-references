@@ -1,9 +1,10 @@
 import {computed, inject, Injectable, Renderer2, RendererFactory2, Signal, signal, WritableSignal} from '@angular/core';
-import {firstValueFrom, forkJoin, from, mergeMap, Observable, of, queueScheduler, Subject} from 'rxjs';
+import {concatMap, firstValueFrom, forkJoin, from, mergeMap, Observable, of, queueScheduler, Subject} from 'rxjs';
 import {Image, ImageData} from '../lib/models/image.model';
 import JSZip from 'jszip';
 import {ImageService} from './image.service';
 import {QueryConstraint} from '@angular/fire/firestore';
+import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 
 export interface ImageFetchStrategy {
   Fetch(): Observable<Image[]>
@@ -35,17 +36,26 @@ export class DownloadService {
   // Next number to use as postfix for zip file.  Not used if set to zero.
   private fileCounter = 0;
 
+  // Download tasks that complete one at a time.
+  private downloadTasks = new Subject<DownloadConfiguration>();
+
   imageCount = signal(0);
   zipFileCount = signal(0);
   busy: Signal<boolean> = computed(()=> this.imageCount() > 0);
 
   constructor(rendererFactory: RendererFactory2) {
     this.renderer = rendererFactory.createRenderer(null, null);
+    this.downloadTasks.pipe(
+      takeUntilDestroyed(),
+      concatMap(config => this._download(config))
+    ).subscribe({
+      error: error => console.error(error),
+    })
   }
 
   // Perform a download operation.  Operations are queued and executed one at a time.
   download(config: DownloadConfiguration) {
-    queueScheduler.schedule(async()=>{ await this._download(config)})
+    this.downloadTasks.next(config);
   }
 
   async _download(config: DownloadConfiguration) {

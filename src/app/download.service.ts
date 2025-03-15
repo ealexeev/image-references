@@ -14,9 +14,18 @@ export interface DownloadConfiguration {
   // Name of the .zip file that will be produced. If batched, it will have a counter like -1, etc.
   fileName: string;
   // Number of files allowed to be stored in a single archive.
-  filesPerZip: number;
+  maxZipContentFiles?: number;
+  // Max size in bytes that can be added to a zip.
+  maxZipContentBytes?: number;
   // Strategy to use for obtaining the files.
   strategy: ImageFetchStrategy;
+}
+
+interface Stopper {
+  // Check if stop condition has been met.
+  stop(blob: Blob): boolean;
+  // Rest the internal state to just after init.
+  reset(): void;
 }
 
 type ImageBlobPair = {
@@ -69,14 +78,16 @@ export class DownloadService {
       this.zipFileCount.update(v=>v+=1);
       buffer = [];
     }
-    const sub = this.getBlobs(config.strategy, config.filesPerZip).subscribe(
+    const stopper = pickStopper(config);
+    const sub = this.getBlobs(config.strategy).subscribe(
       {
         next: (pair: ImageBlobPair) => {
           this.imageCount.update(v=>v+=1);
           buffer.push(pair)
-          if (buffer.length === config.filesPerZip) {
+          if (stopper.stop(pair.blob)) {
             this.fileCounter+=1;
             makeAndDownload();
+            stopper.reset();
           }
         },
         complete: ()=> {
@@ -98,7 +109,7 @@ export class DownloadService {
 
   // Returns an observable (or should this be a signal?) that emits batches of IdBlobPairs.
   // Observable completes when all the images have been received.
-  private getBlobs(strategy: ImageFetchStrategy, filesPerZip: number): Observable<ImageBlobPair> {
+  private getBlobs(strategy: ImageFetchStrategy): Observable<ImageBlobPair> {
     const out: Subject<ImageBlobPair> = new Subject();
     const sub = strategy.Fetch().pipe(
       mergeMap((images: Image[])=> from(images)),
@@ -171,4 +182,36 @@ export class BatchedStrategy implements ImageFetchStrategy {
 
     return ret;
   }
+}
+
+function pickStopper(config: DownloadConfiguration): Stopper {
+  let stopper: Stopper;
+  if (config.maxZipContentFiles) {
+    return new CountStopper(config.maxZipContentFiles)
+  }
+  return new SizeStopper(config.maxZipContentBytes!)
+}
+
+class CountStopper implements Stopper {
+  private count = 0;
+  constructor(private limit: number){}
+
+  stop(blob:Blob): boolean {
+    this.count++;
+    return this.count >= this.limit
+  }
+
+  reset(): void {this.count = 0;}
+}
+
+class SizeStopper implements Stopper {
+  private size = 0;
+  constructor(private limit: number) {}
+
+  stop(blob: Blob): boolean {
+    this.size += blob.size;
+    return this.size >= this.limit;
+  }
+
+  reset(): void {this.size = 0;}
 }

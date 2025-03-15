@@ -225,7 +225,7 @@ export class ImageGalleryComponent implements OnInit, OnDestroy {
   onDownload() {
     this.downloadService.download({
       fileName: this.mode === 'latest' ? 'latest-images' : `${this.optTagName()}-images`,
-      filesPerZip: 500,
+      maxZipContentBytes: 500 * 1024 * 1024,
       strategy: this.mode === 'latest' ? new BatchedStrategy(this.imageService) : new BatchedStrategy(this.imageService, where("tags", "array-contains", this.tag?.reference)),
     })
   }

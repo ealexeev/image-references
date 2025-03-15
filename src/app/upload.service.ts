@@ -7,8 +7,8 @@ import {Tag, TagService} from './tag.service';
 import {ImageService} from './image.service';
 
 interface Metadata {
-  tags: string[]
-  added: string
+  tags?: string[]
+  added?: string
 }
 
 interface FilePair {
@@ -45,8 +45,8 @@ export class UploadService implements OnDestroy {
     let added: Date|undefined = undefined;
     if (metadata) {
       const parsed = JSON.parse(await metadata.text()) as Metadata
-      parsed.tags.forEach(t => tagNames.add(t))
-      added = new Date(parsed.added)
+      (parsed?.tags || []).forEach(t => tagNames.add(t))
+      added = parsed.added ? new Date(parsed.added) : undefined;
     }
     const tags: DocumentReference[] = [];
     for (const name of tagNames) {
@@ -69,15 +69,17 @@ export class UploadService implements OnDestroy {
    * Upload specified files.  If provided, apply the specified tag name to the files.
    * */
   upload(files: FileHandle[], tag?: string) {
-    this.messageService.Info(`Received ${files.length} ${files.length > 1 ? 'files' : 'file'}`);
-    const queueCount = 10;
+        const queueCount = 10;
 
     if (files.length > queueCount) {
       this.toUploadCount.set(files.length)
       this.uploadedCount.set(0);
     }
 
-    for (const batch of this.makeBatches(files, queueCount).filter(b => !!b)) {
+    const batches = this.makeBatches(files, queueCount).filter(b => !!b)
+    this.toUploadCount.set(batches.reduce((a, b) => a + b.length, 0))
+
+    for (const batch of batches) {
       this.sub.add(from(batch).pipe(
         concatMap((pair: FilePair) => {
           return from(this.processFile(pair.image.file, tag, pair.metadata?.file))

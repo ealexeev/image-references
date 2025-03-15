@@ -26,6 +26,7 @@ import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
 import {ImageReport, IntegrityService} from '../integrity.service';
 import {MatTooltipModule} from '@angular/material/tooltip';
 import {NgClass} from '@angular/common';
+import {UploadService} from '../upload.service';
 
 
 @Component({
@@ -70,6 +71,7 @@ export class ImageGalleryComponent implements OnInit, OnDestroy {
   private tagService: TagService = inject(TagService);
   protected downloadService: DownloadService = inject(DownloadService);
   protected integrityService: IntegrityService = inject(IntegrityService);
+  protected uploadService: UploadService = inject(UploadService);
   // How many image-cards are allowed to be loading their data in parallel
   readonly loadBudget: number = 25;
 
@@ -79,11 +81,6 @@ export class ImageGalleryComponent implements OnInit, OnDestroy {
   optTagName: WritableSignal<string> = signal('');
   images: WritableSignal<Image[]> = signal([]);
   totalImageCount: WritableSignal<number> = signal(0);
-
-  uploading: WritableSignal<boolean> = signal(false);
-  uploadedImageCount: WritableSignal<number> = signal(0);
-  uploadTotalCount: WritableSignal<number> = signal(0);
-  uploadPercentage: Signal<string> = computed(()=> Math.floor(this.uploadedImageCount()/this.uploadTotalCount()*100).toString())
 
   dbUnsubscribe: () => void = () => {
     return
@@ -152,18 +149,6 @@ export class ImageGalleryComponent implements OnInit, OnDestroy {
     this.dbUnsubscribe = subscription.unsubscribe;
   }
 
-  async receiveImageURL(url: string): Promise<void> {
-    const tags: DocumentReference[] = []
-    if ( this.mode === 'tag' && this.optTagName() ) {
-      if ( this.tag?.reference ) {
-        tags.push(this.tag?.reference)
-      }
-    }
-    const blob = await fetch(url).then(res => res.blob()).then(blob => blob)
-    await this.imageService.StoreImage(blob, tags)
-    this.totalImageCount.update(v=>v+1)
-  }
-
   async deleteImageOrTag(id: string) {
     let img = this.images().filter(li => li.reference.id == id).pop();
     if (!img) {
@@ -195,31 +180,7 @@ export class ImageGalleryComponent implements OnInit, OnDestroy {
   }
 
   filesDropped(files: FileHandle[]) {
-    this.messageService.Info(`Received ${files.length} ${files.length > 1 ? 'files' : 'file'}`);
-    const queueCount = 10;
-    const batchSize = Math.ceil(files.length / queueCount);
-    if (files.length > queueCount) {
-      this.uploading.set(true)
-      this.uploadTotalCount.set(files.length)
-      this.uploadedImageCount.set(0);
-    }
-
-    for (let i = 0; i < queueCount; i++) {
-      const start = i*batchSize;
-      const end = start+batchSize;
-      this.imagesSub.add(from(files.slice(start, end)).pipe(
-        concatMap((file: FileHandle) => {
-          return from(this.receiveImageURL(file.url))
-        }),
-      ).subscribe({
-        next: ()=> this.uploadedImageCount.update(v=>v+1),
-        error: (err: unknown)=> {
-          this.uploadedImageCount.update(v => v + 1)
-          this.messageService.Error(`Error uploading image: ${err}`)
-        },
-        complete: ()=> this.uploading.set(false),
-      }))
-    }
+    this.uploadService.upload(files, this.mode === 'tag' ? this.optTagName() : undefined)
   }
 
   onDownload() {

@@ -33,10 +33,10 @@
         <mat-spinner class="integrity-spinner"></mat-spinner>
       }
     </div>
-    @if (uploading()) {
-      <h3 class="upload-heading">Uploading {{uploadTotalCount()}} Images</h3>
+    @if ( uploadService.uploading()) {
+      <h3 class="upload-heading">Uploading {{uploadService.toUploadCount()}} Images</h3>
       <mat-progress-bar mode="determinate"
-                        [value]="uploadPercentage()"
+                        [value]="uploadService.uploadPercentage()"
                         class="upload-progress"
       />
     } @else {

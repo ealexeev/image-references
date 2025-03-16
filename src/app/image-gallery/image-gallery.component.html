@@ -34,7 +34,7 @@
       }
     </div>
     @if ( uploadService.uploading()) {
-      <h3 class="upload-heading">Uploading {{uploadService.toUploadCount()}} Images</h3>
+      <h3 class="upload-heading">Uploading {{uploadService.uploadedCount()}} / {{uploadService.toUploadCount()}} Images</h3>
       <mat-progress-bar mode="determinate"
                         [value]="uploadService.uploadPercentage()"
                         class="upload-progress"

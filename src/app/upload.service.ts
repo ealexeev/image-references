@@ -1,10 +1,12 @@
-import {computed, effect, inject, Injectable, OnDestroy, Signal, signal} from '@angular/core';
+import {computed, inject, Injectable, OnDestroy, Signal, signal} from '@angular/core';
 import {FileHandle} from './drag-drop.directive';
 import {concatMap, from, Subscription} from 'rxjs';
 import {MessageService} from './message.service';
 import {DocumentReference} from '@angular/fire/firestore';
 import {Tag, TagService} from './tag.service';
 import {ImageService} from './image.service';
+import {ImageState, IntegrityService} from './integrity.service';
+import {HmacService} from './hmac.service';
 
 interface Metadata {
   tags?: string[]
@@ -23,6 +25,8 @@ export class UploadService implements OnDestroy {
   private messageService = inject(MessageService);
   private tagService = inject(TagService);
   private imageService = inject(ImageService);
+  private integrityService = inject(IntegrityService);
+  private hmacService = inject(HmacService);
 
   sub: Subscription = new Subscription();
 
@@ -62,14 +66,18 @@ export class UploadService implements OnDestroy {
       }
     }
     await this.imageService.StoreImage(file, tags, added)
-    this.uploadedCount.update(v=>v+1)
+    const id = await this.hmacService.getHmacHex(file)
+    const report = await this.integrityService.getImageReport(id)
+    if ( report.state !== ImageState.COMPLETE ) {
+      console.error(report)
+    }
   }
 
   /**
    * Upload specified files.  If provided, apply the specified tag name to the files.
    * */
   upload(files: FileHandle[], tag?: string) {
-        const queueCount = 10;
+        const queueCount = 5;
 
     if (files.length > queueCount) {
       this.toUploadCount.set(files.length)

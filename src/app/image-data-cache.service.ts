@@ -24,4 +24,8 @@ export class ImageDataCacheService {
   set(imageId: string, data: ImageData): void {
     this.cache.set(imageId, data);
   }
+
+  delete(imageId: string): void {
+    this.cache.delete(imageId);
+  }
 }

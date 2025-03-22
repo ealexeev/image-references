@@ -152,6 +152,7 @@ export class ImageService {
    * Delete the specified image and its data.
    */
   async DeleteImage(imageRef: DocumentReference) {
+    this.imageCache.delete(imageRef.id)
     const batch = writeBatch(this.firestore)
     batch.delete(doc(this.firestore, this.imagesCollection.path, imageRef.id, 'data', 'thumbnail'));
     batch.delete(imageRef);

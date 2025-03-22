@@ -19,7 +19,7 @@ import {TagService} from '../tag.service';
 import {MessageService} from '../message.service';
 import {ImageService} from '../image.service';
 import {Image, ImageData, ImageSubscription} from '../../lib/models/image.model';
-import {first, raceWith, Subject, takeUntil, timer} from 'rxjs';
+import {first, raceWith, Subject, take, takeUntil, timer} from 'rxjs';
 import {MatTooltipModule} from '@angular/material/tooltip';
 import {Router} from '@angular/router';
 
@@ -101,7 +101,7 @@ export class ImageCardComponent implements OnInit, OnDestroy{
   startSubscriptions() {
     this.dataSub = this.imageService.SubscribeToImageData(this.imageSource.reference.id);
     this.dataSub.results$.pipe(
-      first(),
+      take(1),
     ).subscribe(
       (imageData: ImageData) => {
         this.thumbnailUrl.set(URL.createObjectURL(imageData.thumbnail));

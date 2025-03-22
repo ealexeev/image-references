@@ -65,8 +65,9 @@ export class ImageCardComponent implements OnInit, OnDestroy{
   fullUrlAvailable: WritableSignal<Boolean> = signal(false);
   fetchFull: any; /// ()=>Promise<Blob>;
   lastTagsText: WritableSignal<string> = signal('');
+  loaded = signal(false);
 
-    private unsubscribe: () => void = () => {return};
+  private unsubscribe: () => void = () => {return};
   private destroy$: Subject<void> = new Subject<void>();
 
   constructor() {
@@ -77,6 +78,11 @@ export class ImageCardComponent implements OnInit, OnDestroy{
           .then((names: string[]) => this.lastTagsText.set(names.join("\n")))
       }
     )
+    effect(()=>{
+      if (this.loaded()) {
+        this.loadComplete.emit()
+      }
+    })
   }
 
   ngOnInit(): void {
@@ -101,7 +107,7 @@ export class ImageCardComponent implements OnInit, OnDestroy{
         this.thumbnailUrl.set(URL.createObjectURL(imageData.thumbnail));
         this.fetchFull = imageData.fullSize
         this.fullUrlAvailable.set(true)
-        this.loadComplete.emit();
+        this.loaded.set(true);
         this.dataSub!.unsubscribe();  // Unsub after getting image data.
         this.dataSub = undefined;
       }

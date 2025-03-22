@@ -128,6 +128,10 @@ export class ImageGalleryComponent implements OnInit, OnDestroy {
     }
   }
 
+  countLoading(): number {
+    return this.imageCards.filter(c => c.loadImmediately && !(c.loaded())).length;
+  }
+
   async startSubscriptions() {
     let subscription: ImageSubscription<Image[]>;
     switch(this.mode) {

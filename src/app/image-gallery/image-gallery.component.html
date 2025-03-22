@@ -45,7 +45,7 @@
           <app-image-card #img
                           [imageSource]=liveImage
                           [tagCountFrom]="mode === 'tag' ? 2 : 1"
-                          [loadImmediately]="index < loadBudget"
+                          [loadImmediately]="index < loadBudget || countLoading() < loadBudget"
                           (imageDeleted)="deleteImageOrTag($event)"
                           (loadComplete)="onLoadComplete()"
           />

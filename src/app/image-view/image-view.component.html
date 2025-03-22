@@ -1,3 +1,43 @@
 <div class="image-view-outer">
-  <img [src]="imgURL()" alt="full size image"/>
+  <div class="image-view-inner">
+    <div class="header">
+      <mat-form-field subscriptSizing="dynamic">
+        <mat-chip-grid #chipList aria-label="Available items">
+          @for (item of selectedItems; track item) {
+            <mat-chip (removed)="removeTag(item)">
+              {{ item }}
+              <button matChipRemove>
+                <mat-icon>cancel</mat-icon>
+              </button>
+            </mat-chip>
+          }
+          <input
+            placeholder="New tag..."
+            #itemInput
+            [formControl]="itemCtrl"
+            [matAutocomplete]="auto"
+            [matChipInputFor]="chipList"
+            (matChipInputTokenEnd)="addTag($event)"
+          />
+        </mat-chip-grid>
+        <mat-autocomplete #auto="matAutocomplete" (optionSelected)="select($event)">
+          @for (item of filteredItems | async; track item) {
+            <mat-option [value]="item">
+              {{ item }}
+            </mat-option>
+          }
+        </mat-autocomplete>
+      </mat-form-field>
+
+      <mat-divider></mat-divider>
+      <button mat-icon-button matTooltip="Download" (click)="onDownload()">
+        <mat-icon fontIcon="download"></mat-icon>
+      </button>
+      <mat-divider></mat-divider>
+      <button mat-icon-button matTooltip="Delete" (click)="onDelete()">
+        <mat-icon fontIcon="delete"></mat-icon>
+      </button>
+    </div>
+    <img [src]="imgURL()" alt="full size image"/>
+  </div>
 </div>

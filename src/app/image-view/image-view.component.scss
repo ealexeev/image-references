@@ -1,11 +1,38 @@
-@use '../../variables' as theme;
+@use '../../_variables' as theme;
 
 .image-view-outer {
-  display: flex;
-  flex-flow: column nowrap;
-  align-items: center;
 
-  img {
-    max-width: 95%;
+  --mdc-icon-button-icon-color: #{rgba(theme.$text-color, 0.9)};
+  --mat-badge-background-color: #{rgba(theme.$btn-highlight-color, 0.7)};
+  // Need to read-up more on using theme colors for this kind of deal.  Ok for now.
+  --mat-badge-text-color: #1e1e1e;
+
+  display: flex;
+  flex-flow: row nowrap;
+  justify-content: center;
+  max-width: 95%;
+
+  .image-view-inner {
+    display: flex;
+    flex-flow: column nowrap;
+    align-items: stretch;
+    margin-top: 1.5rem;
+
+    .header {
+      display: flex;
+      flex-flow: row nowrap;
+      align-items: center;
+      margin-bottom: 1em;
+    }
+
+    .header>mat-form-field {
+      flex: 1 0 auto;
+    }
+
+    .header>button {
+      margin: 0.5em;
+    }
+
   }
 }
+

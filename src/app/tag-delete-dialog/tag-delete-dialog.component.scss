@@ -1,0 +1,15 @@
+@use '../../_variables' as theme;
+
+mat-slide-toggle {
+  padding-top: 10px;
+}
+
+mat-form-field {
+  margin-left: 2ch;
+}
+
+button {
+  font-family: Roboto, sans-serif;
+  font-weight: 500;
+  color: theme.$text-color;
+}

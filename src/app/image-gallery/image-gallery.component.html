@@ -32,6 +32,12 @@
       @if (integrityService.busy()) {
         <mat-spinner class="integrity-spinner"></mat-spinner>
       }
+      <button mat-icon-button
+              (click)="onDelete()"
+              class="delete-button"
+              matTooltip="Delete or rename this tag">
+        <mat-icon fontIcon="delete"></mat-icon>
+      </button>
     </div>
     @if ( uploadService.uploading()) {
       <h3 class="upload-heading">Uploading {{uploadService.uploadedCount()}} / {{uploadService.toUploadCount()}} Images</h3>

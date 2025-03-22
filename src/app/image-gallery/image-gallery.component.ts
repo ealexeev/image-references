@@ -28,6 +28,9 @@ import {MatTooltipModule} from '@angular/material/tooltip';
 import {NgClass} from '@angular/common';
 import {UploadService} from '../upload.service';
 import {Router} from '@angular/router';
+import {ConfirmationDialogComponent} from '../confirmation-dialog/confirmation-dialog.component';
+import {TagDeleteDialogComponent} from '../tag-delete-dialog/tag-delete-dialog.component';
+import {MatDialog} from '@angular/material/dialog';
 
 
 @Component({
@@ -69,6 +72,7 @@ export class ImageGalleryComponent implements OnInit, OnDestroy, OnChanges {
   protected integrityService: IntegrityService = inject(IntegrityService);
   protected uploadService: UploadService = inject(UploadService);
   private router: Router = inject(Router)
+  private dialog: MatDialog = inject(MatDialog);
   // How many image-cards are allowed to be loading their data in parallel
   readonly loadBudget: number = 25;
 
@@ -221,6 +225,50 @@ export class ImageGalleryComponent implements OnInit, OnDestroy, OnChanges {
     const sub = this.integrityService.getImagesReportStrategy(strategy, true).subscribe({
       next: (res: ImageReport[]) => {res.map(r=> console.log(r))},
       complete: () => {sub.unsubscribe()},
+    })
+  }
+
+  onDelete() {
+    const dialogRef = this.dialog.open(TagDeleteDialogComponent, {
+      data: {tag: this.tag?.name, newName: ''}});
+
+    dialogRef.afterClosed().subscribe(result => {
+      switch (result) {
+        case false:
+          console.log('delete cancelled')
+          break;
+        case '':
+          this.deleteTag().catch((err: unknown) => {console.error(err)})
+          break;
+        default:
+          this.deleteTag(result).catch((err: unknown) => {console.error(err)})
+      }
+    })
+  }
+
+  private async deleteTag(rename?: string) {
+    let newTag: Tag | undefined;
+    if (rename) {
+      newTag = await this.tagService.StoreTag(rename);
+    }
+    const strategy = new BatchedStrategy(this.imageService, where("tags", "array-contains", this.tag!.reference));
+    strategy.Fetch().subscribe({
+      next: (images: Image[]) => {
+        for (const image of images) {
+          const updated = image.tags
+            .filter(t=>t != this.tag!.reference)
+            .concat( newTag ? [newTag.reference] : []);
+          this.imageService.ReplaceTags(image.reference, updated)
+            .catch((err: unknown) => {console.error(`Replacing tags: ${err}`)})}
+      },
+      complete: () => {
+        this.tagService.DeleteTag(this.tag!.reference);
+        if (rename) {
+          this.router.navigateByUrl(`/tags/${rename}`)
+          return;
+        }
+        this.router.navigateByUrl(`/tags`);
+      }
     })
   }
 

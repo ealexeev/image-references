@@ -63,8 +63,7 @@ export class ImageGalleryComponent implements OnInit, OnDestroy, OnChanges {
           this.messageService.Error(`LoadTagByName(${value}): ${err}`);
           this.router.navigateByUrl('/tags');
         })
-      this.ngOnDestroy();
-      this.ngOnInit();
+      this.ngOnChanges();
     }
   }
   @ViewChildren(ImageCardComponent) imageCards!: QueryList<ImageCardComponent>;

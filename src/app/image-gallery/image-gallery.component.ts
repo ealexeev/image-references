@@ -101,10 +101,12 @@ export class ImageGalleryComponent implements OnInit, OnDestroy, OnChanges {
         })
         .catch(err => {
           this.messageService.Error(`LoadTagByName(${tagName}): ${err}`);
-          this.router.navigateByUrl('/tags');
+          if (this.mode ==='tag') {
+            this.router.navigateByUrl('/tags');
+          }
         })
       this.ngOnChanges();
-    })
+    }, {allowSignalWrites: true})
   }
 
   ngOnInit() {

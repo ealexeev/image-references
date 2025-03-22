@@ -27,6 +27,7 @@ import {ImageReport, IntegrityService} from '../integrity.service';
 import {MatTooltipModule} from '@angular/material/tooltip';
 import {NgClass} from '@angular/common';
 import {UploadService} from '../upload.service';
+import {Router} from '@angular/router';
 
 
 @Component({
@@ -58,7 +59,10 @@ export class ImageGalleryComponent implements OnInit, OnDestroy, OnChanges {
       this.optTagName.set(value);
       this.tagService.LoadTagByName(value)
         .then(tag => {this.tag = tag})
-        .catch(err => {this.messageService.Error(`LoadTagByName(${value}): ${err}`);})
+        .catch(err => {
+          this.messageService.Error(`LoadTagByName(${value}): ${err}`);
+          this.router.navigateByUrl('/tags');
+        })
       this.ngOnDestroy();
       this.ngOnInit();
     }
@@ -72,6 +76,7 @@ export class ImageGalleryComponent implements OnInit, OnDestroy, OnChanges {
   protected downloadService: DownloadService = inject(DownloadService);
   protected integrityService: IntegrityService = inject(IntegrityService);
   protected uploadService: UploadService = inject(UploadService);
+  private router: Router = inject(Router)
   // How many image-cards are allowed to be loading their data in parallel
   readonly loadBudget: number = 25;
 

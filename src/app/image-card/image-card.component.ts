@@ -1,12 +1,11 @@
 import {
   ChangeDetectionStrategy,
-  Component, computed, effect,
+  Component, effect,
   EventEmitter, inject,
   Input,
   OnDestroy,
   OnInit,
   Output,
-  Renderer2, Signal,
   signal, WritableSignal
 } from '@angular/core';
 import { MatBadgeModule } from '@angular/material/badge';
@@ -19,9 +18,11 @@ import {TagService} from '../tag.service';
 import {MessageService} from '../message.service';
 import {ImageService} from '../image.service';
 import {Image, ImageData, ImageSubscription} from '../../lib/models/image.model';
-import {first, raceWith, Subject, take, takeUntil, timer} from 'rxjs';
+import {first, of, raceWith, Subject, take, takeUntil, timer} from 'rxjs';
 import {MatTooltipModule} from '@angular/material/tooltip';
 import {Router} from '@angular/router';
+import {ConfirmationDialogComponent} from '../confirmation-dialog/confirmation-dialog.component';
+import {DownloadService} from '../download.service';
 
 @Component({
   selector: 'app-image-card',
@@ -51,7 +52,7 @@ export class ImageCardComponent implements OnInit, OnDestroy{
 
   protected imageService = inject(ImageService);
   private tagService = inject(TagService);
-  private renderer = inject(Renderer2);
+  private download: DownloadService = inject(DownloadService);
   private messages = inject(MessageService);
   private router: Router = inject(Router);
   private imageSub: ImageSubscription<Image> | undefined = undefined;
@@ -138,22 +139,14 @@ export class ImageCardComponent implements OnInit, OnDestroy{
       .catch((err: unknown) => this.messages.Error(`Error resolving tag names: ${err}`))
   }
 
-  async onDownload() {
-    const link = this.renderer.createElement('a');
-    let blob: Blob;
-    try {
-      blob = await this.fetchFull();
-    } catch (err: unknown) {
-     console.error(`Error fetching image blob: ${err}`);
-     return;
-    }
-    const url = URL.createObjectURL(blob)
-    link.setAttribute('target', '_blank');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `${this.imageSource.reference.id}.${extFromMime(blob.type)}`);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
+  onDownload() {
+    const img = this.imageSource
+    this.download.download({
+      fileName: this.imageSource.reference.id,
+      maxZipContentFiles: 1,
+      strategy: {
+        Fetch() {return of([img]);}
+      }})
   }
 
   manageTags() {

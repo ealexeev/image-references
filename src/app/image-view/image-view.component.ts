@@ -8,7 +8,7 @@ import {
   OnInit,
   inject,
   ViewChild,
-  ElementRef, Renderer2
+  ElementRef,
 } from '@angular/core';
 import {Image, ImageData} from '../../lib/models/image.model';
 import {ImageService} from '../image.service';
@@ -16,7 +16,7 @@ import {MatInputModule} from '@angular/material/input';
 import {MatChipInputEvent, MatChipsModule} from '@angular/material/chips';
 import {MatAutocompleteModule, MatAutocompleteSelectedEvent} from '@angular/material/autocomplete';
 import {FormControl, ReactiveFormsModule} from '@angular/forms';
-import {map, Observable, startWith} from 'rxjs';
+import {map, Observable, of, startWith} from 'rxjs';
 import {COMMA, ENTER} from '@angular/cdk/keycodes';
 import {MatIconModule} from '@angular/material/icon';
 import {AsyncPipe, Location} from '@angular/common';
@@ -27,6 +27,7 @@ import {Tag, TagService} from '../tag.service';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {MatDialog} from '@angular/material/dialog';
 import {ConfirmationDialogComponent} from '../confirmation-dialog/confirmation-dialog.component';
+import {DownloadService} from '../download.service';
 
 export interface ImageBundle {
   image: Image
@@ -53,10 +54,10 @@ export interface ImageBundle {
 })
 export class ImageViewComponent implements OnInit, OnDestroy {
 
-  private renderer: Renderer2 = inject(Renderer2);
   private location: Location = inject(Location);
   private imageService: ImageService = inject(ImageService);
   private tagService: TagService = inject(TagService);
+  private download: DownloadService = inject(DownloadService);
   private dialog: MatDialog = inject(MatDialog);
 
   // This is set if we get to a page via a URL, it is static and not sensitive to changes.
@@ -216,12 +217,14 @@ export class ImageViewComponent implements OnInit, OnDestroy {
   protected async onDownload() {
     const bundle = this.bundle();
     if (!bundle) {return}
-    const link = this.renderer.createElement('a');
-    link.setAttribute('target', '_blank');
-    link.setAttribute('href', this.imgURL());
-    link.setAttribute('download', `${bundle.image.reference.id}.${this.imgExtension()}`);
-    link.click();
-    link.remove();
+    this.download.download({
+      fileName: `${bundle.image.reference.id}.${this.imgExtension()}`,
+      maxZipContentFiles: 1,
+      strategy: {
+       Fetch()  {
+         return of([bundle.image]);
+      }}
+    })
   }
 
 }

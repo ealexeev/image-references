@@ -1,6 +1,6 @@
 import {
   ChangeDetectionStrategy,
-  Component, computed,
+  Component, computed, effect,
   inject,
   Input,
   OnChanges, OnDestroy,
@@ -57,13 +57,6 @@ export class ImageGalleryComponent implements OnInit, OnDestroy, OnChanges {
     if  ( value === undefined ) {return}
     if ( value !== this.optTagName() ) {
       this.optTagName.set(value);
-      this.tagService.LoadTagByName(value)
-        .then(tag => {this.tag = tag})
-        .catch(err => {
-          this.messageService.Error(`LoadTagByName(${value}): ${err}`);
-          this.router.navigateByUrl('/tags');
-        })
-      this.ngOnChanges();
     }
   }
   @ViewChildren(ImageCardComponent) imageCards!: QueryList<ImageCardComponent>;
@@ -99,6 +92,19 @@ export class ImageGalleryComponent implements OnInit, OnDestroy, OnChanges {
         this.onMaxCountChanged(v)
       }
     )
+
+    effect(()=> {
+      const tagName = this.optTagName();
+      this.tagService.LoadTagByName(tagName)
+        .then(tag => {
+          this.tag = tag
+        })
+        .catch(err => {
+          this.messageService.Error(`LoadTagByName(${tagName}): ${err}`);
+          this.router.navigateByUrl('/tags');
+        })
+      this.ngOnChanges();
+    })
   }
 
   ngOnInit() {

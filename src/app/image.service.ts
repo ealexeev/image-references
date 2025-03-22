@@ -244,6 +244,30 @@ export class ImageService {
   }
 
   /**
+   * Subscribe to the latest images without a tag.
+  * */
+  SubscribeToUntaggedImages(last_n_images: number): ImageSubscription<Image[]> {
+    const constraints: QueryConstraint[] = [orderBy("added", "desc"), where("tags", "==", [])]
+    if ( last_n_images > 0 ) {
+      constraints.push(limit(last_n_images));
+    }
+    const q = query(this.imagesCollection, ...constraints)
+
+    const out$ = new Subject<Image[]>();
+
+    const unsub = onSnapshot(q, (querySnapshot) => {
+      const images: Image[] = [];
+      querySnapshot.forEach((doc) => {
+        images.push(doc.data() as Image)
+      })
+      out$.next(images);
+      this.message.Info(`Fetched ${images.length} latest images`)
+    })
+
+    return {results$: out$, unsubscribe: ()=>{unsub(); out$.complete()}} as ImageSubscription<Image[]>;
+  }
+
+  /**
    * Subscribe to updates for a particular image.
    */
   SubscribeToImage(imageRef: DocumentReference): ImageSubscription<Image> {
@@ -331,6 +355,11 @@ export class ImageService {
    */
   async CountAllImages(): Promise<number> {
     return getCountFromServer(query(this.imagesCollection))
+      .then(snap => snap.data().count)
+  }
+
+  async CountUntaggedImages(): Promise<number> {
+    return getCountFromServer(query(this.imagesCollection, where("tags", "==", [])))
       .then(snap => snap.data().count)
   }
 
@@ -508,6 +537,25 @@ export class FakeImageService {
       images.push(img)
       if (images.length == last_n_images) {
         break
+      }
+    }
+    sub.next(images)
+    return ret
+  }
+
+  SubscribeToUntaggedImages(last_n_images: number): ImageSubscription<Image[]> {
+    const sub = new Subject<Image[]>()
+    const ret = {
+      results$: sub,
+      unsubscribe: () => {sub.complete()}
+    } as ImageSubscription<Image[]>
+    const images: Image[] = []
+    for (const img of this.images.values()) {
+      if (img.tags.length === 0) {
+        images.push(img)
+        if (images.length == last_n_images) {
+          break
+        }
       }
     }
     sub.next(images)

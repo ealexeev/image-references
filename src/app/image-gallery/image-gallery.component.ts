@@ -3,8 +3,8 @@ import {
   Component, computed,
   inject,
   Input,
-  OnDestroy,
-  OnInit, QueryList, Signal,
+  OnChanges, OnDestroy,
+  OnInit, QueryList,
   signal, ViewChildren,
   WritableSignal
 } from '@angular/core';
@@ -49,7 +49,7 @@ import {UploadService} from '../upload.service';
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ImageGalleryComponent implements OnInit, OnDestroy {
+export class ImageGalleryComponent implements OnInit, OnDestroy, OnChanges {
   @Input({required: true}) mode: "tag" | "latest" | "inbox" = "latest";
   @Input()
   set tagName(value: string) {
@@ -116,6 +116,11 @@ export class ImageGalleryComponent implements OnInit, OnDestroy {
       .catch((err: unknown) => {this.messageService.Error(`<image-gallery> startSubscriptions(): ${err}`)})
   }
 
+  ngOnChanges() {
+    this.ngOnDestroy()
+    this.ngOnInit();
+  }
+
   ngOnDestroy() {
     this.imagesSub.unsubscribe()
     this.dbUnsubscribe();
@@ -139,6 +144,10 @@ export class ImageGalleryComponent implements OnInit, OnDestroy {
         this.imageService.CountAllImages().then(cnt=>this.totalImageCount.set(cnt))
         subscription = this.imageService.SubscribeToLatestImages(this.preferences.showImageCount$.value)
         break
+      case 'inbox':
+        this.imageService.CountUntaggedImages().then(cnt=>this.totalImageCount.set(cnt))
+        subscription = this.imageService.SubscribeToUntaggedImages(this.preferences.showImageCount$.value)
+        break;
       case 'tag':
         const tag = await this.tagService.LoadTagByName(this.optTagName())
         this.imageService.CountTagImages(tag.reference)

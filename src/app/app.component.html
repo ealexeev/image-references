@@ -11,8 +11,9 @@
                              matTooltip="See latest images"
           >Latest</mat-button-toggle>
           <mat-button-toggle value="untagged"
-                             disabled="true"
-                             matTooltip="WIP...see untagged images"
+                             routerLink="/images/inbox"
+                             routerLinkActive="mat-button-toggle-checked"
+                             matTooltip="See images without tags"
           >Untagged</mat-button-toggle>
           <mat-button-toggle value="tags"
                              routerLink="/tags"

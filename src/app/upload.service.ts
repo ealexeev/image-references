@@ -77,7 +77,7 @@ export class UploadService implements OnDestroy {
    * Upload specified files.  If provided, apply the specified tag name to the files.
    * */
   upload(files: FileHandle[], tag?: string) {
-        const queueCount = 5;
+    const queueCount = 15;
 
     if (files.length > queueCount) {
       this.toUploadCount.set(files.length)

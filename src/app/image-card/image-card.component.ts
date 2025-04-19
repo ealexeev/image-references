@@ -23,6 +23,7 @@ import {MatTooltipModule} from '@angular/material/tooltip';
 import {Router} from '@angular/router';
 import {ConfirmationDialogComponent} from '../confirmation-dialog/confirmation-dialog.component';
 import {DownloadService} from '../download.service';
+import {SelectableDirective} from './selectable.directive';
 
 @Component({
   selector: 'app-image-card',
@@ -35,6 +36,7 @@ import {DownloadService} from '../download.service';
     MatIconModule,
     TagSelectComponent,
     MatTooltipModule,
+    SelectableDirective,
   ],
   templateUrl: './image-card.component.html',
   styleUrls: [
@@ -67,6 +69,7 @@ export class ImageCardComponent implements OnInit, OnDestroy{
   fetchFull: any; /// ()=>Promise<Blob>;
   lastTagsText: WritableSignal<string> = signal('');
   loaded = signal(false);
+  selected = false;
 
   private unsubscribe: () => void = () => {return};
   private destroy$: Subject<void> = new Subject<void>();
@@ -185,6 +188,16 @@ export class ImageCardComponent implements OnInit, OnDestroy{
 
   onFullSize() {
     this.router.navigateByUrl(`/image/${this.imageSource.reference.id}`)
+  }
+
+  onSelectedChange(isSelected: boolean) {
+    this.selected = isSelected;
+    console.log('Selection changed ', isSelected);
+  }
+
+  onDeselect(event: Event) {
+    event.stopPropagation();
+    this.selected = false;
   }
 }
 

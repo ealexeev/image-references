@@ -269,6 +269,13 @@ export class ImageService {
   }
 
   /**
+   * Return an image by reference.
+  * */
+  async LoadImageByReference(ref: DocumentReference): Promise<Image> {
+    return this.convert.snapshotToImage(await getDoc(ref))
+  }
+
+  /**
    * Subscribe to updates for a particular image.
    */
   SubscribeToImage(imageRef: DocumentReference): ImageSubscription<Image> {

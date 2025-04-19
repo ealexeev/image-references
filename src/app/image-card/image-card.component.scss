@@ -16,6 +16,12 @@
     margin: 0;
 	}
 
+  &.selected {
+    border-color: theme.$btn-highlight-color;
+    border-width: 2px;
+    border-style: solid;
+  }
+
   .image-actions {
     anchor-name: --image-actions;
     min-height: 30px;

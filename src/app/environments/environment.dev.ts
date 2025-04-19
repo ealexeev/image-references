@@ -10,6 +10,6 @@ export const environment = {
   "firebaseAuthUseLocal": true,
   "authRequired": false,
   "authorizedUids": [
-    "VLAi1x838xN7Kmep1KPrYFZw10sL",
+    "OVurK9ebeGer5oa0IsrzhW3fy3aE",
   ],
 };

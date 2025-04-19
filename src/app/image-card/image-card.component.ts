@@ -69,10 +69,11 @@ export class ImageCardComponent implements OnInit, OnDestroy{
   fetchFull: any; /// ()=>Promise<Blob>;
   lastTagsText: WritableSignal<string> = signal('');
   loaded = signal(false);
-  selected = false;
+  selected = signal(false);
 
   private unsubscribe: () => void = () => {return};
   private destroy$: Subject<void> = new Subject<void>();
+  private lastAdded: Set<string> = new Set();
 
   constructor() {
     effect(async () => {
@@ -85,6 +86,33 @@ export class ImageCardComponent implements OnInit, OnDestroy{
     effect(()=>{
       if (this.loaded()) {
         this.loadComplete.emit()
+      }
+    })
+    effect(() => {
+      const newTags:Set<string> = new Set();
+      const tags = this.imageService.lastTagsAdded();
+      for (const tag of tags) {
+        newTags.add(tag.id);
+      }
+      const containsEvery = Array.from(newTags).map((i)=> this.lastAdded.has(i)).every(Boolean);
+      const same = newTags.size === this.lastAdded.size && containsEvery;
+      if (this.selected() && !same) {
+        this.lastAdded.clear();
+        const tags = this.imageService.lastTagsAdded();
+        for (const tag of tags) {
+          this.lastAdded.add(tag.id);
+        }
+        this.imageService.AddLastTags(this.imageSource.reference)
+        console.log('Updated last tags!');
+      }
+    })
+    effect(()=> {
+      if ( !this.selected() && this.imageService.lastTagsAdded().length > 0) {
+        this.lastAdded.clear();
+        const tags = this.imageService.lastTagsAdded();
+        for (const tag of tags) {
+          this.lastAdded.add(tag.id);
+        }
       }
     })
   }
@@ -191,13 +219,13 @@ export class ImageCardComponent implements OnInit, OnDestroy{
   }
 
   onSelectedChange(isSelected: boolean) {
-    this.selected = isSelected;
+    this.selected.set(isSelected);
     console.log('Selection changed ', isSelected);
   }
 
   onDeselect(event: Event) {
     event.stopPropagation();
-    this.selected = false;
+    this.selected.set(false);
   }
 }
 

@@ -103,7 +103,6 @@ export class ImageCardComponent implements OnInit, OnDestroy{
           this.lastAdded.add(tag.id);
         }
         this.imageService.AddLastTags(this.imageSource.reference)
-        console.log('Updated last tags!');
       }
     })
     effect(()=> {

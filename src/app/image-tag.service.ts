@@ -1,6 +1,7 @@
 import { Injectable, inject, signal, WritableSignal } from '@angular/core';
 import { Tag } from './tag.service';
-import { arrayUnion, arrayRemove, updateDoc, DocumentReference, Firestore } from '@angular/fire/firestore';
+import { DocumentReference } from '@angular/fire/firestore';
+import { FirestoreWrapperService } from './firestore-wrapper.service';
 import { MessageService } from './message.service';
 
 export type ImageTagOperationType = 'Add' | 'Replace' | 'Remove';
@@ -15,14 +16,14 @@ export class ImageTagService {
   public readonly recentOperations = this._recentOperations.asReadonly();
 
   private message = inject(MessageService);
-  updateDoc = updateDoc;
+  private firestore = inject(FirestoreWrapperService);
 
   /**
    * Add tags to an image document.
    */
   async AddTags(imageRef: DocumentReference, tags: Tag[]): Promise<void> {
     try {
-      await this.updateDoc(imageRef, { tags: arrayUnion(...tags.map(t => t.reference)) });
+      await this.firestore.updateDoc(imageRef, { tags: this.firestore.arrayUnion(...tags.map(t => t.reference)) });
     } catch (error) {
       this.message.Error(`Error adding tags to image ${imageRef.id}: ${error}`);
       return;
@@ -36,7 +37,7 @@ export class ImageTagService {
    */
   async RemoveTags(imageRef: DocumentReference, tags: Tag[]): Promise<void> {
     try {
-      await this.updateDoc(imageRef, { tags: arrayRemove(...tags.map(t => t.reference)) });
+      await this.firestore.updateDoc(imageRef, { tags: this.firestore.arrayRemove(...tags.map(t => t.reference)) });
     } catch (error) {
       this.message.Error(`Error removing tags from image ${imageRef.id}: ${error}`);
       return;
@@ -50,7 +51,7 @@ export class ImageTagService {
    */
   async ReplaceTags(imageRef: DocumentReference, tags: Tag[]): Promise<void> {
     try {
-      await this.updateDoc(imageRef, { tags: tags.map(t => t.reference) });
+      await this.firestore.updateDoc(imageRef, { tags: tags.map(t => t.reference) });
     } catch (error) {
       this.message.Error(`Error replacing tags on image ${imageRef.id}: ${error}`);
       return;

@@ -1,74 +1,79 @@
 import { TestBed } from '@angular/core/testing';
 import { ImageTagService } from './image-tag.service';
 import { Tag } from './tag.service';
+import { FirestoreWrapperService } from './firestore-wrapper.service';
 import { MessageService } from './message.service';
-import { MockMessageService } from './test-providers';
-import { getDefaultProviders } from './test-providers';
+import { DefaultProviders } from './test-providers';
 
 fdescribe('ImageTagService', () => {
+  let providers: DefaultProviders;
   let service: ImageTagService;
-  let message: MockMessageService;
   let mockDocRef: any;
   let tag: Tag;
-  let mockUpdateDoc: jasmine.Spy;
+  let mockUpdateDoc: jasmine.Spy<() => Promise<void>>;
+  let mockInfo: jasmine.Spy<(message: string) => void>;
+  let mockError: jasmine.Spy<(message: string) => void>;
 
   beforeEach(() => {
+    providers = new DefaultProviders();
     TestBed.configureTestingModule({
-      providers: getDefaultProviders(),
+      providers: providers.getProviders({include: [FirestoreWrapperService, MessageService]}),
     }).compileComponents();
     service = TestBed.inject(ImageTagService);
-    message = TestBed.inject(MessageService) as any;
 
     // Mock DocumentReference
     mockDocRef = { id: 'img1' };
     // Mock Tag
     tag = { name: 'tag1', reference: { id: 'tag1ref' } } as Tag;
-    mockUpdateDoc = spyOn(service, 'updateDoc');
+    
+    mockUpdateDoc = providers.FirestoreWrapperService.updateDoc;
+    mockInfo = providers.MessageService.Info;
+    mockError = providers.MessageService.Error;
   });
 
   afterEach(() => {
     mockUpdateDoc.calls.reset();
-    message.Info.calls.reset();
-    message.Error.calls.reset();
+    mockInfo.calls.reset();
+    mockError.calls.reset();
   });
 
   it('should add tags and log operation', async () => {
     await service.AddTags(mockDocRef, [tag]);
     expect(mockUpdateDoc).toHaveBeenCalled();
-    expect(message.Info).toHaveBeenCalledWith('Added 1 tag(s) to image img1');
+    expect(mockInfo).toHaveBeenCalledWith('Added 1 tag(s) to image img1');
     expect(service.recentOperations()[0]).toEqual(jasmine.objectContaining({ type: 'Add', tags: [tag] }));
   });
 
   it('should handle add tags error', async () => {
     mockUpdateDoc.and.callFake(() => Promise.reject('fail'));
     await service.AddTags(mockDocRef, [tag]);
-    expect(message.Error).toHaveBeenCalledWith('Error adding tags to image img1: fail');
+    expect(mockError).toHaveBeenCalledWith('Error adding tags to image img1: fail');
   });
 
   it('should remove tags and log operation', async () => {
     await service.RemoveTags(mockDocRef, [tag]);
     expect(mockUpdateDoc).toHaveBeenCalled();
-    expect(message.Info).toHaveBeenCalledWith('Removed 1 tag(s) from image img1');
+    expect(mockInfo).toHaveBeenCalledWith('Removed 1 tag(s) from image img1');
     expect(service.recentOperations()[0]).toEqual(jasmine.objectContaining({ type: 'Remove', tags: [tag] }));
   });
 
   it('should handle remove tags error', async () => {
-      mockUpdateDoc.and.callFake(() => Promise.reject('fail'));
+    mockUpdateDoc.and.callFake(() => Promise.reject('fail'));
     await service.RemoveTags(mockDocRef, [tag]);
-    expect(message.Error).toHaveBeenCalledWith('Error removing tags from image img1: fail');
+    expect(mockError).toHaveBeenCalledWith('Error removing tags from image img1: fail');
   });
 
   it('should replace tags and log operation', async () => {
     await service.ReplaceTags(mockDocRef, [tag]);
     expect(mockUpdateDoc).toHaveBeenCalled();
-    expect(message.Info).toHaveBeenCalledWith('Replaced tags on image img1 (1 tag(s))');
+    expect(mockInfo).toHaveBeenCalledWith('Replaced tags on image img1 (1 tag(s))');
     expect(service.recentOperations()[0]).toEqual(jasmine.objectContaining({ type: 'Replace', tags: [tag] }));
   });
 
   it('should handle replace tags error', async () => {
     mockUpdateDoc.and.callFake(() => Promise.reject('fail'));
     await service.ReplaceTags(mockDocRef, [tag]);
-    expect(message.Error).toHaveBeenCalledWith('Error replacing tags on image img1: fail');
+    expect(mockError).toHaveBeenCalledWith('Error replacing tags on image img1: fail');
   });
 
   it('should keep only the 5 most recent operations', async () => {

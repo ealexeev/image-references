@@ -8,6 +8,8 @@ import { FakeImageService, ImageService } from './image.service';
 import { FakeTagService, TagService } from './tag.service';
 import { MessageService } from './message.service';
 import { FirestoreWrapperService } from './firestore-wrapper.service';
+import { StorageWrapperService } from './storage-wrapper.service';
+import { FakeEncryptionService, EncryptionService } from './encryption.service';
 
 
 // Get default providers commonly needed for testing.
@@ -20,6 +22,7 @@ export function getDefaultProviders() {
     {provide: TagService, useClass: FakeTagService},
     {provide: MessageService, useValue: jasmine.createSpyObj<MessageService>('MessageService', ['Info', 'Error'])},
     {provide: FirestoreWrapperService, useValue: jasmine.createSpyObj<FirestoreWrapperService>('FirestoreWrapperService', ['updateDoc', 'arrayUnion', 'arrayRemove'])},
+    {provide: StorageWrapperService, useValue: jasmine.createSpyObj<StorageWrapperService>('StorageWrapperService', ['ref', 'getMetadata'])},
   ]
 }
 
@@ -51,10 +54,30 @@ export function EmulatedStorage() {
 }
 
 export class DefaultProviders {
+  EncryptionService = new FakeEncryptionService() as unknown as EncryptionService;
   ImageService = new FakeImageService() as unknown as ImageService;
   TagService = new FakeTagService() as unknown as TagService;
   MessageService = jasmine.createSpyObj<MessageService>('MessageService', ['Info', 'Error']);
-  FirestoreWrapperService = jasmine.createSpyObj<FirestoreWrapperService>('FirestoreWrapperService', ['updateDoc', 'arrayUnion', 'arrayRemove']);
+  FirestoreWrapperService = jasmine.createSpyObj<FirestoreWrapperService>(
+    'FirestoreWrapperService', 
+    [
+      'updateDoc', 
+      'arrayUnion', 
+      'arrayRemove', 
+      'doc', 
+      'getDoc'
+    ],
+    ['instance']
+  );
+
+  StorageWrapperService = jasmine.createSpyObj<StorageWrapperService>(
+    'StorageWrapperService',
+    [
+      'ref',
+      'getMetadata'
+    ],
+    ['instance']
+  );
 
   getProviders({
     include,
@@ -64,6 +87,14 @@ export class DefaultProviders {
     exclude?: unknown[];
   } = {}): ValueProvider[] {
    return [
+    {
+      provide: this.EncryptionService,
+      useValue: this.EncryptionService
+    },
+    {
+      provide: StorageWrapperService,
+      useValue: this.StorageWrapperService
+    },
     {
       provide: ImageService,
       useValue: this.ImageService

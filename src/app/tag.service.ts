@@ -12,19 +12,16 @@ import {
 } from '@angular/fire/firestore';
 import {EncryptionService} from './encryption.service';
 import {MessageService} from './message.service';
-import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {
   BehaviorSubject,
   distinctUntilChanged,
   map,
   Observable, ReplaySubject,
   shareReplay,
-  startWith, takeUntil,
+  startWith,
   withLatestFrom
 } from 'rxjs';
 import {HmacService} from './hmac.service';
-import {runTransaction} from '@angular/fire/database';
-import {QueryDocumentSnapshot} from '@angular/fire/compat/firestore';
 
 export type Tag = {
   name: string,

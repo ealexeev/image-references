@@ -1,8 +1,33 @@
-import { Injectable } from '@angular/core';
-import { updateDoc, arrayUnion, arrayRemove, DocumentReference } from '@angular/fire/firestore';
+import { inject, Injectable } from '@angular/core';
+import { 
+  updateDoc, 
+  arrayUnion, 
+  arrayRemove, 
+  DocumentReference, 
+  Firestore,
+  doc,
+  getDoc,
+  DocumentSnapshot,
+  DocumentData
+} from '@angular/fire/firestore';
 
 @Injectable({ providedIn: 'root' })
 export class FirestoreWrapperService {
+  readonly instance: Firestore = inject(Firestore);
+
+  /**
+   * Proxy for Firestore's doc
+   */
+  doc<T = DocumentData>(firestore: Firestore, path: string, ...pathSegments: string[]): DocumentReference<T> {
+    return doc(firestore, path, ...pathSegments) as DocumentReference<T>;
+  }
+
+  /**
+   * Proxy for Firestore's getDoc
+   */
+  getDoc<T = DocumentData>(ref: DocumentReference<T>): Promise<DocumentSnapshot<T>> {
+    return getDoc(ref);
+  }
   /**
    * Proxy for Firestore's updateDoc
    */

@@ -15,7 +15,7 @@ import {
 } from '@angular/fire/firestore';
 import {EmulatedFirestore} from './test-providers';
 import {EncryptionService} from './encryption.service';
-import {firstValueFrom, Subject, takeUntil} from 'rxjs';
+import {Subject, takeUntil} from 'rxjs';
 
 describe('TagService', () => {
   let service: TagService;

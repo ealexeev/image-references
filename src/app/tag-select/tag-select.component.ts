@@ -30,20 +30,22 @@ export class TagSelectComponent implements OnInit{
   tagService: TagService = inject(TagService);
   imageTagService = inject(ImageTagService);
   allTags = toSignal(this.tagService.tags$);
+  allTagsSorted = computed(()=> this.allTags()!.sort((a, b)=>a.name.localeCompare(b.name)));
   recentTagsFirst = computed(() => {
-    const ret: Array<Tag> = [];
+    const byId: Map<string, Tag> = new Map(this.allTagsSorted()!.map(t=> [t.reference.id, t]));
+    const idsInOrderOfUse: Array<string> = [];
     const recent = this.imageTagService.recentOperations().reverse();
     recent.forEach(op => {
       if (op.tags.length > 0) {
         for (const tag of op.tags) {
-          if ( !ret.includes(tag) ) {
-            ret.push(tag)
+          if ( !idsInOrderOfUse.includes(tag.reference.id) ) {
+            idsInOrderOfUse.push(tag.reference.id)
           }
         }
       }
     });
-    ret.push(...this.allTags()!.filter(t=>!ret.includes(t)));
-    return ret;
+    idsInOrderOfUse.push(...this.allTagsSorted()!.filter(t=>!idsInOrderOfUse.includes(t.reference.id)).map(t=>t.reference.id));
+    return idsInOrderOfUse.map(id=>byId.get(id)!);
   });
 
   ngOnInit() {

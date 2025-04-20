@@ -24,6 +24,7 @@ import {Router} from '@angular/router';
 import {ConfirmationDialogComponent} from '../confirmation-dialog/confirmation-dialog.component';
 import {DownloadService} from '../download.service';
 import {SelectableDirective} from './selectable.directive';
+import { ImageTagService } from '../image-tag.service';
 
 @Component({
   selector: 'app-image-card',
@@ -54,6 +55,7 @@ export class ImageCardComponent implements OnInit, OnDestroy{
 
   protected imageService = inject(ImageService);
   private tagService = inject(TagService);
+  protected imageTagService = inject(ImageTagService);
   private download: DownloadService = inject(DownloadService);
   private messages = inject(MessageService);
   private router: Router = inject(Router);
@@ -69,11 +71,9 @@ export class ImageCardComponent implements OnInit, OnDestroy{
   fetchFull: any; /// ()=>Promise<Blob>;
   lastTagsText: WritableSignal<string> = signal('');
   loaded = signal(false);
-  selected = signal(false);
 
   private unsubscribe: () => void = () => {return};
   private destroy$: Subject<void> = new Subject<void>();
-  private lastAdded: Set<string> = new Set();
 
   constructor() {
     effect(async () => {
@@ -86,32 +86,6 @@ export class ImageCardComponent implements OnInit, OnDestroy{
     effect(()=>{
       if (this.loaded()) {
         this.loadComplete.emit()
-      }
-    })
-    effect(() => {
-      const newTags:Set<string> = new Set();
-      const tags = this.imageService.lastTagsAdded();
-      for (const tag of tags) {
-        newTags.add(tag.id);
-      }
-      const containsEvery = Array.from(newTags).map((i)=> this.lastAdded.has(i)).every(Boolean);
-      const same = newTags.size === this.lastAdded.size && containsEvery;
-      if (this.selected() && !same) {
-        this.lastAdded.clear();
-        const tags = this.imageService.lastTagsAdded();
-        for (const tag of tags) {
-          this.lastAdded.add(tag.id);
-        }
-        this.imageService.AddLastTags(this.imageSource.reference)
-      }
-    })
-    effect(()=> {
-      if ( !this.selected() && this.imageService.lastTagsAdded().length > 0) {
-        this.lastAdded.clear();
-        const tags = this.imageService.lastTagsAdded();
-        for (const tag of tags) {
-          this.lastAdded.add(tag.id);
-        }
       }
     })
   }
@@ -201,30 +175,20 @@ export class ImageCardComponent implements OnInit, OnDestroy{
   }
 
   onAddLast() {
-    this.imageService.AddLastTags(this.imageSource.reference)
-      .catch((err: unknown) => {this.messages.Error(`Error adding last tags: ${err}`)})
+    this.imageTagService.performLastOperation(this.imageSource.reference)
+      .catch((err: unknown) => {this.messages.Error(`Error performing last operation: ${err}`)})
   }
 
 
   async onSelectionChange(tags: string[]) {
     this.showTagSelection.set(false);
     Promise.all(tags.map(name => this.tagService.LoadTagByName(name)))
-      .then(tags => {this.imageService.ReplaceTags(this.imageSource.reference, tags.map(t=>t.reference))})
+      .then(tags => {this.imageTagService.replaceTags(this.imageSource.reference, tags)})
       .catch(e=>this.messages.Error(`Error updating tags on image ${this.imageSource.reference}: ${e}`))
   }
 
   onFullSize() {
     this.router.navigateByUrl(`/image/${this.imageSource.reference.id}`)
-  }
-
-  onSelectedChange(isSelected: boolean) {
-    this.selected.set(isSelected);
-    console.log('Selection changed ', isSelected);
-  }
-
-  onDeselect(event: Event) {
-    event.stopPropagation();
-    this.selected.set(false);
   }
 }
 

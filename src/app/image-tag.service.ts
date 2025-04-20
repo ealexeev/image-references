@@ -21,7 +21,7 @@ export class ImageTagService {
   /**
    * Add tags to an image document.
    */
-  async AddTags(imageRef: DocumentReference, tags: Tag[]): Promise<void> {
+  async addTags(imageRef: DocumentReference, tags: Tag[]): Promise<void> {
     try {
       await this.firestore.updateDoc(imageRef, { tags: this.firestore.arrayUnion(...tags.map(t => t.reference)) });
     } catch (error) {
@@ -35,7 +35,7 @@ export class ImageTagService {
   /**
    * Remove tags from an image document.
    */
-  async RemoveTags(imageRef: DocumentReference, tags: Tag[]): Promise<void> {
+  async removeTags(imageRef: DocumentReference, tags: Tag[]): Promise<void> {
     try {
       await this.firestore.updateDoc(imageRef, { tags: this.firestore.arrayRemove(...tags.map(t => t.reference)) });
     } catch (error) {
@@ -49,7 +49,7 @@ export class ImageTagService {
   /**
    * Replace all tags on an image document.
    */
-  async ReplaceTags(imageRef: DocumentReference, tags: Tag[]): Promise<void> {
+  async replaceTags(imageRef: DocumentReference, tags: Tag[]): Promise<void> {
     try {
       await this.firestore.updateDoc(imageRef, { tags: tags.map(t => t.reference) });
     } catch (error) {
@@ -61,8 +61,34 @@ export class ImageTagService {
   }
 
   /**
+   * Perform an image tag operation on specified image.
+  */
+  async performOperation(imageRef: DocumentReference, op: ImageTagOperation): Promise<void> {
+  switch (op.type) {
+    case 'Add':
+      return this.addTags(imageRef, op.tags);
+    case 'Remove':
+      return this.removeTags(imageRef, op.tags);
+    case 'Replace':
+      return this.replaceTags(imageRef, op.tags);
+    default:
+      throw new Error('Unknown operation type: ' + op.type);
+    }
+  }
+
+  /**
+   * Perform the last operation on specified image.
+  */
+  async performLastOperation(imageRef: DocumentReference): Promise<void> {
+    const lastOp = this._recentOperations()[0];
+    if (lastOp) {
+      return this.performOperation(imageRef, lastOp);
+    }
+  }
+
+  /**
    * Internal: logs an operation, maintaining a max of 5.
-   */
+  */
   private logOperation(type: ImageTagOperationType, tags: Tag[]): void {
     const updated = [
       { type, tags },

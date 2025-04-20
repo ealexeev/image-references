@@ -1,4 +1,4 @@
-<mat-card class="image-card" appSelectable (selectedChange)="onSelectedChange($event)">
+<mat-card class="image-card" appSelectable [imageSource]="imageSource">
   @defer ( when (thumbnailUrl().length > 0) ){
     <img mat-card-image [src]="thumbnailUrl()" alt="Image" draggable="false">
   }
@@ -23,7 +23,7 @@
     >
 			<mat-icon fontIcon="list"></mat-icon>
 		</button>
-    @if (imageService.lastTagsAdded().length > 0) {
+    @if (imageTagService.recentOperations().length > 0) {
       <button mat-icon-button
               [matTooltip]="lastTagsText()"
               matTooltipClass="multiline-tooltip"

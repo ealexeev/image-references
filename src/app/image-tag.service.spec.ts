@@ -1,8 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { ImageTagService } from './image-tag.service';
 import { Tag } from './tag.service';
-import { FirestoreWrapperService } from './firestore-wrapper.service';
-import { MessageService } from './message.service';
 import { DefaultProviders } from './test-providers';
 
 describe('ImageTagService', () => {
@@ -17,7 +15,7 @@ describe('ImageTagService', () => {
   beforeEach(() => {
     providers = new DefaultProviders();
     TestBed.configureTestingModule({
-      providers: providers.getProviders({include: [FirestoreWrapperService, MessageService]}),
+      providers: providers.getProviders(),
     }).compileComponents();
     service = TestBed.inject(ImageTagService);
 

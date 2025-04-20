@@ -3,7 +3,7 @@ import { RealtimeImageService } from './realtime-image.service';
 import { DefaultProviders } from './test-providers';
 import { DocumentReference, CollectionReference } from '@angular/fire/firestore';
 
-fdescribe('RealtimeImageService', () => {
+describe('RealtimeImageService', () => {
   let providers: DefaultProviders;
   let service: RealtimeImageService;
 

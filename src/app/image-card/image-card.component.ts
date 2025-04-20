@@ -69,7 +69,7 @@ export class ImageCardComponent implements OnInit, OnDestroy{
   thumbnailUrl: WritableSignal<string> = signal('');
   fullUrlAvailable: WritableSignal<Boolean> = signal(false);
   fetchFull: any; /// ()=>Promise<Blob>;
-  lastTagsText: WritableSignal<string> = signal('');
+  lastOpText = signal('');
   loaded = signal(false);
 
   private unsubscribe: () => void = () => {return};
@@ -77,13 +77,15 @@ export class ImageCardComponent implements OnInit, OnDestroy{
 
   constructor() {
     effect(async () => {
-        const lastRefs = this.imageService.lastTagsAdded()
-        Promise.all(lastRefs.map(r => this.tagService.LoadTagByReference(r)))
-          .then((tags: { name: string }[]) => tags.map(tag => tag.name))
-          .then((names: string[]) => this.lastTagsText.set(names.join("\n")))
-      }
-    )
-    effect(()=>{
+        const recentOps = this.imageTagService.recentOperations();
+        if (recentOps.length < 1) {
+          return;
+        }
+        const lastOp = recentOps[0];
+        this.lastOpText.set(lastOp.type + '\n' + lastOp.tags.map(t => `- ${t.name}`).join('\n'));
+
+    }, { allowSignalWrites: true})
+  effect(()=>{
       if (this.loaded()) {
         this.loadComplete.emit()
       }

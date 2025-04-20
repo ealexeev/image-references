@@ -56,38 +56,13 @@ export class TagService implements OnDestroy {
   private tagsByName: TagMap = {}
   private tagsById: TagMap = {}
 
-  // Tags used most recently.  Contains the entire tags$ output, but in order of use.
-  recentTags$: Observable<Tag[]>
   // Complete set of tags known to TagService.  Eventually catches up to Firestore.
   tags$ = new ReplaySubject<Tag[]>()
   // Number of tags known to the TagService
   tagsCount$ = new BehaviorSubject<number>(0)
-  // Tags applied during the last operation.  Supplied externally.  Ideally this is the only point of contact
-  // between TagService and ImageService.
-  appliedTags$ = new BehaviorSubject<Tag[]>([])
-  // Previous emission of recentTags$, which allows continuous updates.
-  private lastRecentlyUsed$ = new BehaviorSubject<Tag[]>([])
   private unsubTagCollection: any
 
   constructor() {
-    this.recentTags$ = this.appliedTags$.pipe(
-      takeUntilDestroyed(),
-      withLatestFrom(this.lastRecentlyUsed$.pipe(startWith([])), this.tags$),
-      map(([applied, lastEmission, stored]) => {
-        const appliedIds = applied.map(t=>t.reference.id)
-        let ret: Tag[];
-        if ( stored.length > lastEmission.length ) {
-          ret = stored.filter(t=> !appliedIds.includes(t.reference.id))
-        } else {
-          ret = lastEmission.filter(t=> !appliedIds.includes(t.reference.id))
-        }
-        ret.unshift(...applied)
-        this.lastRecentlyUsed$.next(ret)
-        return ret;
-      }),
-      distinctUntilChanged(),
-      shareReplay(),
-    )
     this.startSubscriptions()
   }
 
@@ -211,7 +186,6 @@ export class TagService implements OnDestroy {
       return setDoc(ref, toStorage)
         .then(()=> {
           this.messageService.Info(`Created tag: ${name}`)
-          this.RecordTagUsage([ref])
           resolve(tag)
         })
         .catch((err: Error) => {this.messageService.Error(`Error storing tag ${tag.name}: ${err}`)});
@@ -243,15 +217,6 @@ export class TagService implements OnDestroy {
       })
     batch.delete(ref);
     return batch.commit()
-  }
-
-  /**
-   * Record that tags have been used to affect this.recentTags$
-   */
-  RecordTagUsage = async (tags: DocumentReference[]): Promise<void> => {
-    return Promise.all(tags.map(tag => this.LoadTagByReference(tag)))
-      .then(resolved=>this.appliedTags$.next(resolved))
-      .catch((err: Error) => {this.messageService.Error(`Error updating tag use: ${err}`)})
   }
 }
 

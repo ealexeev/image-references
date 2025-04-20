@@ -4,7 +4,7 @@
               (opened)="onOpen()"
   >
     <div (mouseleave)="onMouseLeave()">
-      @for (tag of tags.recentTags$ | async; track tag.reference.id) {
+      @for (tag of recentTagsFirst(); track tag.reference.id) {
         <mat-option class="option" [value]="tag.name">{{ tag.name }}</mat-option>
       }
     </div>

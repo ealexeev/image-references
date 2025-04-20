@@ -342,14 +342,6 @@ export class ImageService {
     })
   }
 
-
-  /**
-   * Register a callback to use when tags are being applied, removed, etc.
-   */
-  RegisterTagUpdateCallback(func: TagUpdateCallback): void {
-    this.tagUpdateCallback = func;
-  }
-
   /**
    * Get a count of images associated with a particular tag.
    */
@@ -590,6 +582,4 @@ export class FakeImageService {
     }
     return ret
   }
-
-  RegisterTagUpdateCallback(func: TagUpdateCallback): void {}
 }

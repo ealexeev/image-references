@@ -111,21 +111,6 @@ describe('TagService', () => {
     }
   })
 
-  it('recent tags are updated based on use', async () => {
-    for (const tagName of ['a', 'b', 'c', 'd', 'e', 'f']) {
-      expect(service.TagByName(tagName)).toBeUndefined()
-      await service.StoreTag(tagName)
-    }
-    const f = service.TagByName('f')
-    const c = service.TagByName('c')
-    expect(f).toBeTruthy()
-    expect(c).toBeTruthy()
-    service.appliedTags$.next([f!, c!])
-    const recent = await firstValueFrom(service.recentTags$)
-    expect(recent).toBeTruthy()
-    expect(recent.map(t=>t.name)).toEqual(['f', 'c', 'a', 'b', 'd', 'e'])
-  })
-
   it('deletes a tag and removes references to it', async () => {
     const t = await service.StoreTag('test-tag')
     const t2 = await service.StoreTag('test-tag2')

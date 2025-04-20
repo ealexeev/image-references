@@ -1,6 +1,5 @@
 import {Component, EventEmitter, OnInit, Input, Output, ChangeDetectionStrategy, inject, signal, computed} from '@angular/core';
 import {MatSelectModule} from '@angular/material/select';
-import {AsyncPipe} from '@angular/common';
 import {FormControl, FormsModule, ReactiveFormsModule} from '@angular/forms';
 import {MatFormFieldModule} from '@angular/material/form-field';
 import {Tag, TagService} from '../tag.service';
@@ -11,7 +10,6 @@ import { toSignal } from '@angular/core/rxjs-interop';
   selector: 'app-tag-select',
   standalone: true,
   imports: [
-    AsyncPipe,
     MatSelectModule,
     MatFormFieldModule,
     FormsModule,

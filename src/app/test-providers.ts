@@ -79,7 +79,7 @@ export class DefaultProviders {
     {
       provide: FirestoreWrapperService,
       useValue: this.FirestoreWrapperService
-    }
+    },
    ] 
   }
 }

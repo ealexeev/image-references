@@ -1,19 +1,20 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { TagSelectComponent } from './tag-select.component';
-import {provideAnimations} from '@angular/platform-browser/animations';
-import {FakeTagService, Tag, TagService} from '../tag.service';
-import { getDefaultProviders } from '../test-providers';
+import {NoopAnimationsModule} from '@angular/platform-browser/animations';
+import { DefaultProviders } from '../test-providers';
 
 describe('TagSelectComponent', () => {
+  let providers: DefaultProviders;
   let component: TagSelectComponent;
   let fixture: ComponentFixture<TagSelectComponent>;
 
 
   beforeEach(async () => {
+    providers = new DefaultProviders();
     await TestBed.configureTestingModule({
-      imports: [TagSelectComponent],
-      providers: getDefaultProviders(),
+      imports: [TagSelectComponent, NoopAnimationsModule],
+      providers: providers.getProviders(),
     })
     .compileComponents();
 

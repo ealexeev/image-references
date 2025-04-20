@@ -1,7 +1,29 @@
 import {Auth, connectAuthEmulator, getAuth} from '@angular/fire/auth';
-import {connectFirestoreEmulator, Firestore, getFirestore} from '@angular/fire/firestore';
+import {connectFirestoreEmulator, Firestore, getFirestore, provideFirestore} from '@angular/fire/firestore';
 import {WritableSignal} from '@angular/core';
-import {connectStorageEmulator, getStorage} from '@angular/fire/storage';
+import {connectStorageEmulator, getStorage, provideStorage} from '@angular/fire/storage';
+import { provideFirebaseApp, initializeApp } from '@angular/fire/app';
+import { environment } from './environments/environment.prod';
+import { FakeImageService, ImageService } from './image.service';
+import { FakeTagService, TagService } from './tag.service';
+import { MessageService } from './message.service';
+
+// Get default providers commonly needed for testing.
+export function getDefaultProviders() {
+  return [
+    provideFirebaseApp(() => initializeApp(environment)),
+    provideFirestore(() => EmulatedFirestore()),
+    provideStorage(() => EmulatedStorage()),
+    {provide: ImageService, useClass: FakeImageService},
+    {provide: TagService, useClass: FakeTagService},
+    {provide: MessageService, useClass: MockMessageService},
+  ]
+}
+
+export class MockMessageService {
+  Info = jasmine.createSpy('Info');
+  Error = jasmine.createSpy('Error');
+}
 
 export function EmulatedAuth(connected: WritableSignal<boolean>): Auth {
   const auth = getAuth()

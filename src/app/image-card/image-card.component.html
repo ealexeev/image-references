@@ -1,4 +1,4 @@
-<mat-card class="image-card" appSelectable="selected()" (selectedChange)="onSelectedChange($event)" [class.selected]="selected()">
+<mat-card class="image-card" appSelectable (selectedChange)="onSelectedChange($event)">
   @defer ( when (thumbnailUrl().length > 0) ){
     <img mat-card-image [src]="thumbnailUrl()" alt="Image" draggable="false">
   }

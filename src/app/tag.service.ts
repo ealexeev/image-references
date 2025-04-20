@@ -270,10 +270,12 @@ export class FakeTagService {
   private lastRecentlyUsed$ = new BehaviorSubject<Tag[]>([])
 
   // Fake tags on which all operations will be carried out.
-  private tags: Tag[]
-
-  constructor(tags: Tag[]) {
-    this.tags = tags;
+  private tags: Tag[] = [
+    {name: 'tag-1', reference: {id: '1', path: 'tags/1'}} as Tag,
+    {name: 'tag-2', reference: {id: '2', path: 'tags/2'}} as Tag,
+    {name: 'tag-3', reference: {id: '3', path: 'tags/3'}} as Tag,
+  ]
+  constructor() {
     this.recentTags$ = this.appliedTags$.pipe(
       withLatestFrom(this.lastRecentlyUsed$.pipe(startWith([])), this.tags$),
       map(([applied, lastEmission, stored]) => {

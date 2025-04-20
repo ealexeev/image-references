@@ -19,7 +19,7 @@ describe('AppComponent', () => {
 
   beforeEach(async () => {
     encryptionService = jasmine.createSpyObj('EncryptionService', ['Enable']);
-    tagService = new FakeTagService([]);
+    tagService = new FakeTagService();
     imageService = new FakeImageService();
 
     await TestBed.configureTestingModule({

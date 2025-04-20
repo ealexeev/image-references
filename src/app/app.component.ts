@@ -36,7 +36,7 @@ import {TagService} from './tag.service';
 export class AppComponent implements OnInit {
   readonly auth = inject(Auth);
   readonly dialog = inject(MatDialog);
-  readonly encryption: EncryptionService = inject(EncryptionService);
+  readonly encryption = inject(EncryptionService);
   readonly tagService = inject(TagService);
   readonly imageService = inject(ImageService);
   readonly router = inject(Router);

@@ -10,7 +10,7 @@ import { MessageService } from './message.service';
 import { FirestoreWrapperService } from './firestore-wrapper.service';
 import { StorageWrapperService } from './storage-wrapper.service';
 import { FakeEncryptionService, EncryptionService } from './encryption.service';
-
+import { ImageConversionService } from './image-conversion.service';
 
 // Get default providers commonly needed for testing.
 export function getDefaultProviders() {
@@ -56,6 +56,15 @@ export function EmulatedStorage() {
 export class DefaultProviders {
   EncryptionService = new FakeEncryptionService() as unknown as EncryptionService;
   ImageService = new FakeImageService() as unknown as ImageService;
+  ImageConversionService = jasmine.createSpyObj<ImageConversionService>(
+    'ImageConversionService', 
+    [
+      'snapshotToImageData', 
+      'snapshotToImage',
+      'imageConverter', 
+      'imageToFirestore', 
+    ]);
+
   TagService = new FakeTagService() as unknown as TagService;
   MessageService = jasmine.createSpyObj<MessageService>('MessageService', ['Info', 'Error']);
   FirestoreWrapperService = jasmine.createSpyObj<FirestoreWrapperService>(
@@ -65,7 +74,14 @@ export class DefaultProviders {
       'arrayUnion', 
       'arrayRemove', 
       'doc', 
-      'getDoc'
+      'getDoc',
+      'collection',
+      'onSnapshot',
+      'onCollectionSnapshot',
+      'orderBy',
+      'query',
+      'where',
+      'limit'
     ],
     ['instance']
   );
@@ -111,6 +127,10 @@ export class DefaultProviders {
       provide: FirestoreWrapperService,
       useValue: this.FirestoreWrapperService
     },
+    {
+      provide: ImageConversionService,
+      useValue: this.ImageConversionService
+    }
    ] 
   }
 }

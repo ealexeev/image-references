@@ -8,7 +8,20 @@ import {
   doc,
   getDoc,
   DocumentSnapshot,
-  DocumentData
+  DocumentData,
+  collection,
+  CollectionReference,
+  onSnapshot,
+  Query,
+  QueryConstraint,
+  orderBy,
+  OrderByDirection,
+  query,
+  where,
+  WhereFilterOp,
+  limit,
+  Unsubscribe,
+  QuerySnapshot
 } from '@angular/fire/firestore';
 
 @Injectable({ providedIn: 'root' })
@@ -47,6 +60,56 @@ export class FirestoreWrapperService {
    */
   arrayRemove(...elements: any[]): any {
     return arrayRemove(...elements);
+  }
+
+  /**
+   * Proxy for Firestore's collection
+   */
+  collection<T = DocumentData>(firestore: Firestore, path: string): CollectionReference<T> {
+    return collection(firestore, path) as CollectionReference<T>;
+  }
+
+  /**
+   * Proxy for Firestore's onSnapshot
+   */
+  onSnapshot<T>(ref: DocumentReference<T>, observer: {
+    next?: (snapshot: DocumentSnapshot<T>) => void;
+    error?: (error: Error) => void;
+    complete?: () => void;
+  }): Unsubscribe {
+    return onSnapshot(ref, observer);
+  }
+
+  onCollectionSnapshot<T>(ref: Query<T>, callback: (snapshot: QuerySnapshot<T>) => void): Unsubscribe {
+    return onSnapshot(ref, callback);
+  }
+
+  /**
+   * Proxy for Firestore's orderBy
+   */
+  orderBy(fieldPath: string, directionStr?: OrderByDirection): QueryConstraint {
+    return orderBy(fieldPath, directionStr);
+  }
+
+  /**
+   * Proxy for Firestore's query
+   */
+  query<T>(q: Query<T>, ...queryConstraints: QueryConstraint[]): Query<T> {
+    return query(q, ...queryConstraints);
+  }
+
+  /**
+   * Proxy for Firestore's where
+   */
+  where(fieldPath: string, opStr: WhereFilterOp, value: unknown): QueryConstraint {
+    return where(fieldPath, opStr, value);
+  }
+
+  /**
+   * Proxy for Firestore's limit
+   */
+  limit(n: number): QueryConstraint {
+    return limit(n);
   }
 }
 

@@ -98,6 +98,8 @@ export class ImageService {
 
   /**
    * Remove the specified tags from the specified image.
+   * @param {DocumentReference} iRef - Image reference
+   * @param {DocumentReference[]} tags - Tags to remove
    */
   async RemoveTags(iRef: DocumentReference, tags: DocumentReference[]): Promise<void> {
     return updateDoc(iRef, {tags: arrayRemove(...tags)})

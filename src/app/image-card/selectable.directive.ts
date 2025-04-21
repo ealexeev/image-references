@@ -1,4 +1,4 @@
-import { Directive, effect, EventEmitter, HostBinding, HostListener, inject, Input, Output, signal } from '@angular/core';
+import { computed, Directive, effect, EventEmitter, HostBinding, HostListener, inject, Input, Output, signal } from '@angular/core';
 import { ImageTagService, ImageTagOperation } from '../image-tag.service';
 import { Image } from '../../lib/models/image.model';
 
@@ -15,8 +15,7 @@ export class SelectableDirective {
 
   private imageTagService = inject(ImageTagService);
   private selected = signal(false);
-  private lastOperation: ImageTagOperation | undefined = undefined;
-  private selectedTime: Date | undefined = undefined;
+  private selectedTime = computed(() => this.selected() ? new Date() : null);
 
   @HostListener('click', ['$event'])
   onClick(event: MouseEvent) {
@@ -28,16 +27,14 @@ export class SelectableDirective {
   constructor() {
     effect(() => this.selectedChange.emit(this.selected()));
     effect(() => {
-      if (this.selected()) {
-        this.selectedTime = new Date();
+      if (!this.selected()) {
+        return;
       }
-    })
-    effect(() => {
       const recent = this.imageTagService.recentOperations();
       if ( recent.length === 0 ) {
         return;
       }
-      if ( this.selected() && recent[0].timestamp > this.selectedTime! ) {
+      if (recent[0].timestamp > (this.selectedTime() ?? new Date() )) {
         this.imageTagService.performOperation(this.imageSource.reference, recent[0]);
         this.selected.set(false);
       }

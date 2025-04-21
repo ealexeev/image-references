@@ -33,9 +33,17 @@ export class TagSelectComponent implements OnInit{
   private tags: Tag[] = [];
 
   recentTagsFirst = computed(() => {
-    const byId: Map<string, Tag> = new Map(this.allTags()!.map(t=> [t.reference.id, t]));
-    const idsInOrderOfUse: Array<string> = [];
     const recent = this.imageTagService.recentOperations();
+
+    const byId: Map<string, Tag> = new Map(this.allTags()!.map(t=> [t.reference.id, t]));
+    const byName: Map<string, Tag> = new Map(this.allTags()!.map(t=> [t.name, t]));
+    
+    const idsInOrderOfUse: Array<string> = [];
+
+    this.selected.value.forEach(name => {
+      idsInOrderOfUse.push(byName.get(name)!.reference.id);
+    }); 
+    
     recent.forEach(op => {
       if (op.tags.length > 0) {
         for (const tag of op.tags) {

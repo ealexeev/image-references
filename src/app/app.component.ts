@@ -13,6 +13,7 @@ import {MatTooltipModule} from '@angular/material/tooltip';
 import {MatButtonToggleModule} from '@angular/material/button-toggle';
 import {ImageService} from './image.service';
 import {TagService} from './tag.service';
+import { ImageTagService } from './image-tag.service';
 
 @Component({
   selector: 'app-root',
@@ -36,14 +37,12 @@ import {TagService} from './tag.service';
 export class AppComponent implements OnInit {
   readonly auth = inject(Auth);
   readonly dialog = inject(MatDialog);
-  readonly encryption: EncryptionService = inject(EncryptionService);
+  readonly encryption = inject(EncryptionService);
   readonly tagService = inject(TagService);
   readonly imageService = inject(ImageService);
+  readonly imageTagService = inject(ImageTagService);
   readonly router = inject(Router);
 
-  constructor() {
-    this.imageService.RegisterTagUpdateCallback(this.tagService.RecordTagUsage)
-  }
 
   ngOnInit() {
     this.encryption.Enable('***REDACTED***')

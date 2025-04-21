@@ -1,15 +1,15 @@
-import {Component, EventEmitter, OnInit, Input, Output, ChangeDetectionStrategy, inject} from '@angular/core';
+import {Component, EventEmitter, OnInit, Input, Output, ChangeDetectionStrategy, inject, signal, computed} from '@angular/core';
 import {MatSelectModule} from '@angular/material/select';
-import {AsyncPipe} from '@angular/common';
 import {FormControl, FormsModule, ReactiveFormsModule} from '@angular/forms';
 import {MatFormFieldModule} from '@angular/material/form-field';
-import {TagService} from '../tag.service';
+import {Tag, TagService} from '../tag.service';
+import { ImageTagService } from '../image-tag.service';
+import { toSignal } from '@angular/core/rxjs-interop';
 
 @Component({
   selector: 'app-tag-select',
   standalone: true,
   imports: [
-    AsyncPipe,
     MatSelectModule,
     MatFormFieldModule,
     FormsModule,
@@ -25,7 +25,26 @@ export class TagSelectComponent implements OnInit{
   @Output() opened: EventEmitter<void> = new EventEmitter();
 
   selected: FormControl<string[]> = new FormControl();
-  tags: TagService = inject(TagService);
+  tagService: TagService = inject(TagService);
+  imageTagService = inject(ImageTagService);
+  allTags = toSignal(this.tagService.tags$);
+  allTagsSorted = computed(()=> this.allTags()!.sort((a, b)=>a.name.localeCompare(b.name)));
+  recentTagsFirst = computed(() => {
+    const byId: Map<string, Tag> = new Map(this.allTagsSorted()!.map(t=> [t.reference.id, t]));
+    const idsInOrderOfUse: Array<string> = [];
+    const recent = this.imageTagService.recentOperations().reverse();
+    recent.forEach(op => {
+      if (op.tags.length > 0) {
+        for (const tag of op.tags) {
+          if ( !idsInOrderOfUse.includes(tag.reference.id) ) {
+            idsInOrderOfUse.push(tag.reference.id)
+          }
+        }
+      }
+    });
+    idsInOrderOfUse.push(...this.allTagsSorted()!.filter(t=>!idsInOrderOfUse.includes(t.reference.id)).map(t=>t.reference.id));
+    return idsInOrderOfUse.map(id=>byId.get(id)!);
+  });
 
   ngOnInit() {
     this.selected.setValue(this.selectedTags, {emitEvent:false});

@@ -1,10 +1,10 @@
 import {inject, Injectable, signal, WritableSignal} from '@angular/core';
-import {doc, Firestore, getDoc} from '@angular/fire/firestore';
-import {getMetadata, ref, Storage} from '@angular/fire/storage';
 import {ImageFetchStrategy} from './download.service';
 import {bufferCount, concatMap, defer, filter, from, map, mergeMap, Observable, of, skip, Subject, toArray} from 'rxjs';
 import {Image} from '../lib/models/image.model';
 import {fromPromise} from 'rxjs/internal/observable/innerFrom';
+import { FirestoreWrapperService } from './firestore-wrapper.service';
+import { StorageWrapperService } from './storage-wrapper.service';
 
 export enum ImageState {
   // No parts of the image exist in any storage system
@@ -44,8 +44,8 @@ export type ImageReport = {
 })
 export class IntegrityService {
 
-  private firestore: Firestore = inject(Firestore);
-  private storage: Storage = inject(Storage);
+  private firestoreWrapper = inject(FirestoreWrapperService);
+  private storageWrapper = inject(StorageWrapperService);
 
   busy: WritableSignal<boolean> = signal(false);
   completed: WritableSignal<boolean> = signal(false);
@@ -129,18 +129,19 @@ export class IntegrityService {
   }
 
   async checkImageExists(imageId: string): Promise<boolean> {
-    const snap = await getDoc(doc(this.firestore, 'images', imageId))
+    const snap = await this.firestoreWrapper.getDoc(this.firestoreWrapper.doc(this.firestoreWrapper.instance, 'images', imageId))
     return snap.exists();
   }
 
   async checkImageDataExists(imageId: string): Promise<boolean> {
-    const snap = await getDoc(doc(this.firestore, 'images', imageId, 'data', 'thumbnail'))
+    const snap = await this.firestoreWrapper.getDoc(this.firestoreWrapper.doc(this.firestoreWrapper.instance, 'images', imageId, 'data', 'thumbnail'))
     return snap.exists();
   }
 
   async checkCloudBlobExists(imageId: string): Promise<boolean> {
     try {
-      const meta = await getMetadata(ref(this.storage, `data/${imageId}`));
+      const storageRef = this.storageWrapper.ref(this.storageWrapper.instance, `data/${imageId}`);
+      const meta = await this.storageWrapper.getMetadata(storageRef);
       return true;
     } catch (err: unknown) {
       console.log(`getMetadata(data/${imageId}): ${err}`)

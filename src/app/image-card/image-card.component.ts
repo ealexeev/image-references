@@ -23,6 +23,8 @@ import {MatTooltipModule} from '@angular/material/tooltip';
 import {Router} from '@angular/router';
 import {ConfirmationDialogComponent} from '../confirmation-dialog/confirmation-dialog.component';
 import {DownloadService} from '../download.service';
+import {SelectableDirective} from './selectable.directive';
+import { ImageTagService } from '../image-tag.service';
 
 @Component({
   selector: 'app-image-card',
@@ -35,6 +37,7 @@ import {DownloadService} from '../download.service';
     MatIconModule,
     TagSelectComponent,
     MatTooltipModule,
+    SelectableDirective,
   ],
   templateUrl: './image-card.component.html',
   styleUrls: [
@@ -52,6 +55,7 @@ export class ImageCardComponent implements OnInit, OnDestroy{
 
   protected imageService = inject(ImageService);
   private tagService = inject(TagService);
+  protected imageTagService = inject(ImageTagService);
   private download: DownloadService = inject(DownloadService);
   private messages = inject(MessageService);
   private router: Router = inject(Router);
@@ -65,7 +69,7 @@ export class ImageCardComponent implements OnInit, OnDestroy{
   thumbnailUrl: WritableSignal<string> = signal('');
   fullUrlAvailable: WritableSignal<Boolean> = signal(false);
   fetchFull: any; /// ()=>Promise<Blob>;
-  lastTagsText: WritableSignal<string> = signal('');
+  lastOpText = signal('');
   loaded = signal(false);
 
   private unsubscribe: () => void = () => {return};
@@ -73,13 +77,15 @@ export class ImageCardComponent implements OnInit, OnDestroy{
 
   constructor() {
     effect(async () => {
-        const lastRefs = this.imageService.lastTagsAdded()
-        Promise.all(lastRefs.map(r => this.tagService.LoadTagByReference(r)))
-          .then((tags: { name: string }[]) => tags.map(tag => tag.name))
-          .then((names: string[]) => this.lastTagsText.set(names.join("\n")))
-      }
-    )
-    effect(()=>{
+        const recentOps = this.imageTagService.recentOperations();
+        if (recentOps.length < 1) {
+          return;
+        }
+        const lastOp = recentOps[0];
+        this.lastOpText.set(lastOp.type + '\n' + lastOp.tags.map(t => `- ${t.name}`).join('\n'));
+
+    }, { allowSignalWrites: true})
+  effect(()=>{
       if (this.loaded()) {
         this.loadComplete.emit()
       }
@@ -171,15 +177,15 @@ export class ImageCardComponent implements OnInit, OnDestroy{
   }
 
   onAddLast() {
-    this.imageService.AddLastTags(this.imageSource.reference)
-      .catch((err: unknown) => {this.messages.Error(`Error adding last tags: ${err}`)})
+    this.imageTagService.performLastOperation(this.imageSource.reference)
+      .catch((err: unknown) => {this.messages.Error(`Error performing last operation: ${err}`)})
   }
 
 
   async onSelectionChange(tags: string[]) {
     this.showTagSelection.set(false);
     Promise.all(tags.map(name => this.tagService.LoadTagByName(name)))
-      .then(tags => {this.imageService.ReplaceTags(this.imageSource.reference, tags.map(t=>t.reference))})
+      .then(tags => {this.imageTagService.replaceTags(this.imageSource.reference, tags)})
       .catch(e=>this.messages.Error(`Error updating tags on image ${this.imageSource.reference}: ${e}`))
   }
 

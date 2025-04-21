@@ -1,27 +1,23 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-
 import { TagListComponent } from './tag-list.component';
-import {provideAnimations} from '@angular/platform-browser/animations';
-import {FakeTagService, TagService} from '../tag.service';
-import {DocumentReference} from '@angular/fire/firestore';
+import { DefaultProviders } from '../test-providers';
+import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 
 describe('TagListComponent', () => {
+  let providers: DefaultProviders;
   let component: TagListComponent;
   let fixture: ComponentFixture<TagListComponent>;
-  let tagService: FakeTagService
 
   beforeEach(async () => {
-    tagService = new FakeTagService([
-      {name: 'tag-1', reference: {id: "1"} as DocumentReference},
-      {name: 'tag-2', reference: {id: "2"} as DocumentReference},
-    ])
-
+    providers = new DefaultProviders();
     await TestBed.configureTestingModule({
-      imports: [TagListComponent],
+      imports: [TagListComponent, NoopAnimationsModule],
       providers: [
-        {provide: TagService, useValue: tagService},
-        provideAnimations(),
-      ],
+        ...providers.getProviders(),
+        { provide: MatDialogRef, useValue: {} },
+        { provide: MAT_DIALOG_DATA, useValue: {} }
+      ]
     })
     .compileComponents();
 

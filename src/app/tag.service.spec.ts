@@ -15,7 +15,7 @@ import {
 } from '@angular/fire/firestore';
 import {EmulatedFirestore} from './test-providers';
 import {EncryptionService} from './encryption.service';
-import {firstValueFrom, Subject, takeUntil} from 'rxjs';
+import {Subject, takeUntil} from 'rxjs';
 
 describe('TagService', () => {
   let service: TagService;
@@ -109,21 +109,6 @@ describe('TagService', () => {
       expect(service.TagByName(tag.name)).toBeTruthy()
       expect(service.TagById(tag.reference.id)).toBeTruthy()
     }
-  })
-
-  it('recent tags are updated based on use', async () => {
-    for (const tagName of ['a', 'b', 'c', 'd', 'e', 'f']) {
-      expect(service.TagByName(tagName)).toBeUndefined()
-      await service.StoreTag(tagName)
-    }
-    const f = service.TagByName('f')
-    const c = service.TagByName('c')
-    expect(f).toBeTruthy()
-    expect(c).toBeTruthy()
-    service.appliedTags$.next([f!, c!])
-    const recent = await firstValueFrom(service.recentTags$)
-    expect(recent).toBeTruthy()
-    expect(recent.map(t=>t.name)).toEqual(['f', 'c', 'a', 'b', 'd', 'e'])
   })
 
   it('deletes a tag and removes references to it', async () => {

@@ -8,8 +8,8 @@ export const environment = {
   "firestoreUseLocal": true,
   "firebaseStorageUseLocal": true,
   "firebaseAuthUseLocal": true,
-  "authRequired": false,
+  "authRequired": true,
   "authorizedUids": [
-    "VLAi1x838xN7Kmep1KPrYFZw10sL",
+    "***REDACTED UID***",
   ],
 };

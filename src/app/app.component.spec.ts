@@ -10,16 +10,20 @@ import {EncryptionService} from './encryption.service';
 import {Router, RouterModule} from '@angular/router';
 import {FakeTagService, TagService} from './tag.service';
 import {FakeImageService, ImageService} from './image.service';
+import {DefaultProviders} from './test-providers';
+import { FirestoreWrapperService } from './firestore-wrapper.service';
 
 describe('AppComponent', () => {
   const connected = signal(false);
+  let providers: DefaultProviders;
   let encryptionService: any;
   let tagService: FakeTagService;
   let imageService: FakeImageService;
 
   beforeEach(async () => {
+    providers = new DefaultProviders();
     encryptionService = jasmine.createSpyObj('EncryptionService', ['Enable']);
-    tagService = new FakeTagService([]);
+    tagService = new FakeTagService();
     imageService = new FakeImageService();
 
     await TestBed.configureTestingModule({
@@ -38,6 +42,7 @@ describe('AppComponent', () => {
         {provide: EncryptionService, useValue: encryptionService},
         {provide: ImageService, useValue: imageService},
         {provide: TagService, useValue: tagService},
+        {provide: FirestoreWrapperService, useValue: providers.FirestoreWrapperService}
       ]
     }).compileComponents();
   });

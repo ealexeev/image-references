@@ -1,32 +1,24 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { TagSelectComponent } from './tag-select.component';
-import {provideAnimations} from '@angular/platform-browser/animations';
-import {FakeTagService, Tag, TagService} from '../tag.service';
-import {DocumentReference} from '@angular/fire/firestore';
+import {NoopAnimationsModule} from '@angular/platform-browser/animations';
+import { DefaultProviders } from '../test-providers';
 
 describe('TagSelectComponent', () => {
+  let providers: DefaultProviders;
   let component: TagSelectComponent;
   let fixture: ComponentFixture<TagSelectComponent>;
-  let tagService: FakeTagService;
-  const tags: Tag[] = [
-    {name: 'tag-1', reference: {id: "1"} as DocumentReference},
-    {name: 'tag-2', reference: {id: "2"} as DocumentReference},
-  ]
+
 
   beforeEach(async () => {
-    tagService = new FakeTagService(tags);
+    providers = new DefaultProviders();
     await TestBed.configureTestingModule({
-      imports: [TagSelectComponent],
-      providers: [
-        provideAnimations(),
-        { provide: TagService, useValue: tagService },
-      ]
+      imports: [TagSelectComponent, NoopAnimationsModule],
+      providers: providers.getProviders(),
     })
     .compileComponents();
 
     fixture = TestBed.createComponent(TagSelectComponent);
-    TestBed.inject(TagService);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });

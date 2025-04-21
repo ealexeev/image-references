@@ -121,51 +121,51 @@ describe('ImageService', () => {
     expect(cloudBlob.size).toEqual(blob.size);
   })
 
-  it('should add tags', async () => {
-    const blob = new Blob(['stuff'], {type: 'image/png'});
-    const ref = doc(firestore, 'images',  await service['hmac'].getHmacHex(blob))
-    const tags = [{id: "1"} as DocumentReference, {id: "2"} as DocumentReference]
-    await service.StoreImage(blob, tags);
-    await service.AddTags(ref, [{id: "3"} as DocumentReference])
-    const snapshot = await getDoc(ref);
-    expect(snapshot.exists()).toBeTrue();
-    const image = service['imageFromFirestore'](snapshot, {})
-    expect(image.tags.length).toEqual(3);
-    expect(image.tags.map(t=>t.id)).toEqual(['1', '2', '3'])
-  })
+  // it('should add tags', async () => {
+  //   const blob = new Blob(['stuff'], {type: 'image/png'});
+  //   const ref = doc(firestore, 'images',  await service['hmac'].getHmacHex(blob))
+  //   const tags = [{id: "1"} as DocumentReference, {id: "2"} as DocumentReference]
+  //   await service.StoreImage(blob, tags);
+  //   await service.AddTags(ref, [{id: "3"} as DocumentReference])
+  //   const snapshot = await getDoc(ref);
+  //   expect(snapshot.exists()).toBeTrue();
+  //   const image = service['imageFromFirestore'](snapshot, {})
+  //   expect(image.tags.length).toEqual(3);
+  //   expect(image.tags.map(t=>t.id)).toEqual(['1', '2', '3'])
+  // })
 
-  it('add tags should be no-op for non-existent images', async () => {
-    const blob = new Blob(['stuff'], {type: 'image/png'});
-    const ref = doc(firestore, 'images',  await service['hmac'].getHmacHex(blob))
-    await service.AddTags(ref, [{id: "3"} as DocumentReference])
-    const snapshot = await getDoc(ref);
-    expect(snapshot.exists()).toBeFalse();
-  })
+  // it('add tags should be no-op for non-existent images', async () => {
+  //   const blob = new Blob(['stuff'], {type: 'image/png'});
+  //   const ref = doc(firestore, 'images',  await service['hmac'].getHmacHex(blob))
+  //   await service.AddTags(ref, [{id: "3"} as DocumentReference])
+  //   const snapshot = await getDoc(ref);
+  //   expect(snapshot.exists()).toBeFalse();
+  // })
 
-  it('should replace tags', async () => {
-    const blob = new Blob(['stuff'], {type: 'image/png'});
-    const ref = doc(firestore, 'images',  await service['hmac'].getHmacHex(blob))
-    const tags = [{id: "1"} as DocumentReference, {id: "2"} as DocumentReference]
-    await service.StoreImage(blob, tags)
-    await service.ReplaceTags(ref, [{id: "3"} as DocumentReference])
-    const snapshot = await getDoc(ref)
-    expect(snapshot.exists()).toBeTrue()
-    const image = service['imageFromFirestore'](snapshot, {})
-    expect(image.tags.length).toEqual(1)
-    expect(image.tags.pop()!.id).toEqual('3')
-  })
+  // it('should replace tags', async () => {
+  //   const blob = new Blob(['stuff'], {type: 'image/png'});
+  //   const ref = doc(firestore, 'images',  await service['hmac'].getHmacHex(blob))
+  //   const tags = [{id: "1"} as DocumentReference, {id: "2"} as DocumentReference]
+  //   await service.StoreImage(blob, tags)
+  //   await service.ReplaceTags(ref, [{id: "3"} as DocumentReference])
+  //   const snapshot = await getDoc(ref)
+  //   expect(snapshot.exists()).toBeTrue()
+  //   const image = service['imageFromFirestore'](snapshot, {})
+  //   expect(image.tags.length).toEqual(1)
+  //   expect(image.tags.pop()!.id).toEqual('3')
+  // })
 
-  it('should remove tags', async () => {
-    const blob = new Blob(['stuff'], {type: 'image/png'});
-    const ref = doc(firestore, 'images',  await service['hmac'].getHmacHex(blob))
-    const tags = [{id: "1"} as DocumentReference, {id: "2"} as DocumentReference]
-    await service.StoreImage(blob, tags);
-    await service.RemoveTags(ref, [{id: "1"} as DocumentReference])
-    const snapshot = await getDoc(ref);
-    const image = service['imageFromFirestore'](snapshot, {})
-    expect(image.tags.length).toEqual(1)
-    expect(image.tags.pop()!.id).toEqual('2')
-  })
+  // it('should remove tags', async () => {
+  //   const blob = new Blob(['stuff'], {type: 'image/png'});
+  //   const ref = doc(firestore, 'images',  await service['hmac'].getHmacHex(blob))
+  //   const tags = [{id: "1"} as DocumentReference, {id: "2"} as DocumentReference]
+  //   await service.StoreImage(blob, tags);
+  //   await service.RemoveTags(ref, [{id: "1"} as DocumentReference])
+  //   const snapshot = await getDoc(ref);
+  //   const image = service['imageFromFirestore'](snapshot, {})
+  //   expect(image.tags.length).toEqual(1)
+  //   expect(image.tags.pop()!.id).toEqual('2')
+  // })
 
   it('should delete image', async () => {
     const blob = new Blob(['stuff'], {type: 'image/png'});

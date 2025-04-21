@@ -16,6 +16,9 @@ export class ImageTagService {
   private _recentOperations: WritableSignal<ImageTagOperation[]> = signal([]);
   public readonly recentOperations = this._recentOperations.asReadonly();
 
+  private _recentTagIds: WritableSignal<string[]> = signal([]);
+  public readonly recentTagIds = this._recentTagIds.asReadonly();
+
   private message = inject(MessageService);
   private firestore = inject(FirestoreWrapperService);
 
@@ -91,10 +94,18 @@ export class ImageTagService {
    * Internal: logs an operation, maintaining a max of 5.
   */
   private logOperation(type: ImageTagOperationType, tags: Tag[]): void {
-    const updated = [
-      { type, tags, timestamp: new Date() },
-      ...this._recentOperations(),
-    ].slice(0, 5);
-    this._recentOperations.set(updated);
+    const operation: ImageTagOperation = {
+      type,
+      tags,
+      timestamp: new Date()
+    };
+    this._recentOperations.update(ops => [operation, ...ops]);
+    
+    // Update recentTagIds - move used tags to front, maintain uniqueness
+    this._recentTagIds.update(ids => {
+      const newIds = tags.map(t => t.reference.id);
+      const remainingIds = ids.filter(id => !newIds.includes(id));
+      return [...newIds, ...remainingIds];
+    });
   }
 }

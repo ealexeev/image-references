@@ -30,9 +30,9 @@ export class TagSelectComponent implements OnInit{
   allTags = toSignal(this.tagService.tags$);
   allTagsSorted = computed(()=> this.allTags()!.sort((a, b)=>a.name.localeCompare(b.name)));
   recentTagsFirst = computed(() => {
-    const byId: Map<string, Tag> = new Map(this.allTagsSorted()!.map(t=> [t.reference.id, t]));
+    const byId: Map<string, Tag> = new Map(this.allTags()!.map(t=> [t.reference.id, t]));
     const idsInOrderOfUse: Array<string> = [];
-    const recent = this.imageTagService.recentOperations().reverse();
+    const recent = this.imageTagService.recentOperations();
     recent.forEach(op => {
       if (op.tags.length > 0) {
         for (const tag of op.tags) {

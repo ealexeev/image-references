@@ -8,6 +8,7 @@ export type ImageTagOperationType = 'Add' | 'Replace' | 'Remove';
 export interface ImageTagOperation {
   type: ImageTagOperationType;
   tags: Tag[];
+  timestamp: Date;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -91,7 +92,7 @@ export class ImageTagService {
   */
   private logOperation(type: ImageTagOperationType, tags: Tag[]): void {
     const updated = [
-      { type, tags },
+      { type, tags, timestamp: new Date() },
       ...this._recentOperations(),
     ].slice(0, 5);
     this._recentOperations.set(updated);

@@ -16,6 +16,7 @@ export class SelectableDirective {
   private imageTagService = inject(ImageTagService);
   private selected = signal(false);
   private lastOperation: ImageTagOperation | undefined = undefined;
+  private selectedTime: Date | undefined = undefined;
 
   @HostListener('click', ['$event'])
   onClick(event: MouseEvent) {
@@ -27,25 +28,19 @@ export class SelectableDirective {
   constructor() {
     effect(() => this.selectedChange.emit(this.selected()));
     effect(() => {
+      if (this.selected()) {
+        this.selectedTime = new Date();
+      }
+    })
+    effect(() => {
       const recent = this.imageTagService.recentOperations();
       if ( recent.length === 0 ) {
         return;
       }
-      if ( !this.selected() ) {
-        this.lastOperation = recent[0];
-        return;
-      }
-      if (!this.equalOperations(this.lastOperation, recent[0])) {
+      if ( this.selected() && recent[0].timestamp > this.selectedTime! ) {
         this.imageTagService.performOperation(this.imageSource.reference, recent[0]);
         this.selected.set(false);
       }
     },  { allowSignalWrites: true })
-  }
-
-  private equalOperations(op1: ImageTagOperation | undefined, op2: ImageTagOperation | undefined): boolean {
-    if (!op1 || !op2) {
-      return op1 === op2;
-    }
-    return op1?.type === op2.type && op1?.tags.length == op2.tags.length && op1?.tags.every(t => op2.tags.map(t => t.reference.id).includes(t.reference.id));
   }
 }

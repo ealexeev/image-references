@@ -10,12 +10,18 @@ export class SelectableDirective {
   @Input({required: true}) imageSource!: Image;
   @Output() selectedChange = new EventEmitter<boolean>();
   @HostBinding('class.selected') get isSelected() {
-    return this.selected();
+    return this.ready();
   }
 
   private imageTagService = inject(ImageTagService);
   private selected = signal(false);
-  private selectedTime = computed(() => this.selected() ? new Date() : null);
+
+  state = computed(()=> ({
+    selected: this.selected(),
+    done: signal(false),
+  }))
+
+  ready = computed(() => this.state().selected && !this.state().done())
 
   @HostListener('click', ['$event'])
   onClick(event: MouseEvent) {
@@ -27,16 +33,10 @@ export class SelectableDirective {
   constructor() {
     effect(() => this.selectedChange.emit(this.selected()));
     effect(() => {
-      if (!this.selected()) {
-        return;
-      }
       const recent = this.imageTagService.recentOperations();
-      if ( recent.length === 0 ) {
-        return;
-      }
-      if (recent[0].timestamp > (this.selectedTime() ?? new Date() )) {
+      if (this.ready() && recent.length > 0) {
         this.imageTagService.performOperation(this.imageSource.reference, recent[0]);
-        this.selected.set(false);
+        this.state().done.set(true);
       }
     },  { allowSignalWrites: true })
   }

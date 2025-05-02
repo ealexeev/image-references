@@ -3,11 +3,11 @@
 $grid_gap: 20px;
 
 @keyframes flash-duplicate {
-  0%, 100% {
+  0% {
     background-color: transparent;
   }
-  50% {
-    background-color: rgba(theme.$btn-highlight-color, 0.1);
+  100% {
+    background-color: rgba(theme.$btn-highlight-color, 0.2);
   }
 }
 

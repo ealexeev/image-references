@@ -7,7 +7,7 @@ $grid_gap: 20px;
     background-color: transparent;
   }
   100% {
-    background-color: rgba(theme.$btn-highlight-color, 0.2);
+    background-color: rgba(theme.$text-color, 0.1);
   }
 }
 
@@ -22,7 +22,7 @@ $grid_gap: 20px;
   height: 100%;
 
   &.duplicate-detected {
-    animation: flash-duplicate 0.8s ease-in-out;
+    animation: flash-duplicate 0.6s ease-in-out;
   }
 
   .upload-progress {

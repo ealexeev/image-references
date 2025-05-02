@@ -19,6 +19,7 @@ export class SelectableDirective {
   state = computed(()=> ({
     selected: this.selected(),
     done: signal(false),
+    start: new Date(),
   }))
 
   ready = computed(() => this.state().selected && !this.state().done())
@@ -34,7 +35,7 @@ export class SelectableDirective {
     effect(() => this.selectedChange.emit(this.selected()));
     effect(() => {
       const recent = this.imageTagService.recentOperations();
-      if (this.ready() && recent.length > 0) {
+      if (this.ready() && recent.length > 0 && recent[0].timestamp > this.state().start) {
         this.imageTagService.performOperation(this.imageSource.reference, recent[0]);
         this.state().done.set(true);
       }

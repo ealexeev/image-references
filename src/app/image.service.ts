@@ -43,6 +43,8 @@ export class ImageService {
   private readonly cloudStorageRef = ref(this.storage, cloudDataPath)
   private tagUpdateCallback: TagUpdateCallback = (tags: DocumentReference[]): Promise<void> => {return Promise.resolve()};
 
+  duplicateImageDetected = signal(false);
+
   lastTagsAdded: WritableSignal<DocumentReference[]> = signal([]);
 
   constructor() {
@@ -126,6 +128,9 @@ export class ImageService {
     // This assumes brand new upload.  No inconsistencies.
     const snapshot = await getDoc(newImage.reference)
     if (snapshot.exists()) {
+      this.duplicateImageDetected.set(true);
+      setTimeout(() => this.duplicateImageDetected.set(false), 1500);
+      
       if (tags.length > 0) {
         return this.AddTags(newImage.reference, newImage.tags)
           .then(()=>{this.message.Info(`Added ${newImage.tags.length} to image ${shortenId(newImage.reference.id)})`)})

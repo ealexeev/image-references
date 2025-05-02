@@ -8,15 +8,12 @@ body {
     height: 100%;
 
 		.header {
-      padding: 2px;
 			flex: 0 0 auto;
 		}
 
 		.content {
-      padding: 2px;
 			flex: 1 1 auto;
       overflow-y: auto;
-
 		}
 	}
 

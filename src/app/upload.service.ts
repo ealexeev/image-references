@@ -32,6 +32,7 @@ export class UploadService implements OnDestroy {
 
   toUploadCount = signal(0);
   uploadedCount = signal(0);
+  duplicateUploadDetected = computed(()=> this.imageService.duplicateImageDetected());
   uploading = computed(()=> this.toUploadCount() > 0 && this.uploadedCount() < this.toUploadCount());
   uploadPercentage: Signal<string> = computed(()=> Math.floor(this.uploadedCount()/this.toUploadCount()*100).toString())
 

@@ -1,5 +1,5 @@
 <div class="dropzone" appDragDrop (files)="filesDropped($event)">
-  <div class="image-gallery" >
+  <div class="image-gallery" [class.duplicate-detected]="uploadService.duplicateUploadDetected()">
     <div class="header">
       <span class="text">{{ title() }}</span>
       @if (totalImageCount()) {

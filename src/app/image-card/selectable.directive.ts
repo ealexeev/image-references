@@ -40,5 +40,10 @@ export class SelectableDirective {
         this.state().done.set(true);
       }
     },  { allowSignalWrites: true })
+    effect(() => {
+      if (!this.ready()) {
+        this.selected.set(false);
+      }
+    }, { allowSignalWrites: true })
   }
 }

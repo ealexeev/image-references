@@ -1,6 +1,6 @@
 {
   "hosting": {
-    "public": "public",
+    "public": "dist/prestige-ape-references/browser",
     "ignore": [
       "firebase.json",
       "**/.*",

@@ -1,0 +1,50 @@
+@use '../../_variables' as theme;
+
+.messages-container {
+  padding: 1rem;
+
+  h2 {
+    margin-bottom: 1rem;
+    color: theme.$text-color;
+    font-family: "Inconsolata", monospace;
+    font-size: 1.5rem;
+  }
+}
+
+.message-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.message-item {
+  padding: 1rem;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  font-family: "Inconsolata", monospace;
+
+  &.error {
+    background-color: #fff5f5;
+    border-color: #fc8181;
+  }
+
+  &.info {
+    background-color: #ebf8ff;
+    border-color: #63b3ed;
+  }
+}
+
+.message-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.message-content {
+  font-size: 1rem;
+  line-height: 1.5;
+  color: #2d3748;
+}

@@ -221,7 +221,7 @@ export class ImageService {
         images.push(doc.data() as Image)
       })
       imagesObservable.next(images)
-      this.message.Info(`Tag ${shortenId(tagRef.id)} now has ${images.length} images`)
+      this.message.Info(`Fetched ${images.length} images for tag ${shortenId(tagRef.id)}`)
     })
 
     return {results$: imagesObservable, unsubscribe: () => { unsub(); imagesObservable.complete()}} as ImageSubscription<Image[]>;
@@ -269,7 +269,7 @@ export class ImageService {
         images.push(doc.data() as Image)
       })
       out$.next(images);
-      this.message.Info(`Fetched ${images.length} latest images`)
+      this.message.Info(`Fetched ${images.length} latest untagged images`)
     })
 
     return {results$: out$, unsubscribe: ()=>{unsub(); out$.complete()}} as ImageSubscription<Image[]>;

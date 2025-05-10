@@ -4,9 +4,15 @@ import {TagSelectComponent} from './tag-select/tag-select.component';
 import {ImageGalleryComponent} from './image-gallery/image-gallery.component';
 import {AuthenticatedGuard} from './authenticated.guard';
 import {AuthorizedGuard} from './authorized.guard';
-import {LoginFormComponent} from './login-form/login-form.component';
+import { LoginFormComponent } from './login-form/login-form.component';
+import { MessagesComponent } from './messages/messages.component';
 
 export const routes: Routes = [
+  {
+    path: 'messages',
+    component: MessagesComponent,
+    canActivate: [AuthenticatedGuard, AuthorizedGuard],
+  },
   {
     path: 'login',
     component: LoginFormComponent,

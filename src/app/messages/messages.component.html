@@ -1,0 +1,17 @@
+<div class="messages-container">
+  <h2>Messages</h2>
+  <div class="message-list">
+    @for (message of messageLog(); track $index) {
+      <div 
+         class="message-item" 
+         [class.error]="message.type === 'error'"
+         [class.info]="message.type === 'info'">
+      <div class="message-header">
+        <span class="timestamp">{{ message.timestamp | date:'medium' }}</span>
+        <span class="category">{{ message.type | titlecase }}</span>
+      </div>
+      <div class="message-content">{{ message.message }}</div>
+    </div>
+    }
+  </div>
+</div>

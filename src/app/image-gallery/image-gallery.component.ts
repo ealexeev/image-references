@@ -99,6 +99,7 @@ export class ImageGalleryComponent implements OnInit, OnDestroy, OnChanges {
 
     effect(()=> {
       const tagName = this.optTagName();
+      if (tagName === '') {return};
       this.tagService.LoadTagByName(tagName)
         .then(tag => {
           this.tag = tag

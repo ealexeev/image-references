@@ -22,6 +22,7 @@ import {
   withLatestFrom
 } from 'rxjs';
 import {HmacService} from './hmac.service';
+import { shortenId } from './common';
 
 export type Tag = {
   name: string,
@@ -195,7 +196,7 @@ export class TagService implements OnDestroy {
   async LoadTagByName(name: string): Promise<Tag> {
     const cached = this.TagByName(name);
     if ( cached !== undefined ) {
-      this.messageService.Info(`Fetched (cached) tag: ${name}`)
+      this.messageService.Info(`Fetched (cached) tag: ${name}, ${shortenId(cached.reference.id)}`)
       return cached
     }
     const tagRef = await this.GetTagReference(name)

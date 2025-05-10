@@ -11,6 +11,18 @@
                 matTooltip="There is at least one error in messages."
       />
     }
+    <button mat-icon-button
+            (click)="clearMessages()"
+            matTooltip="Clear messages"
+    >
+      <mat-icon aria-hidden="false" aria-label="Clear messages" fontIcon="delete"></mat-icon>
+    </button>
+    <button mat-icon-button
+            (click)="messageLog()"
+            matTooltip="Open messages log"
+    >
+      <mat-icon aria-hidden="false" aria-label="Latest message" fontIcon="list"></mat-icon>
+    </button>
   </div>
   <div class="message">
     @if ( messages.length ) {

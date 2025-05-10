@@ -5,6 +5,8 @@ import {Message, MessageService} from '../message.service';
 import {interval} from 'rxjs';
 import {MatTooltipModule} from '@angular/material/tooltip';
 import {AsyncPipe} from '@angular/common';
+import { Router } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 @Component({
   selector: 'app-status-bar',
@@ -22,6 +24,8 @@ import {AsyncPipe} from '@angular/common';
   ],
 })
 export class StatusBarComponent {
+  private router = inject(Router);
+
   // Max number of messages to keep in memory.
   @Input() max: number = 500;
 
@@ -40,16 +44,15 @@ export class StatusBarComponent {
   constructor() {
     this.msgCount = signal(this.messages.length);
     this.msgIndex = signal(0);
-    this.messageService.messages$.subscribe(
+    this.messageService.messages$.pipe(
+      takeUntilDestroyed()
+    ).subscribe(
       (message: Message) => {
-        if ( this.queue.length < this.max ) {
-          this.queue.unshift(message);
-        } else {
-          // console.error(`Status bar queue exceeds ${this.max}}`)
-        }
+        this.queue.push(message);
+        this.queue = this.queue.slice(-this.max).reverse();
       }
     )
-    interval(1000).subscribe(() => {
+    interval(500).subscribe(() => {
         const next = this.queue.pop()
         if (next) {
           this.messages.unshift(next)
@@ -72,5 +75,16 @@ export class StatusBarComponent {
 
   statusOk(): boolean {
     return this.messages.every((message) => message.type != 'error')
+  }
+
+  clearMessages() {
+    this.queue = [];
+    this.messages = [];
+    this.msgCount.set(0);
+    this.msgIndex.set(0);
+  }
+
+  messageLog() {
+    this.router.navigateByUrl('/messages')
   }
 }

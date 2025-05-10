@@ -1,6 +1,6 @@
 import {inject, Injectable, OnDestroy, Query, signal, WritableSignal} from '@angular/core';
 import { WindowRef } from './window-ref.service';
-import {BehaviorSubject, first, firstValueFrom, Observable, shareReplay, Subject, takeUntil, tap, timeout} from 'rxjs';
+import {BehaviorSubject, first, firstValueFrom, Observable, ReplaySubject, shareReplay, Subject, takeUntil, tap, timeout} from 'rxjs';
 import {
   addDoc,
   Bytes,
@@ -11,6 +11,7 @@ import {
   query, serverTimestamp, updateDoc
 } from '@angular/fire/firestore';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
+import { MessageService } from './message.service';
 
 
 const saltValues = [1, 3, 3, 7, 1, 3, 3, 7, 1, 3, 3, 7, 1, 3, 3, 7];
@@ -76,6 +77,7 @@ const ReadyStateDelay = 5000;
 export class EncryptionService implements OnDestroy {
   windowRef = inject(WindowRef);
   firestore = inject(Firestore);
+  messageService = inject(MessageService);
 
   // Whether encryption is desired.  Only if the service is enabled should its states be considered.
   enabled: WritableSignal<boolean> = signal(false);
@@ -84,25 +86,27 @@ export class EncryptionService implements OnDestroy {
   wrap_key: CryptoKey | null = null;
   encryption_key: LiveKey | null = null;
   readyStateChanged$: Subject<State> = new Subject<State>();
-  currentState$: Observable<State>;
-  error$: Subject<Error> = new Subject<Error>();
+  currentState$ = new ReplaySubject<State>(State.NotReady);
 
   constructor() {
     if ( !this.windowRef.nativeWindow?.crypto.subtle ) {
-      throw new ReferenceError("Could not get crypto reference!");
+      this.messageService.Error("Encryption service init error: Could not get crypto reference!");
+      this.readyStateChanged$.next(State.Error);
+      return;
     }
     this.subtle = this.windowRef!.nativeWindow!.crypto.subtle;
     this.crypto = this.windowRef!.nativeWindow!.crypto;
-    this.currentState$ = this.readyStateChanged$.pipe(shareReplay());
-    this.readyStateChanged$.next(State.NotReady)
     this.readyStateChanged$.pipe(
       takeUntilDestroyed(),
     ).subscribe(
-      state => {console.log(`EncryptionService state changed: ${state}`)}
+      state => {
+        this.messageService.Info(`EncryptionService state changed: ${state}`);
+        this.currentState$.next(state);
+      }
     )
   }
 
-  async Enable(passphrase: string) {
+  async Enable(passphrase: string): Promise<State> {
     this.readyStateChanged$.next(State.Initializing)
     this.enabled.set(true)
     await this.subtle!.importKey("raw", stringToArrayBuffer(passphrase), {name: "PBKDF2"}, false, ["deriveKey"])
@@ -112,24 +116,26 @@ export class EncryptionService implements OnDestroy {
     try {
       latest = await this.LoadLatestKey()
     } catch (err: unknown) {
-      this.error$.next(err as Error)
+      this.messageService.Error(err as Error)
       this.readyStateChanged$.next(State.Error)
       this.enabled.set(false)
-      return
+      return State.Error;
     }
     if ( latest ) {
       this.encryption_key = latest
       this.readyStateChanged$.next(State.Ready);
-      return;
+      return State.Ready;
     }
-    const key = await this.GenerateEncryptionKey()
-    const ref = await this.WrapKey(key).then(w=>this.StoreWrappedKey(w))
-    this.encryption_key = {
-      key: key,
-      reference: ref,
-      used: 0,
-    } as LiveKey
-    this.readyStateChanged$.next(State.Ready);
+    try {
+      this.encryption_key = await this.GenerateEncryptionKey();
+      this.readyStateChanged$.next(State.Ready);
+      return State.Ready;
+    } catch (err: unknown) {
+      this.messageService.Error(err as Error)
+      this.readyStateChanged$.next(State.Error)
+      this.enabled.set(false)
+      return State.Error;
+    }
   }
 
   // Used to undo "initialize" and make encryption/decryption impossible.
@@ -144,13 +150,28 @@ export class EncryptionService implements OnDestroy {
     this.Disable()
   }
 
-  // Ideally we make a wrapped copy right now and store it.
-  // We should also set this.encryption.key
-  async GenerateEncryptionKey(): Promise<CryptoKey> {
+  /**
+   * Generate a new encryption key and store it.  Errors out if wrap_key is not initialized.
+   * 
+   * @returns The new encryption key as LiveKey.
+   */
+  async GenerateEncryptionKey(): Promise<LiveKey> {
     if ( !this.wrap_key ) {
       return Promise.reject('Error generating key: wrapping key not initialized!');
     }
-    return this.subtle!.generateKey({ name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt'])
+    const key = await this.subtle!.generateKey({ name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt'])
+    let ref: DocumentReference;
+    try {
+      const wrapped = await this.WrapKey(key)
+      ref = await this.StoreWrappedKey(wrapped)
+    } catch (err: unknown) {
+      return Promise.reject(err)
+    }
+    return {
+      key: key,
+      reference: ref,
+      used: 0,
+    } as LiveKey
   }
 
   async WrapKey(key: CryptoKey): Promise<ArrayBuffer> {

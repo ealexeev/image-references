@@ -15,6 +15,7 @@ import {ImageService} from './image.service';
 import {TagService} from './tag.service';
 import { ImageTagService } from './image-tag.service';
 import { MessageService } from './message.service';
+import { toSignal } from '@angular/core/rxjs-interop';
 
 @Component({
   selector: 'app-root',
@@ -44,6 +45,7 @@ export class AppComponent implements OnInit {
   readonly imageTagService = inject(ImageTagService);
   readonly router = inject(Router);
   readonly messageService = inject(MessageService);
+  protected encryptionState = toSignal(this.encryption.currentState$);
 
   ngOnInit() {
     this.encryption.Enable('***REDACTED***')

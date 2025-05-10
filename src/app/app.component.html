@@ -23,10 +23,10 @@
         </mat-button-toggle-group>
         <span class="toolbar-spacer"></span>
         <span class="key-status">
-         @if ( (encryption.currentState$ | async) == EncryptionState.Ready ) {
+         @if ( encryptionState() == EncryptionState.Ready ) {
            <mat-icon fontIcon="lock_open"></mat-icon>
          } @else {
-           <button mat-icon-button class="key-status-button" (click)=encryption.debugme()>
+           <button mat-icon-button class="key-status-button">
             <mat-icon fontIcon="lock"></mat-icon>
           </button>
          }

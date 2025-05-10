@@ -109,23 +109,31 @@ export class EncryptionService implements OnDestroy {
   async Enable(passphrase: string): Promise<State> {
     this.readyStateChanged$.next(State.Initializing)
     this.enabled.set(true)
-    await this.subtle!.importKey("raw", stringToArrayBuffer(passphrase), {name: "PBKDF2"}, false, ["deriveKey"])
-      .then((static_passphrase: CryptoKey) => this.subtle!.deriveKey(pbkdf2Params, static_passphrase, aesKWParams, true, ['wrapKey', 'unwrapKey']))
-      .then((wrap_key: CryptoKey) => this.wrap_key = wrap_key)
-    let latest: LiveKey|null;
+    
     try {
-      latest = await this.LoadLatestKey()
+      const passKey = await this.subtle!.importKey("raw", stringToArrayBuffer(passphrase), {name: "PBKDF2"}, false, ["deriveKey"]);
+      this.wrap_key = await this.subtle!.deriveKey(pbkdf2Params, passKey, aesKWParams, true, ['wrapKey', 'unwrapKey']);
     } catch (err: unknown) {
       this.messageService.Error(err as Error)
       this.readyStateChanged$.next(State.Error)
       this.enabled.set(false)
       return State.Error;
     }
-    if ( latest ) {
-      this.encryption_key = latest
-      this.readyStateChanged$.next(State.Ready);
-      return State.Ready;
+
+    try {
+      const latest = await this.LoadLatestKey()
+      if ( latest ) {
+        this.encryption_key = latest
+        this.readyStateChanged$.next(State.Ready);
+        return State.Ready;
+      }
+    } catch (err: unknown) {
+      this.messageService.Error(err as Error)
+      this.readyStateChanged$.next(State.Error)
+      this.enabled.set(false)
+      return State.Error;
     }
+
     try {
       this.encryption_key = await this.GenerateEncryptionKey();
       this.readyStateChanged$.next(State.Ready);

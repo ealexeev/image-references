@@ -3,6 +3,7 @@ import { Tag } from './tag.service';
 import { DocumentReference } from '@angular/fire/firestore';
 import { FirestoreWrapperService } from './firestore-wrapper.service';
 import { MessageService } from './message.service';
+import { shortenId } from './common';
 
 export type ImageTagOperationType = 'Add' | 'Replace' | 'Remove';
 export interface ImageTagOperation {
@@ -32,7 +33,7 @@ export class ImageTagService {
       this.message.Error(`Error adding tags to image ${imageRef.id}: ${error}`);
       return;
     }
-    this.message.Info(`Added ${tags.length} tag(s) to image ${imageRef.id}`);
+    this.message.Info(`Added ${tags.length} tag(s) to image ${  shortenId(imageRef.id)}`);
     this.logOperation('Add', tags);
   }
 
@@ -46,7 +47,7 @@ export class ImageTagService {
       this.message.Error(`Error removing tags from image ${imageRef.id}: ${error}`);
       return;
     }
-    this.message.Info(`Removed ${tags.length} tag(s) from image ${imageRef.id}`);
+    this.message.Info(`Removed ${tags.length} tag(s) from image ${shortenId(imageRef.id)}`);
     this.logOperation('Remove', tags);
   }
 
@@ -60,7 +61,7 @@ export class ImageTagService {
       this.message.Error(`Error replacing tags on image ${imageRef.id}: ${error}`);
       return;
     }
-    this.message.Info(`Replaced tags on image ${imageRef.id} (${tags.length} tag(s))`);
+    this.message.Info(`Replaced ${tags.length} tag(s) on image ${shortenId(imageRef.id)}`);
     this.logOperation('Replace', tags);
   }
 

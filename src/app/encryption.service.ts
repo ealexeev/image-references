@@ -109,7 +109,7 @@ export class EncryptionService implements OnDestroy {
   async Enable(passphrase: string): Promise<State> {
     this.readyStateChanged$.next(State.Initializing)
     this.enabled.set(true)
-    
+
     try {
       const passKey = await this.subtle!.importKey("raw", stringToArrayBuffer(passphrase), {name: "PBKDF2"}, false, ["deriveKey"]);
       this.wrap_key = await this.subtle!.deriveKey(pbkdf2Params, passKey, aesKWParams, true, ['wrapKey', 'unwrapKey']);
@@ -293,11 +293,6 @@ export class EncryptionService implements OnDestroy {
         return Promise.reject(`EncryptionService not ready after ${timeoutMs}`);
       }
     }
-  }
-
-  // Delete in production.
-  debugme() {
-    console.log('Debug me called');
   }
 
   async forTestOnlyClearAllKeys() {

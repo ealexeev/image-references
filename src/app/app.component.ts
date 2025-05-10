@@ -1,13 +1,12 @@
 import {Component, inject, OnInit} from '@angular/core';
 import {Router, RouterLink, RouterLinkActive, RouterOutlet} from '@angular/router';
-import { Auth, User, signOut } from '@angular/fire/auth';
+import { Auth, signOut } from '@angular/fire/auth';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import {SetPreferencesComponent} from './set-preferences/set-preferences.component';
 import {EncryptionService, State as EncryptionState} from './encryption.service';
-import {AsyncPipe} from '@angular/common';
 import {StatusBarComponent} from './status-bar/status-bar.component';
 import {MatTooltipModule} from '@angular/material/tooltip';
 import {MatButtonToggleModule} from '@angular/material/button-toggle';
@@ -21,7 +20,6 @@ import { toSignal } from '@angular/core/rxjs-interop';
   selector: 'app-root',
   standalone: true,
   imports: [
-    AsyncPipe,
     SetPreferencesComponent,
     MatButtonModule,
     MatIconModule,

@@ -10,7 +10,11 @@
         <span class="timestamp">{{ message.timestamp | date:'medium' }}</span>
         <span class="category">{{ message.type | titlecase }}</span>
       </div>
-      <div class="message-content">{{ message.message }}</div>
+      <div class="message-content">
+        @if (message.count > 1) {
+          ({{ message.count }})
+        }
+        {{ message.message }}</div>
     </div>
     }
   </div>

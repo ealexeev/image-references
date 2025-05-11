@@ -1,13 +1,16 @@
-import { computed, Directive, effect, EventEmitter, HostBinding, HostListener, inject, Input, Output, signal } from '@angular/core';
+import { computed, Directive, effect, EventEmitter, HostBinding, HostListener, inject, Input, OnDestroy, OnInit, Output, signal } from '@angular/core';
 import { ImageTagService, ImageTagOperation } from '../image-tag.service';
 import { Image } from '../../lib/models/image.model';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Observable, of, Subject, takeUntil } from 'rxjs';
 
 @Directive({
   selector: '[appSelectable]',
   standalone: true,
 })
-export class SelectableDirective {
+export class SelectableDirective implements OnInit, OnDestroy {
   @Input({required: true}) imageSource!: Image;
+  @Input() deselect$: Observable<void> = of();
   @Output() selectedChange = new EventEmitter<boolean>();
   @HostBinding('class.selected') get isSelected() {
     return this.ready();
@@ -15,6 +18,7 @@ export class SelectableDirective {
 
   private imageTagService = inject(ImageTagService);
   private selected = signal(false);
+  private destroy$: Subject<void> = new Subject<void>();
 
   state = computed(()=> ({
     selected: this.selected(),
@@ -45,5 +49,16 @@ export class SelectableDirective {
         this.selected.set(false);
       }
     }, { allowSignalWrites: true })
+  }
+
+  ngOnInit() {
+    this.deselect$.pipe(
+      takeUntil(this.destroy$)
+    ).subscribe(()=>this.selected.set(false))
+  }
+
+  ngOnDestroy() {
+    this.destroy$.next()
+    this.destroy$.complete()
   }
 }

@@ -8,10 +8,10 @@ import {
   signal, ViewChildren,
   WritableSignal
 } from '@angular/core';
-import {concatMap, from, Subscription} from 'rxjs';
+import {concatMap, from, Subject, Subscription} from 'rxjs';
 import {PreferenceService} from '../preference-service';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
-import {ImageCardComponent} from '../image-card/image-card.component';
+import {ImageCardComponent, SelectionStatus} from '../image-card/image-card.component';
 import {DragDropDirective, FileHandle} from '../drag-drop.directive';
 import {MessageService} from '../message.service';
 import {Tag, TagService} from '../tag.service';
@@ -83,6 +83,7 @@ export class ImageGalleryComponent implements OnInit, OnDestroy, OnChanges {
   images: WritableSignal<Image[]> = signal([]);
   totalImageCount: WritableSignal<number> = signal(0);
   selectedCount: WritableSignal<number> = signal(0);
+  deselectAll$: Subject<void> = new Subject<void>();
 
   dbUnsubscribe: () => void = () => {
     return
@@ -274,8 +275,8 @@ export class ImageGalleryComponent implements OnInit, OnDestroy, OnChanges {
     })
   }
 
-  onSelectedChange(value: boolean) {
-    this.selectedCount.update(v=> v + (value ? 1 : -1) < 0 ? 0 : v + (value ? 1 : -1));
+  onSelectedChange(value: SelectionStatus) {
+    this.selectedCount.update(v=> v + (value.selected ? 1 : -1) < 0 ? 0 : v + (value.selected ? 1 : -1));
   }
 
 }

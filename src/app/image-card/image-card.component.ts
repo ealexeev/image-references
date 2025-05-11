@@ -18,13 +18,14 @@ import {TagService} from '../tag.service';
 import {MessageService} from '../message.service';
 import {ImageService} from '../image.service';
 import {Image, ImageData, ImageSubscription} from '../../lib/models/image.model';
-import {first, of, raceWith, Subject, take, takeUntil, timer} from 'rxjs';
+import {first, Observable, of, raceWith, Subject, take, takeUntil, timer} from 'rxjs';
 import {MatTooltipModule} from '@angular/material/tooltip';
 import {Router} from '@angular/router';
 import {ConfirmationDialogComponent} from '../confirmation-dialog/confirmation-dialog.component';
 import {DownloadService} from '../download.service';
 import {SelectableDirective} from './selectable.directive';
 import { ImageTagService } from '../image-tag.service';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 @Component({
   selector: 'app-image-card',
@@ -50,9 +51,10 @@ export class ImageCardComponent implements OnInit, OnDestroy{
   @Input({required: true}) imageSource!: Image;
   @Input() tagCountFrom: number = 2;
   @Input() loadImmediately: boolean = true;
+  @Input() deselect$: Observable<void> = of();
   @Output() imageDeleted = new EventEmitter<string>;
   @Output() loadComplete: EventEmitter<void> = new EventEmitter();
-  @Output() imageSelectedChange = new EventEmitter<boolean>();
+  @Output() imageSelectedChange = new EventEmitter<SelectionStatus>();
 
   protected imageService = inject(ImageService);
   private tagService = inject(TagService);
@@ -195,10 +197,15 @@ export class ImageCardComponent implements OnInit, OnDestroy{
   }
 
   updateSelected(selected: boolean) {
-    this.imageSelectedChange.emit(selected);
+    this.imageSelectedChange.emit({selected, reference: this.imageSource.reference.id});
   }
 }
 
 function extFromMime(mimeType: string): string {
   return mimeType.slice('image/'.length)
+}
+
+export interface SelectionStatus {
+  selected: boolean;
+  reference: string;
 }

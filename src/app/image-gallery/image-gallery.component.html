@@ -40,7 +40,8 @@
       </button>
       <button 
               class="select-count-button"
-              matTooltip="Number of selected images">
+              matTooltip="Number of selected images"
+              (click)="deselectAll$.next()">
         {{selectedCount()}}
       </button>
     </div>
@@ -57,6 +58,7 @@
                           [imageSource]=liveImage
                           [tagCountFrom]="mode === 'tag' ? 2 : 1"
                           [loadImmediately]="index < loadBudget || countLoading() < loadBudget"
+                          [deselect$]="deselectAll$"
                           (imageDeleted)="deleteImageOrTag($event)"
                           (loadComplete)="onLoadComplete()"
                           (imageSelectedChange)="onSelectedChange($event)"

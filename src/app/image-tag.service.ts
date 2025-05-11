@@ -28,6 +28,7 @@ export class ImageTagService {
   public addToScope$ = new Subject<DocumentReference>();
   public removeFromScope$ = new Subject<DocumentReference>();
   private additionalScope: Set<DocumentReference> = new Set();
+  public operationComplete$ = new Subject<DocumentReference[]>();
 
   constructor() {
     this.addToScope$.pipe(takeUntilDestroyed()).subscribe(ref => this.additionalScope.add(ref));
@@ -38,68 +39,57 @@ export class ImageTagService {
    * Add tags to an image document.
    */
   async addTags(imageRef: DocumentReference, tags: Tag[]): Promise<void> {
-    const imagesInScope = Array.from(this.additionalScope);
-    if (!imagesInScope.includes(imageRef)) {
-      imagesInScope.push(imageRef);
+    const scope = this.expandScope(imageRef);
+    for (const ref of scope) {
+      try {
+        await this.firestore.updateDoc(ref, { tags: this.firestore.arrayUnion(...tags.map(t => t.reference)) });
+      } catch (error) {
+        this.message.Error(`Error adding tags to image ${imageRef.id}: ${error}`);
+        continue;
+      }
+      this.message.Info(`Added ${tags.length} tag(s) to image ${  shortenId(imageRef.id)}`);
+      this.logOperation('Add', tags);
     }
-    for (const ref of imagesInScope) {
-      this._addTags(ref, tags);
-    }
-  }
-
-  async _addTags(imageRef: DocumentReference, tags: Tag[]): Promise<void> {
-    try {
-      await this.firestore.updateDoc(imageRef, { tags: this.firestore.arrayUnion(...tags.map(t => t.reference)) });
-    } catch (error) {
-      this.message.Error(`Error adding tags to image ${imageRef.id}: ${error}`);
-      return;
-    }
-    this.message.Info(`Added ${tags.length} tag(s) to image ${  shortenId(imageRef.id)}`);
-    this.logOperation('Add', tags);
+    this.operationComplete$.next(scope);
+      this.additionalScope.clear();
   }
 
   /**
    * Remove tags from an image document.
    */
   async removeTags(imageRef: DocumentReference, tags: Tag[]): Promise<void> {
-    const imagesInScope = Array.from(this.additionalScope);
-    imagesInScope.push(imageRef);
-    for (const ref of imagesInScope) {
-      this._removeTags(ref, tags);
+    const scope = this.expandScope(imageRef);
+    for (const ref of scope) {
+      try {
+        await this.firestore.updateDoc(ref, { tags: this.firestore.arrayRemove(...tags.map(t => t.reference)) });
+      } catch (error) {
+        this.message.Error(`Error removing tags from image ${imageRef.id}: ${error}`);
+        continue;
+      }
+      this.message.Info(`Removed ${tags.length} tag(s) from image ${shortenId(imageRef.id)}`);
+      this.logOperation('Remove', tags);
     }
-  }
-
-  async _removeTags(imageRef: DocumentReference, tags: Tag[]): Promise<void> {
-    try {
-      await this.firestore.updateDoc(imageRef, { tags: this.firestore.arrayRemove(...tags.map(t => t.reference)) });
-    } catch (error) {
-      this.message.Error(`Error removing tags from image ${imageRef.id}: ${error}`);
-      return;
-    }
-    this.message.Info(`Removed ${tags.length} tag(s) from image ${shortenId(imageRef.id)}`);
-    this.logOperation('Remove', tags);
+    this.operationComplete$.next(scope);
+    this.additionalScope.clear();
   }
 
   /**
    * Replace all tags on an image document.
    */
   async replaceTags(imageRef: DocumentReference, tags: Tag[]): Promise<void> {
-    const imagesInScope = Array.from(this.additionalScope);
-    imagesInScope.push(imageRef);
-    for (const ref of imagesInScope) {
-      this._replaceTags(ref, tags);
+    const scope = this.expandScope(imageRef);
+    for (const ref of scope) {
+      try {
+        await this.firestore.updateDoc(ref, { tags: tags.map(t => t.reference) });
+      } catch (error) {
+        this.message.Error(`Error replacing tags on image ${imageRef.id}: ${error}`);
+        continue;
+      }
+      this.message.Info(`Replaced ${tags.length} tag(s) on image ${shortenId(imageRef.id)}`);
+      this.logOperation('Replace', tags);
     }
-  }
-
-  async _replaceTags(imageRef: DocumentReference, tags: Tag[]): Promise<void> {
-    try {
-      await this.firestore.updateDoc(imageRef, { tags: tags.map(t => t.reference) });
-    } catch (error) {
-      this.message.Error(`Error replacing tags on image ${imageRef.id}: ${error}`);
-      return;
-    }
-    this.message.Info(`Replaced ${tags.length} tag(s) on image ${shortenId(imageRef.id)}`);
-    this.logOperation('Replace', tags);
+    this.operationComplete$.next(scope);
+    this.additionalScope.clear();
   }
 
   /**
@@ -145,5 +135,13 @@ export class ImageTagService {
       const remainingIds = ids.filter(id => !newIds.includes(id));
       return [...newIds, ...remainingIds];
     });
+  }
+
+  private expandScope(imageRef: DocumentReference): DocumentReference[] {
+    const imagesInScope = Array.from(this.additionalScope);
+    if (!imagesInScope.includes(imageRef)) {
+      imagesInScope.push(imageRef);
+    }
+    return imagesInScope;
   }
 }

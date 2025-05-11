@@ -74,6 +74,7 @@ export class ImageCardComponent implements OnInit, OnDestroy{
   fetchFull: any; /// ()=>Promise<Blob>;
   lastOpText = signal('');
   loaded = signal(false);
+  operationComplete = signal(false);
 
   private unsubscribe: () => void = () => {return};
   private destroy$: Subject<void> = new Subject<void>();
@@ -88,10 +89,10 @@ export class ImageCardComponent implements OnInit, OnDestroy{
         this.lastOpText.set(lastOp.type + '\n' + lastOp.tags.map(t => `- ${t.name}`).join('\n'));
 
     }, { allowSignalWrites: true})
-  effect(()=>{
-      if (this.loaded()) {
-        this.loadComplete.emit()
-      }
+    effect(()=>{
+        if (this.loaded()) {
+          this.loadComplete.emit()
+        }
     })
   }
 
@@ -100,6 +101,15 @@ export class ImageCardComponent implements OnInit, OnDestroy{
       this.startSubscriptions()
     }
     this.resolveTags();
+    this.imageTagService.operationComplete$.pipe(
+      takeUntil(this.destroy$)
+    ).subscribe(scope=>{
+      if (scope.filter(ref=>ref.id==this.imageSource.reference.id).length>0) {
+          this.deselect$.next()
+          this.operationComplete.set(true);
+          setTimeout(()=>this.operationComplete.set(false), 3000);
+      }
+    })
   }
 
   ngOnDestroy(): void{
@@ -188,7 +198,6 @@ export class ImageCardComponent implements OnInit, OnDestroy{
     this.showTagSelection.set(false);
     Promise.all(tags.map(name => this.tagService.LoadTagByName(name)))
       .then(tags => this.imageTagService.replaceTags(this.imageSource.reference, tags))
-      .then(()=>this.deselect$.next())
       .catch(e=>this.messages.Error(`Error updating tags on image ${this.imageSource.reference}: ${e}`))
   }
 

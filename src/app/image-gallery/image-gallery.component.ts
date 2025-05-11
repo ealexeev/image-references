@@ -82,6 +82,7 @@ export class ImageGalleryComponent implements OnInit, OnDestroy, OnChanges {
   optTagName: WritableSignal<string> = signal('');
   images: WritableSignal<Image[]> = signal([]);
   totalImageCount: WritableSignal<number> = signal(0);
+  selectedCount: WritableSignal<number> = signal(0);
 
   dbUnsubscribe: () => void = () => {
     return
@@ -271,6 +272,10 @@ export class ImageGalleryComponent implements OnInit, OnDestroy, OnChanges {
         this.router.navigateByUrl(`/tags`);
       }
     })
+  }
+
+  onSelectedChange(value: boolean) {
+    this.selectedCount.update(v=> v + (value ? 1 : -1) < 0 ? 0 : v + (value ? 1 : -1));
   }
 
 }

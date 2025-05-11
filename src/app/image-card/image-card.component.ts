@@ -52,6 +52,7 @@ export class ImageCardComponent implements OnInit, OnDestroy{
   @Input() loadImmediately: boolean = true;
   @Output() imageDeleted = new EventEmitter<string>;
   @Output() loadComplete: EventEmitter<void> = new EventEmitter();
+  @Output() imageSelectedChange = new EventEmitter<boolean>();
 
   protected imageService = inject(ImageService);
   private tagService = inject(TagService);
@@ -191,6 +192,10 @@ export class ImageCardComponent implements OnInit, OnDestroy{
 
   onFullSize() {
     this.router.navigateByUrl(`/image/${this.imageSource.reference.id}`)
+  }
+
+  updateSelected(selected: boolean) {
+    this.imageSelectedChange.emit(selected);
   }
 }
 

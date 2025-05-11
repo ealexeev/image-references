@@ -7,7 +7,7 @@ $grid_gap: 20px;
     background-color: transparent;
   }
   100% {
-    background-color: rgba(theme.$text-color, 0.1);
+    background-color: rgba(theme.$text-color, 0.2);
   }
 }
 
@@ -103,5 +103,15 @@ $grid_gap: 20px;
     justify-content: center;
     gap: $grid_gap;
     background: transparent;
+  }
+
+  .select-count-button {
+    background-color: theme.$background;
+    color: theme.$text-color;
+    border: 1px dashed theme.$text-color;
+    border-radius: 5px;
+    cursor: pointer;
+    font-family: Roboto, sans-serif;
+    padding: 0.35em 0.5em;
   }
 }

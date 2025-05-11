@@ -38,12 +38,16 @@
               matTooltip="Delete or rename this tag">
         <mat-icon fontIcon="delete"></mat-icon>
       </button>
-      <button 
+      @if (selectedCount() > 0) {
+        <span class="spacer"></span>
+        <button 
               class="select-count-button"
               matTooltip="Number of selected images"
               (click)="deselectAll$.next()">
-        {{selectedCount()}}
-      </button>
+          {{selectedCount()}}
+        </button>
+      }
+      
     </div>
     @if ( uploadService.uploading()) {
       <h3 class="upload-heading">Uploading {{uploadService.uploadedCount()}} / {{uploadService.toUploadCount()}} Images</h3>

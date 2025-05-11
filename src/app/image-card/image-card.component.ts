@@ -51,7 +51,7 @@ export class ImageCardComponent implements OnInit, OnDestroy{
   @Input({required: true}) imageSource!: Image;
   @Input() tagCountFrom: number = 2;
   @Input() loadImmediately: boolean = true;
-  @Input() deselect$: Observable<void> = of();
+  @Input() deselect$: Subject<void> = new Subject<void>();
   @Output() imageDeleted = new EventEmitter<string>;
   @Output() loadComplete: EventEmitter<void> = new EventEmitter();
   @Output() imageSelectedChange = new EventEmitter<SelectionStatus>();
@@ -184,11 +184,11 @@ export class ImageCardComponent implements OnInit, OnDestroy{
       .catch((err: unknown) => {this.messages.Error(`Error performing last operation: ${err}`)})
   }
 
-
   async onSelectionChange(tags: string[]) {
     this.showTagSelection.set(false);
     Promise.all(tags.map(name => this.tagService.LoadTagByName(name)))
-      .then(tags => {this.imageTagService.replaceTags(this.imageSource.reference, tags)})
+      .then(tags => this.imageTagService.replaceTags(this.imageSource.reference, tags))
+      .then(()=>this.deselect$.next())
       .catch(e=>this.messages.Error(`Error updating tags on image ${this.imageSource.reference}: ${e}`))
   }
 
@@ -198,6 +198,11 @@ export class ImageCardComponent implements OnInit, OnDestroy{
 
   updateSelected(selected: boolean) {
     this.imageSelectedChange.emit({selected, reference: this.imageSource.reference.id});
+    if (selected) {
+      this.imageTagService.addToScope$.next(this.imageSource.reference);
+    } else {
+      this.imageTagService.removeFromScope$.next(this.imageSource.reference);
+    }
   }
 }
 

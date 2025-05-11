@@ -13,20 +13,11 @@ export class SelectableDirective implements OnInit, OnDestroy {
   @Input() deselect$: Observable<void> = of();
   @Output() selectedChange = new EventEmitter<boolean>();
   @HostBinding('class.selected') get isSelected() {
-    return this.ready();
+    return this.selected();
   }
 
-  private imageTagService = inject(ImageTagService);
   private selected = signal(false);
-  private destroy$: Subject<void> = new Subject<void>();
-
-  state = computed(()=> ({
-    selected: this.selected(),
-    done: signal(false),
-    start: new Date(),
-  }))
-
-  ready = computed(() => this.state().selected && !this.state().done())
+  private destroy$: Subject<void> = new Subject<void>()
 
   @HostListener('click', ['$event'])
   onClick(event: MouseEvent) {
@@ -37,18 +28,6 @@ export class SelectableDirective implements OnInit, OnDestroy {
 
   constructor() {
     effect(() => this.selectedChange.emit(this.selected()));
-    effect(() => {
-      const recent = this.imageTagService.recentOperations();
-      if (this.ready() && recent.length > 0 && recent[0].timestamp > this.state().start) {
-        this.imageTagService.performOperation(this.imageSource.reference, recent[0]);
-        this.state().done.set(true);
-      }
-    },  { allowSignalWrites: true })
-    effect(() => {
-      if (!this.ready()) {
-        this.selected.set(false);
-      }
-    }, { allowSignalWrites: true })
   }
 
   ngOnInit() {

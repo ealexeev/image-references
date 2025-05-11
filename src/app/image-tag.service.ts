@@ -4,6 +4,8 @@ import { DocumentReference } from '@angular/fire/firestore';
 import { FirestoreWrapperService } from './firestore-wrapper.service';
 import { MessageService } from './message.service';
 import { shortenId } from './common';
+import { Subject } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 export type ImageTagOperationType = 'Add' | 'Replace' | 'Remove';
 export interface ImageTagOperation {
@@ -23,10 +25,29 @@ export class ImageTagService {
   private message = inject(MessageService);
   private firestore = inject(FirestoreWrapperService);
 
+  public addToScope$ = new Subject<DocumentReference>();
+  public removeFromScope$ = new Subject<DocumentReference>();
+  private additionalScope: Set<DocumentReference> = new Set();
+
+  constructor() {
+    this.addToScope$.pipe(takeUntilDestroyed()).subscribe(ref => this.additionalScope.add(ref));
+    this.removeFromScope$.pipe(takeUntilDestroyed()).subscribe(ref => this.additionalScope.delete(ref));
+  }
+
   /**
    * Add tags to an image document.
    */
   async addTags(imageRef: DocumentReference, tags: Tag[]): Promise<void> {
+    const imagesInScope = Array.from(this.additionalScope);
+    if (!imagesInScope.includes(imageRef)) {
+      imagesInScope.push(imageRef);
+    }
+    for (const ref of imagesInScope) {
+      this._addTags(ref, tags);
+    }
+  }
+
+  async _addTags(imageRef: DocumentReference, tags: Tag[]): Promise<void> {
     try {
       await this.firestore.updateDoc(imageRef, { tags: this.firestore.arrayUnion(...tags.map(t => t.reference)) });
     } catch (error) {
@@ -41,6 +62,14 @@ export class ImageTagService {
    * Remove tags from an image document.
    */
   async removeTags(imageRef: DocumentReference, tags: Tag[]): Promise<void> {
+    const imagesInScope = Array.from(this.additionalScope);
+    imagesInScope.push(imageRef);
+    for (const ref of imagesInScope) {
+      this._removeTags(ref, tags);
+    }
+  }
+
+  async _removeTags(imageRef: DocumentReference, tags: Tag[]): Promise<void> {
     try {
       await this.firestore.updateDoc(imageRef, { tags: this.firestore.arrayRemove(...tags.map(t => t.reference)) });
     } catch (error) {
@@ -55,6 +84,14 @@ export class ImageTagService {
    * Replace all tags on an image document.
    */
   async replaceTags(imageRef: DocumentReference, tags: Tag[]): Promise<void> {
+    const imagesInScope = Array.from(this.additionalScope);
+    imagesInScope.push(imageRef);
+    for (const ref of imagesInScope) {
+      this._replaceTags(ref, tags);
+    }
+  }
+
+  async _replaceTags(imageRef: DocumentReference, tags: Tag[]): Promise<void> {
     try {
       await this.firestore.updateDoc(imageRef, { tags: tags.map(t => t.reference) });
     } catch (error) {

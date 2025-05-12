@@ -6,7 +6,7 @@
         "maxAgeSeconds": 3600
     },
     {
-        "origin": ["https://test.prestig-eape.com"],
+        "origin": ["https://test.prestige-ape.com"],
         "method": ["GET"],
         "responseHeader": ["Content-Type"],
         "maxAgeSeconds": 3600

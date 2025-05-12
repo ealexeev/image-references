@@ -1,0 +1,20 @@
+[
+    {
+        "origin": ["https://***REDACTED***.web.app"],
+        "method": ["GET"],
+        "responseHeader": ["Content-Type"],
+        "maxAgeSeconds": 3600
+    },
+    {
+        "origin": ["https://***REDACTED HOST***"],
+        "method": ["GET"],
+        "responseHeader": ["Content-Type"],
+        "maxAgeSeconds": 3600
+    },
+    {
+        "origin": ["http://localhost:4200"],
+        "method": ["GET"],
+        "responseHeader": ["Content-Type"],
+        "maxAgeSeconds": 3600
+    }
+]

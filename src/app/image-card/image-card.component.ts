@@ -75,6 +75,8 @@ export class ImageCardComponent implements OnInit, OnDestroy{
   lastOpText = signal('');
   loaded = signal(false);
   operationComplete = signal(false);
+  encryptionPresent = signal(false);
+  encryptionDecrypted = signal(false);
 
   private unsubscribe: () => void = () => {return};
   private destroy$: Subject<void> = new Subject<void>();
@@ -130,6 +132,8 @@ export class ImageCardComponent implements OnInit, OnDestroy{
         this.loaded.set(true);
         this.dataSub!.unsubscribe();  // Unsub after getting image data.
         this.dataSub = undefined;
+        this.encryptionPresent.set(!!imageData.encryptionPresent);
+        this.encryptionDecrypted.set(!!imageData.decrypted);
       }
     )
     this.imageSub = this.imageService.SubscribeToImage(this.imageSource.reference);

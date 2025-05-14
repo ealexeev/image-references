@@ -5,7 +5,14 @@
           [imageSource]="imageSource" 
           [class.operation-complete]="operationComplete()">
   @defer ( when (thumbnailUrl().length > 0) ){
-    <img mat-card-image [src]="thumbnailUrl()" alt="Image" draggable="false">
+    @if ( !encryptionPresent() || (encryptionPresent() && encryptionDecrypted())) {
+      <img mat-card-image [src]="thumbnailUrl()" alt="Image" draggable="false">
+    }
+    @else {
+      <div class="thumbnail-lock">
+        <mat-icon fontIcon="lock"></mat-icon>
+      </div>
+    }
   }
   @placeholder {
     <div style="display: flex; height: 200px; width:200px; justify-content: center; align-items: center;">

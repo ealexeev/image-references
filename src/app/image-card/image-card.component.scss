@@ -20,6 +20,15 @@
   &.operation-complete {
     animation: op-complete 1s ease;
   }
+
+  .thumbnail-lock {
+    color: theme.$text-color;
+    display: flex;
+    height: 200px;
+    width:200px;
+    justify-content: center;
+    align-items: center;
+  }
   
 	img {
 		object-fit: contain;

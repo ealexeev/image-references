@@ -13,13 +13,14 @@ import {BehaviorSubject, of, ReplaySubject, Subject} from 'rxjs';
 import {HmacService} from './hmac.service';
 import {deleteObject, getDownloadURL, ref, Storage, StorageReference, uploadBytes} from '@angular/fire/storage';
 import {LRUCache} from 'lru-cache';
-import {EncryptionService, FakeEncryptionService} from './encryption.service';
+import {EncryptionService, FakeEncryptionService, State as EncryptionState} from './encryption.service';
 import {hex, shortenId} from './common';
 import {ImageScaleService} from './image-scale.service';
 import {TagUpdateCallback} from './tag.service';
 import { Image, ImageData, ImageSubscription } from '../lib/models/image.model';
 import {ImageConversionService, StoredImageData} from './image-conversion.service';
 import {ImageDataCacheService} from './image-data-cache.service';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 const imagesCollectionPath = 'images'
 const cloudDataPath = 'data'
@@ -48,6 +49,13 @@ export class ImageService {
   lastTagsAdded: WritableSignal<DocumentReference[]> = signal([]);
 
   constructor() {
+    this.encryption.currentState$.pipe(
+      takeUntilDestroyed(),
+    ).subscribe(
+      (v: EncryptionState) => {
+        this.imageCache.clear()
+      }
+    )
     this.imagesCollection = collection(this.firestore, imagesCollectionPath).withConverter(this.convert.imageConverter())
   }
 

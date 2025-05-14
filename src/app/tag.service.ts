@@ -10,7 +10,7 @@ import {
   onSnapshot,
   query, setDoc, where, writeBatch
 } from '@angular/fire/firestore';
-import {EncryptionService} from './encryption.service';
+import {EncryptionService, State as EncryptionState} from './encryption.service';
 import {MessageService} from './message.service';
 import {
   BehaviorSubject,
@@ -23,6 +23,7 @@ import {
 } from 'rxjs';
 import {HmacService} from './hmac.service';
 import { shortenId } from './common';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 export type Tag = {
   name: string,
@@ -62,6 +63,17 @@ export class TagService implements OnDestroy {
 
   constructor() {
     this.startSubscriptions()
+    this.encryption.currentState$.pipe(
+      takeUntilDestroyed(),
+      distinctUntilChanged(),
+    ).subscribe((state) => {
+      if ( state == EncryptionState.Ready ) {
+        this.unsubTagCollection();
+        this.startSubscriptions();
+      }
+      this.tags$.next([]);
+      this.tagsCount$.next(0);  
+    })
   }
 
   private startSubscriptions(): void {

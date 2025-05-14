@@ -1,0 +1,14 @@
+@use '../../_variables' as theme;
+
+#mat-mdc-dialog-title-0 {
+  --mdc-dialog-subhead-font: #{Teko, serif};
+  --mdc-dialog-subhead-font-size: 1.5rem;
+  --mdc-dialog-subhead-color: #{theme.$text-color};
+}
+  
+button {
+    font-family: Roboto, sans-serif;
+    font-weight: 500;
+    color: theme.$text-color;
+}
+ 

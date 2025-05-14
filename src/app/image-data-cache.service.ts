@@ -28,4 +28,8 @@ export class ImageDataCacheService {
   delete(imageId: string): void {
     this.cache.delete(imageId);
   }
+
+  clear(): void {
+    this.cache.clear();
+  }
 }

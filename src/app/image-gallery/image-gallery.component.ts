@@ -17,7 +17,7 @@ import {MessageService} from '../message.service';
 import {Tag, TagService} from '../tag.service';
 import {ImageService} from '../image.service';
 import {Image, ImageSubscription} from '../../lib/models/image.model';
-import {DocumentReference, where} from '@angular/fire/firestore';
+import {EncryptionService, State as EncryptionState} from '../encryption.service';
 import {MatProgressBarModule} from '@angular/material/progress-bar';
 import {DownloadService, BatchedStrategy} from '../download.service';
 import {MatButtonModule} from '@angular/material/button';
@@ -28,9 +28,9 @@ import {MatTooltipModule} from '@angular/material/tooltip';
 import {NgClass} from '@angular/common';
 import {UploadService} from '../upload.service';
 import {Router} from '@angular/router';
-import {ConfirmationDialogComponent} from '../confirmation-dialog/confirmation-dialog.component';
 import {TagDeleteDialogComponent} from '../tag-delete-dialog/tag-delete-dialog.component';
 import {MatDialog} from '@angular/material/dialog';
+import { where } from '@angular/fire/firestore';
 
 
 @Component({
@@ -65,6 +65,7 @@ export class ImageGalleryComponent implements OnInit, OnDestroy, OnChanges {
   @ViewChildren(ImageCardComponent) imageCards!: QueryList<ImageCardComponent>;
 
   private messageService: MessageService = inject(MessageService);
+  private encryptionService: EncryptionService = inject(EncryptionService);
   private preferences: PreferenceService = inject(PreferenceService);
   private imageService: ImageService = inject(ImageService);
   private tagService: TagService = inject(TagService);
@@ -96,6 +97,15 @@ export class ImageGalleryComponent implements OnInit, OnDestroy, OnChanges {
     ).subscribe(
       (v: number) => {
         this.onMaxCountChanged(v)
+      }
+    )
+    this.encryptionService.currentState$.pipe(
+      takeUntilDestroyed(),
+    ).subscribe(
+      (v: EncryptionState) => {
+        this.images.set([]);
+        this.ngOnDestroy();
+        this.ngOnInit();
       }
     )
 

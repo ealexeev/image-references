@@ -1,4 +1,5 @@
 import {Component, inject, OnInit} from '@angular/core';
+import { EncryptionDialogComponent } from './encryption-dialog/encryption-dialog.component';
 import {Router, RouterLink, RouterLinkActive, RouterOutlet} from '@angular/router';
 import { Auth, signOut } from '@angular/fire/auth';
 import { MatButtonModule } from '@angular/material/button';
@@ -45,8 +46,20 @@ export class AppComponent implements OnInit {
   readonly messageService = inject(MessageService);
   protected encryptionState = toSignal(this.encryption.currentState$);
 
+  toggleEncryption() {
+    if (this.encryptionState() === EncryptionState.Ready) {
+      this.encryption.Disable();
+    } else {
+      const dialogRef = this.dialog.open(EncryptionDialogComponent);
+      dialogRef.afterClosed().subscribe(passphrase => {
+        if (passphrase) {
+          this.encryption.Enable(passphrase);
+        }
+      });
+    }
+  }
+
   ngOnInit() {
-    this.encryption.Enable('***REDACTED***')
     this.messageService.Info('App started')
   }
 

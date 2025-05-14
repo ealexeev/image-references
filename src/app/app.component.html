@@ -23,14 +23,11 @@
         </mat-button-toggle-group>
         <span class="toolbar-spacer"></span>
         <span class="key-status">
-         @if ( encryptionState() == EncryptionState.Ready ) {
-           <mat-icon fontIcon="lock_open"></mat-icon>
-         } @else {
-           <button mat-icon-button class="key-status-button">
-            <mat-icon fontIcon="lock"></mat-icon>
+          <button mat-icon-button class="key-status-button" (click)="toggleEncryption()" 
+                  [matTooltip]="encryptionState() == EncryptionState.Ready ? 'Clear passphrase' : 'Enter passphrase'">
+            <mat-icon [fontIcon]="encryptionState() == EncryptionState.Ready ? 'lock_open' : 'lock'"></mat-icon>
           </button>
-         }
-      </span>
+        </span>
         <app-set-preferences></app-set-preferences>
         <button mat-icon-button
                 (click)="doLogOut()"

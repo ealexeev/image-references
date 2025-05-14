@@ -100,7 +100,7 @@ export class EncryptionService implements OnDestroy {
       takeUntilDestroyed(),
     ).subscribe(
       state => {
-        this.messageService.Info(`EncryptionService state changed: ${state}`);
+        this.messageService.Info(`EncryptionService state changed: ${State[state]}`);
         this.currentState$.next(state);
       }
     )

@@ -62,7 +62,7 @@ export class LoginFormComponent implements OnInit {
     this.auth.authStateReady()
       .then(() => {
         if (this.auth.currentUser || !environment.authRequired) {
-          this.router.navigateByUrl(this.route.snapshot.queryParams['returnUrl'] ?? '/')
+          this.router.navigateByUrl(this.route.snapshot.queryParams['returnUrl'] ?? '/images/latest')
         }
       })
   }

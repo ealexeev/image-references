@@ -21,7 +21,7 @@ export class AuthorizedGuard implements CanActivate {
       if ( environment.authorizedUids.length === 0 ) {
         return false;
       }
-      if ( environment.authorizedUids.filter(uid=> uid === this.auth.currentUser?.uid).length === 0 ) {
+      if ( environment.authorizedUids.filter((uid: string)=> uid === this.auth.currentUser?.uid).length === 0 ) {
         // Need to redirect to a 403-like page.
         return false;
       }

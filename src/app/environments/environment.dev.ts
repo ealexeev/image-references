@@ -9,6 +9,6 @@ export const environment = {
   "firebaseStorageUseLocal": true,
   "firebaseAuthUseLocal": true,
   "authRequired": true,
-  "databaseId": "test-references",
+  "databaseId": "default",
   "authorizedUids": [import.meta.env.NG_APP_DEV_AUTHORIZED_UID],
 };

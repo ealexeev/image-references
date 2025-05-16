@@ -24,8 +24,8 @@
         <span class="toolbar-spacer"></span>
         <span class="key-status">
           <button mat-icon-button class="key-status-button" (click)="toggleEncryption()" 
-                  [matTooltip]="encryptionState() == EncryptionState.Ready ? 'Clear passphrase' : 'Enter passphrase'">
-            <mat-icon [fontIcon]="encryptionState() == EncryptionState.Ready ? 'lock_open' : 'lock'"></mat-icon>
+                  [matTooltip]="encryption.state() == EncryptionState.Ready ? 'Clear passphrase' : 'Enter passphrase'">
+            <mat-icon [fontIcon]="encryption.state() == EncryptionState.Ready ? 'lock_open' : 'lock'"></mat-icon>
           </button>
         </span>
         <app-set-preferences></app-set-preferences>

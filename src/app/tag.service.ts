@@ -1,4 +1,4 @@
-import {inject, Injectable, OnDestroy, Query} from '@angular/core';
+import {effect, inject, Injectable, OnDestroy, Query} from '@angular/core';
 import {
   arrayRemove,
   Bytes,
@@ -63,17 +63,15 @@ export class TagService implements OnDestroy {
 
   constructor() {
     this.startSubscriptions()
-    this.encryption.currentState$.pipe(
-      takeUntilDestroyed(),
-      distinctUntilChanged(),
-    ).subscribe((state) => {
+    effect(()=> {
+      const state = this.encryption.state();
       if ( state == EncryptionState.Ready ) {
         this.unsubTagCollection();
         this.startSubscriptions();
       }
       this.tags$.next([]);
       this.tagsCount$.next(0);  
-    })
+    })  
   }
 
   private startSubscriptions(): void {

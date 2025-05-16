@@ -127,7 +127,7 @@ export class ImageTagService {
       tags,
       timestamp: new Date(),
     };
-    this._recentOperations.update(ops => [operation, ...ops]);
+    this._recentOperations.update(ops => [operation, ...(ops.slice(0, 4))]);
     
     // Update recentTagIds - move used tags to front, maintain uniqueness
     this._recentTagIds.update(ids => {

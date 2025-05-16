@@ -38,7 +38,7 @@ describe('ImageTagService', () => {
   it('should add tags and log operation', async () => {
     await service.addTags(mockDocRef, [tag]);
     expect(mockUpdateDoc).toHaveBeenCalled();
-    expect(mockInfo).toHaveBeenCalledWith('Added 1 tag(s) to image img1');
+    expect(mockInfo).toHaveBeenCalledWith('Added 1 tag(s) to image *img1');
     expect(service.recentOperations()[0]).toEqual(jasmine.objectContaining({ type: 'Add', tags: [tag] }));
   });
 
@@ -51,7 +51,7 @@ describe('ImageTagService', () => {
   it('should remove tags and log operation', async () => {
     await service.removeTags(mockDocRef, [tag]);
     expect(mockUpdateDoc).toHaveBeenCalled();
-    expect(mockInfo).toHaveBeenCalledWith('Removed 1 tag(s) from image img1');
+    expect(mockInfo).toHaveBeenCalledWith('Removed 1 tag(s) from image *img1');
     expect(service.recentOperations()[0]).toEqual(jasmine.objectContaining({ type: 'Remove', tags: [tag] }));
   });
 
@@ -64,7 +64,7 @@ describe('ImageTagService', () => {
   it('should replace tags and log operation', async () => {
     await service.replaceTags(mockDocRef, [tag]);
     expect(mockUpdateDoc).toHaveBeenCalled();
-    expect(mockInfo).toHaveBeenCalledWith('Replaced tags on image img1 (1 tag(s))');
+    expect(mockInfo).toHaveBeenCalledWith('Replaced 1 tag(s) on image *img1');
     expect(service.recentOperations()[0]).toEqual(jasmine.objectContaining({ type: 'Replace', tags: [tag] }));
   });
 

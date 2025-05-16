@@ -1,6 +1,6 @@
-import {inject, Injectable, OnDestroy, Query, signal, WritableSignal} from '@angular/core';
+import {computed, effect, inject, Injectable, OnDestroy, Query, Signal, signal, WritableSignal} from '@angular/core';
 import { WindowRef } from './window-ref.service';
-import {BehaviorSubject, first, firstValueFrom, Observable, ReplaySubject, shareReplay, Subject, takeUntil, tap, timeout} from 'rxjs';
+import {BehaviorSubject, distinctUntilChanged, first, firstValueFrom, Observable, ReplaySubject, shareReplay, Subject, takeUntil, tap, timeout} from 'rxjs';
 import {
   addDoc,
   Bytes,
@@ -10,7 +10,7 @@ import {
   orderBy,
   query, serverTimestamp, updateDoc
 } from '@angular/fire/firestore';
-import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
+import {takeUntilDestroyed, toSignal} from '@angular/core/rxjs-interop';
 import { MessageService } from './message.service';
 
 
@@ -80,13 +80,13 @@ export class EncryptionService implements OnDestroy {
   messageService = inject(MessageService);
 
   // Whether encryption is desired.  Only if the service is enabled should its states be considered.
-  enabled: WritableSignal<boolean> = signal(false);
   subtle: SubtleCrypto | null = null;
   crypto: Crypto | null = null;
   wrap_key: CryptoKey | null = null;
   encryption_key: LiveKey | null = null;
-  readyStateChanged$: Subject<State> = new Subject<State>();
-  currentState$ = new ReplaySubject<State>(State.NotReady);
+  readyStateChanged$ = new ReplaySubject<State>(State.NotReady);
+  state = toSignal(this.readyStateChanged$);
+  enabled = computed(()=>!!(this.state() === State.Ready));
 
   constructor() {
     if ( !this.windowRef.nativeWindow?.crypto.subtle ) {
@@ -96,19 +96,15 @@ export class EncryptionService implements OnDestroy {
     }
     this.subtle = this.windowRef!.nativeWindow!.crypto.subtle;
     this.crypto = this.windowRef!.nativeWindow!.crypto;
-    this.readyStateChanged$.pipe(
-      takeUntilDestroyed(),
-    ).subscribe(
-      state => {
-        this.messageService.Info(`EncryptionService state changed: ${State[state]}`);
-        this.currentState$.next(state);
-      }
-    )
+    effect(()=>{
+      const state = this.state();
+      if ( state===undefined ) return;
+      this.messageService.Info(`EncryptionService state changed: ${State[state]} (${state})`);
+    })
   }
 
   async Enable(passphrase: string): Promise<State> {
     this.readyStateChanged$.next(State.Initializing)
-    this.enabled.set(true)
 
     try {
       const passKey = await this.subtle!.importKey("raw", stringToArrayBuffer(passphrase), {name: "PBKDF2"}, false, ["deriveKey"]);
@@ -116,7 +112,6 @@ export class EncryptionService implements OnDestroy {
     } catch (err: unknown) {
       this.messageService.Error(err as Error)
       this.readyStateChanged$.next(State.Error)
-      this.enabled.set(false)
       return State.Error;
     }
 
@@ -130,7 +125,6 @@ export class EncryptionService implements OnDestroy {
     } catch (err: unknown) {
       this.messageService.Error(err as Error)
       this.readyStateChanged$.next(State.Error)
-      this.enabled.set(false)
       return State.Error;
     }
 
@@ -141,7 +135,6 @@ export class EncryptionService implements OnDestroy {
     } catch (err: unknown) {
       this.messageService.Error(err as Error)
       this.readyStateChanged$.next(State.Error)
-      this.enabled.set(false)
       return State.Error;
     }
   }
@@ -151,7 +144,6 @@ export class EncryptionService implements OnDestroy {
     this.wrap_key = null;
     this.encryption_key = null;
     this.readyStateChanged$.next(State.NotReady);
-    this.enabled.set(false)
   }
 
   ngOnDestroy() {
@@ -285,7 +277,7 @@ export class EncryptionService implements OnDestroy {
   }
 
   async BlockUntilReady(timeoutMs: number): Promise<void> {
-    let state = await firstValueFrom(this.currentState$);
+    let state = await firstValueFrom(this.readyStateChanged$);
     if ( state !== State.Ready ) {
       try {
         state = await firstValueFrom(this.readyStateChanged$.pipe(timeout(timeoutMs)))
@@ -307,6 +299,13 @@ export class FakeEncryptionService {
   iv: Uint8Array = new Uint8Array(16)
   keyRef = {id: "123", path: "keys/123"} as DocumentReference
   enabled: WritableSignal<boolean> = signal(false);
+  currentState$ = new ReplaySubject<State>(State.NotReady);
+  state = signal<State>(State.NotReady);
+  ready = computed(()=>this.state() === State.Ready);
+
+  constructor() {
+    this.currentState$.pipe(distinctUntilChanged()).subscribe(state=>this.state.set(state as State));
+  }
 
   async Disable(){
     this.enabled.set(false);

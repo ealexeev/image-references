@@ -1,4 +1,4 @@
-import {inject, Injectable, Query, signal, WritableSignal} from '@angular/core';
+import {effect, inject, Injectable, Query, signal, WritableSignal} from '@angular/core';
 import {
   arrayRemove,
   arrayUnion, Bytes,
@@ -49,13 +49,10 @@ export class ImageService {
   lastTagsAdded: WritableSignal<DocumentReference[]> = signal([]);
 
   constructor() {
-    this.encryption.currentState$.pipe(
-      takeUntilDestroyed(),
-    ).subscribe(
-      (v: EncryptionState) => {
-        this.imageCache.clear()
-      }
-    )
+    effect(()=>{
+      this.encryption.state();
+      this.imageCache.clear();
+    })
     this.imagesCollection = collection(this.firestore, imagesCollectionPath).withConverter(this.convert.imageConverter())
   }
 
@@ -451,6 +448,7 @@ export class FakeImageService {
   images = new LRUCache<string, Image>({max:10})
   imageData = new LRUCache<string, ImageData>({max:10})
   encryption = new FakeEncryptionService();
+  duplicateImageDetected = signal(false);
 
   GetImageReferenceFromId(imageId: string): DocumentReference {
     return {id: imageId, path: `images/${imageId}`} as DocumentReference

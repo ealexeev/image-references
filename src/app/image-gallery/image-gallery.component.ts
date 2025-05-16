@@ -8,7 +8,7 @@ import {
   signal, ViewChildren,
   WritableSignal
 } from '@angular/core';
-import {concatMap, from, Subject, Subscription} from 'rxjs';
+import {Subject, Subscription} from 'rxjs';
 import {PreferenceService} from '../preference-service';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {ImageCardComponent, SelectionStatus} from '../image-card/image-card.component';
@@ -30,7 +30,7 @@ import {UploadService} from '../upload.service';
 import {Router} from '@angular/router';
 import {TagDeleteDialogComponent} from '../tag-delete-dialog/tag-delete-dialog.component';
 import {MatDialog} from '@angular/material/dialog';
-import { where } from '@angular/fire/firestore';
+import {where} from '@angular/fire/firestore';
 
 
 @Component({
@@ -99,15 +99,12 @@ export class ImageGalleryComponent implements OnInit, OnDestroy, OnChanges {
         this.onMaxCountChanged(v)
       }
     )
-    this.encryptionService.currentState$.pipe(
-      takeUntilDestroyed(),
-    ).subscribe(
-      (v: EncryptionState) => {
-        this.images.set([]);
-        this.ngOnDestroy();
-        this.ngOnInit();
-      }
-    )
+    effect(()=> {
+      this.encryptionService.state();
+      this.images.set([]);
+      this.ngOnDestroy();
+      this.ngOnInit();
+    })
 
     effect(()=> {
       const tagName = this.optTagName();

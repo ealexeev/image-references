@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { TagDeleteDialogComponent } from './tag-delete-dialog.component';
+import { MAT_DIALOG_DATA } from '@angular/material/dialog';
 
 describe('TagDeleteDialogComponent', () => {
   let component: TagDeleteDialogComponent;
@@ -8,6 +9,9 @@ describe('TagDeleteDialogComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
+      providers: [
+        {provide: MAT_DIALOG_DATA, useValue: {tag: 'test', newName: 'test-2'}},
+      ],
       imports: [TagDeleteDialogComponent]
     })
     .compileComponents();

@@ -44,10 +44,9 @@ export class AppComponent implements OnInit {
   readonly imageTagService = inject(ImageTagService);
   readonly router = inject(Router);
   readonly messageService = inject(MessageService);
-  protected encryptionState = toSignal(this.encryption.currentState$);
 
   toggleEncryption() {
-    if (this.encryptionState() === EncryptionState.Ready) {
+    if (this.encryption.state() === EncryptionState.Ready) {
       this.encryption.Disable();
     } else {
       const dialogRef = this.dialog.open(EncryptionDialogComponent);

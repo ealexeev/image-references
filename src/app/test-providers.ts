@@ -18,6 +18,7 @@ export function getDefaultProviders() {
     provideFirebaseApp(() => initializeApp(environment)),
     provideFirestore(() => EmulatedFirestore()),
     provideStorage(() => EmulatedStorage()),
+    {provide: EncryptionService, useClass: FakeEncryptionService},
     {provide: ImageService, useClass: FakeImageService},
     {provide: TagService, useClass: FakeTagService},
     {provide: MessageService, useValue: jasmine.createSpyObj<MessageService>('MessageService', ['Info', 'Error'])},

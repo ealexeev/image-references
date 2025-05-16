@@ -52,23 +52,23 @@ describe('EncryptionService', () => {
     await service.Enable('test');
     expect(service.enabled()).toBeTrue();
     expect( await service.GenerateEncryptionKey()
-      .then(k=> service.WrapKey(k))
+      .then(k=> service.WrapKey(k.key))
       .then(w => service.UnwrapKey(w))
     ).toBeTruthy()
   })
 
   it('should store and load keys', async () => {
     await service.Enable('test');
-    const key = await service.GenerateEncryptionKey();
-    const wrapped = await service.WrapKey(key)
+    const liveKey = await service.GenerateEncryptionKey();
+    const wrapped = await service.WrapKey(liveKey.key)
     const ref = await service.StoreWrappedKey(wrapped);
     expect(ref).toBeTruthy()
     const live = await service.LoadKey(ref)
     expect(live.key).toBeTruthy()
     expect(live.used).toEqual(0)
     expect(live.reference.path).toEqual(ref.path)
-    expect(live.key.algorithm).toEqual(key.algorithm);
-    expect(live.key.type).toEqual(key.type);
+    expect(live.key.algorithm).toEqual(liveKey.key.algorithm);
+    expect(live.key.type).toEqual(liveKey.key.type);
   })
 
   it('should initialize encryption_key', async () => {

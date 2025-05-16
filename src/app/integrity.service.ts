@@ -129,12 +129,12 @@ export class IntegrityService {
   }
 
   async checkImageExists(imageId: string): Promise<boolean> {
-    const snap = await this.firestoreWrapper.getDoc(this.firestoreWrapper.doc(this.firestoreWrapper.instance, 'images', imageId))
+    const snap = await this.firestoreWrapper.getDoc(this.firestoreWrapper.doc('images', imageId))
     return snap.exists();
   }
 
   async checkImageDataExists(imageId: string): Promise<boolean> {
-    const snap = await this.firestoreWrapper.getDoc(this.firestoreWrapper.doc(this.firestoreWrapper.instance, 'images', imageId, 'data', 'thumbnail'))
+    const snap = await this.firestoreWrapper.getDoc(this.firestoreWrapper.doc('images', imageId, 'data', 'thumbnail'))
     return snap.exists();
   }
 

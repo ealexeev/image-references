@@ -21,14 +21,14 @@ export class RealtimeImageService {
   private readonly imagesCollection: CollectionReference<Image>;
 
   constructor() {
-    this.imagesCollection = this.firestoreWrapper.collection<Image>(this.firestoreWrapper.instance, 'images');
+    this.imagesCollection = this.firestoreWrapper.collection<Image>('images');
   }
 
   /**
    * Subscribe to updates about image data.  In practice there is only one update expected.
    */
   SubscribeToImageData(imageId: string): ImageSubscription<ImageData> {
-    const docRef = this.firestoreWrapper.doc<ImageData>(this.firestoreWrapper.instance, this.imagesCollection.path, imageId, 'data', 'thumbnail');
+    const docRef = this.firestoreWrapper.doc<ImageData>(this.imagesCollection.path, imageId, 'data', 'thumbnail');
     if ( this.imageCache.has(imageId) ) {
       return {results$: of(this.imageCache.get(imageId)), unsubscribe: ()=> {}} as ImageSubscription<ImageData>
     }

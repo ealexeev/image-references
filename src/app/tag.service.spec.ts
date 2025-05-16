@@ -33,7 +33,7 @@ describe('TagService', () => {
     service = TestBed.inject(TagService);
     TestBed.inject(FirebaseApp)
     TestBed.inject(Firestore)
-    firestore = service['firestore'];
+    firestore = service['firestore'].instance;
   });
 
   afterEach(async () => {

@@ -10,7 +10,6 @@ import {
 } from '@angular/core';
 import {Subject, Subscription} from 'rxjs';
 import {PreferenceService} from '../preference-service';
-import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {ImageCardComponent, SelectionStatus} from '../image-card/image-card.component';
 import {DragDropDirective, FileHandle} from '../drag-drop.directive';
 import {MessageService} from '../message.service';
@@ -92,19 +91,14 @@ export class ImageGalleryComponent implements OnInit, OnDestroy, OnChanges {
   imagesSub: Subscription = new Subscription();
 
   constructor() {
-    this.preferences.showImageCount$.pipe(
-      takeUntilDestroyed(),
-    ).subscribe(
-      (v: number) => {
-        this.onMaxCountChanged(v)
-      }
-    )
+    effect(()=>this.onMaxCountChanged(this.preferences.showImageCount()))
+
     effect(()=> {
       this.encryptionService.state();
       this.images.set([]);
       this.ngOnDestroy();
       this.ngOnInit();
-    })
+    }, {allowSignalWrites: true});
 
     effect(()=> {
       const tagName = this.optTagName();
@@ -168,18 +162,18 @@ export class ImageGalleryComponent implements OnInit, OnDestroy, OnChanges {
     switch(this.mode) {
       case 'latest':
         this.imageService.CountAllImages().then(cnt=>this.totalImageCount.set(cnt))
-        subscription = this.imageService.SubscribeToLatestImages(this.preferences.showImageCount$.value)
+        subscription = this.imageService.SubscribeToLatestImages(this.preferences.showImageCount())
         break
       case 'inbox':
         this.imageService.CountUntaggedImages().then(cnt=>this.totalImageCount.set(cnt))
-        subscription = this.imageService.SubscribeToUntaggedImages(this.preferences.showImageCount$.value)
+        subscription = this.imageService.SubscribeToUntaggedImages(this.preferences.showImageCount())
         break;
       case 'tag':
         const tag = await this.tagService.LoadTagByName(this.optTagName())
         this.imageService.CountTagImages(tag.reference)
           .then(cnt => this.totalImageCount.set(cnt))
           .catch(err => {this.messageService.Error(`<image-gallery> fetching tag image count: ${err}`)})
-        subscription = this.imageService.SubscribeToTag(tag.reference, this.preferences.showImageCount$.value)
+        subscription = this.imageService.SubscribeToTag(tag.reference, this.preferences.showImageCount())
         break;
       default:
         throw new Error(`Unsupported mode: ${this.mode}`);

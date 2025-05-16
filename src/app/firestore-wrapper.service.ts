@@ -21,7 +21,8 @@ import {
   WhereFilterOp,
   limit,
   Unsubscribe,
-  QuerySnapshot
+  QuerySnapshot,
+  writeBatch
 } from '@angular/fire/firestore';
 
 @Injectable({ providedIn: 'root' })
@@ -31,8 +32,8 @@ export class FirestoreWrapperService {
   /**
    * Proxy for Firestore's doc
    */
-  doc<T = DocumentData>(firestore: Firestore, path: string, ...pathSegments: string[]): DocumentReference<T> {
-    return doc(firestore, path, ...pathSegments) as DocumentReference<T>;
+  doc<T = DocumentData>(path: string, ...pathSegments: string[]): DocumentReference<T> {
+    return doc(this.instance, path, ...pathSegments) as DocumentReference<T>;
   }
 
   /**
@@ -65,8 +66,8 @@ export class FirestoreWrapperService {
   /**
    * Proxy for Firestore's collection
    */
-  collection<T = DocumentData>(firestore: Firestore, path: string): CollectionReference<T> {
-    return collection(firestore, path) as CollectionReference<T>;
+  collection<T = DocumentData>(path: string): CollectionReference<T> {
+    return collection(this.instance, path) as CollectionReference<T>;
   }
 
   /**
@@ -110,6 +111,13 @@ export class FirestoreWrapperService {
    */
   limit(n: number): QueryConstraint {
     return limit(n);
+  }
+
+  /**
+   * Proxy for Firestore's writeBatch
+   */
+  writeBatch() {
+    return writeBatch(this.instance) ;
   }
 }
 

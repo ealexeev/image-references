@@ -2,13 +2,11 @@ import {effect, inject, Injectable, OnDestroy, Query} from '@angular/core';
 import {
   arrayRemove,
   Bytes,
-  collection, doc,
   DocumentReference,
   DocumentSnapshot,
-  Firestore,
   getDoc, getDocs,
   onSnapshot,
-  query, setDoc, where, writeBatch
+  setDoc
 } from '@angular/fire/firestore';
 import {EncryptionService, State as EncryptionState} from './encryption.service';
 import {MessageService} from './message.service';
@@ -23,7 +21,9 @@ import {
 } from 'rxjs';
 import {HmacService} from './hmac.service';
 import { shortenId } from './common';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FirestoreWrapperService } from './firestore-wrapper.service';
+
+const TAG_COLLECTION_PATH = 'tags';;
 
 export type Tag = {
   name: string,
@@ -45,13 +45,12 @@ type TagMap = Record<string, Tag>
 })
 export class TagService implements OnDestroy {
   private encryption = inject(EncryptionService)
-  private firestore = inject(Firestore)
+  private firestore = inject(FirestoreWrapperService)
   private hmac = inject(HmacService)
   private messageService = inject(MessageService)
 
   private readonly encoder = new TextEncoder()
   private readonly decoder = new TextDecoder()
-  private readonly tagsCollectionPath = 'tags'
   private tagsByName: TagMap = {}
   private tagsById: TagMap = {}
 
@@ -75,7 +74,7 @@ export class TagService implements OnDestroy {
   }
 
   private startSubscriptions(): void {
-    const allTagsQuery = query(collection(this.firestore, this.tagsCollectionPath));
+    const allTagsQuery = this.firestore.query(this.firestore.collection(TAG_COLLECTION_PATH));
     this.unsubTagCollection = onSnapshot(allTagsQuery, (querySnapshot) => {
       const tags: Promise<Tag>[] = [];
       querySnapshot.forEach((doc) => {
@@ -134,7 +133,7 @@ export class TagService implements OnDestroy {
       return cached;
     }
     const id = await this.hmac.getHmacHex(new Blob([name], {type: 'text/plain'}))
-    return doc(this.firestore,  this.tagsCollectionPath, id);
+    return this.firestore.doc(TAG_COLLECTION_PATH, id);
   }
 
  /**
@@ -217,9 +216,9 @@ export class TagService implements OnDestroy {
    * Remove this tag from all images that reference it and delete the tag document.
    */
   async DeleteTag(ref: DocumentReference): Promise<void> {
-    const q = query(collection(this.firestore, 'images'), where("tags", "array-contains", ref))
+    const q = this.firestore.query(this.firestore.collection('images'), this.firestore.where("tags", "array-contains", ref))
     const images = await getDocs(q);
-    const batch = writeBatch(this.firestore)
+    const batch = this.firestore.writeBatch();
     images.forEach(image => {
         batch.update(image.ref, {'tags': arrayRemove(ref)})
       })

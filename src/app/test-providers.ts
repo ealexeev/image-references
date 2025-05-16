@@ -82,7 +82,8 @@ export class DefaultProviders {
       'orderBy',
       'query',
       'where',
-      'limit'
+      'limit',
+      'writeBatch'
     ],
     ['instance']
   );

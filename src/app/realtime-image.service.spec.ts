@@ -31,7 +31,6 @@ describe('RealtimeImageService', () => {
 
       // Assert
       expect(providers.FirestoreWrapperService.doc).toHaveBeenCalledWith(
-        providers.FirestoreWrapperService.instance,
         'images',
         imageId,
         'data',

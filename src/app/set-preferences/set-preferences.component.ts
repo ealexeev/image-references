@@ -1,6 +1,5 @@
-import {ChangeDetectionStrategy, Component, inject} from '@angular/core';
+import {ChangeDetectionStrategy, Component, inject, computed} from '@angular/core';
 import {PreferenceService} from '../preference-service';
-import {AsyncPipe} from '@angular/common';
 import {MatSlideToggleModule} from '@angular/material/slide-toggle';
 import {MatSliderModule} from '@angular/material/slider';
 import {MatFormFieldModule} from '@angular/material/form-field';
@@ -27,14 +26,14 @@ export class SetPreferencesComponent {
 
   onSelectionChange(change: MatSelectChange) {
     let v: number = Number(change.value);
-    if ( !v ) {
-      v = -1
+    if (!v) {
+      v = -1;
     }
-    this.preferences.showImageCount$.next(change.value);
+    this.preferences.showImageCount.set(v);
   }
 
   getInitialSelection() {
-    const current = this.preferences.showImageCount$.value;
+    const current = this.preferences.showImageCount();
     return current > 0 ? current : "All";
   }
 }

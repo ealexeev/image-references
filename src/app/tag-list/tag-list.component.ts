@@ -1,7 +1,7 @@
-import {ChangeDetectionStrategy, Component, EventEmitter, inject, Output} from '@angular/core';
+import {ChangeDetectionStrategy, Component, computed, EventEmitter, inject, Output, signal, Signal, WritableSignal} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { combineLatestWith, debounceTime, distinctUntilChanged, map, of, startWith, tap, Observable, BehaviorSubject } from 'rxjs';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 
 import {MatButtonModule} from '@angular/material/button';
 import {MatDividerModule} from '@angular/material/divider';
@@ -33,14 +33,21 @@ import {Tag, TagService} from '../tag.service';
 export class TagListComponent {
   @Output() tagSelectionEvent = new EventEmitter<string>()
 
-  tags$: Observable<Tag[]>;
-  tagsFilteredCount$: BehaviorSubject<number> = new BehaviorSubject(0);
-  enableCreateButton$: BehaviorSubject<boolean> = new BehaviorSubject(false);
-
-  readonly searchText = new FormControl('')
-
   private tagService: TagService = inject(TagService);
+  readonly searchText = new FormControl('');
 
+  protected tags: Signal<Tag[]>;
+  protected tagsFilteredCount = computed(() => this.tags().length);
+  protected searchTextValue: Signal<string | null | undefined>;
+  protected enabledCreateButton = computed(() => {
+    const tags = this.tags();
+    const searchText = this.searchTextValue() || ''
+    if ( tags.length == 0 || (( searchText) || '').length > 0 && !tags.map(t => t.name.toLowerCase()).includes((searchText || '').toLowerCase())) {
+      return true;
+    }
+    return false;
+  });
+  
   constructor() {
     let search = this.searchText.valueChanges.pipe(
       startWith(''),
@@ -48,21 +55,14 @@ export class TagListComponent {
       debounceTime(500),
     );
 
-    this.tags$ = this.tagService.tags$.pipe(
-      distinctUntilChanged(),
-      combineLatestWith(search),
-      map( ([tags, searchText]) => {
-        const matches = tags.filter(t => t.name.toLowerCase().includes((searchText || '').toLowerCase()))
-        this.tagsFilteredCount$.next(matches.length);
-        if ( matches.length == 0 || (( searchText || '').length > 0 && !matches.map(t => t.name.toLowerCase())
-                                         .includes((searchText || '').toLowerCase())) ) {
-          this.enableCreateButton$.next(true);
-        } else {
-          this.enableCreateButton$.next(false);
-        }
-        return matches.sort((a, b) => a.name.localeCompare(b.name));
-      }),
-    );
+    this.searchTextValue = toSignal(search);
+
+    this.tags = computed(() => {
+      const allTags = this.tagService.tags();
+      const searchTextValue = this.searchTextValue();
+      const matches = allTags.filter(t => t.name.toLowerCase().includes((searchTextValue || '').toLowerCase()))
+      return matches.sort((a, b) => a.name.localeCompare(b.name));
+    });
   }
 
   createTag() {

@@ -1,4 +1,4 @@
-import {effect, inject, Injectable, OnDestroy, Query} from '@angular/core';
+import {computed, effect, inject, Injectable, OnDestroy, signal, WritableSignal} from '@angular/core';
 import {
   arrayRemove,
   Bytes,
@@ -14,7 +14,6 @@ import {
   BehaviorSubject,
   distinctUntilChanged,
   map,
-  Observable, ReplaySubject,
   shareReplay,
   startWith,
   withLatestFrom
@@ -55,9 +54,9 @@ export class TagService implements OnDestroy {
   private tagsById: TagMap = {}
 
   // Complete set of tags known to TagService.  Eventually catches up to Firestore.
-  tags$ = new ReplaySubject<Tag[]>()
+  tags: WritableSignal<Array<Tag>> = signal([]);
   // Number of tags known to the TagService
-  tagsCount$ = new BehaviorSubject<number>(0)
+  tagsCount = computed(()=>this.tags().length);
   private unsubTagCollection: any
 
   constructor() {
@@ -68,9 +67,8 @@ export class TagService implements OnDestroy {
         this.unsubTagCollection();
         this.startSubscriptions();
       }
-      this.tags$.next([]);
-      this.tagsCount$.next(0);  
-    })  
+      this.tags.set([]);
+    }, {allowSignalWrites: true})  
   }
 
   private startSubscriptions(): void {
@@ -83,8 +81,7 @@ export class TagService implements OnDestroy {
       Promise.all(tags).then(liveTags => {
         this.tagsByName = Object.fromEntries(liveTags.map(t => [t.name, t]))
         this.tagsById = Object.fromEntries(liveTags.map(t => [t.reference.id, t]))
-        this.tags$.next(liveTags.sort((a, b) => a.name.localeCompare(b.name)));
-        this.tagsCount$.next(liveTags.length);
+        this.tags.set(liveTags.sort((a, b) => a.name.localeCompare(b.name)));
       })
     })
   }
@@ -230,53 +227,31 @@ export class TagService implements OnDestroy {
 
 export class FakeTagService {
 
-  // Tags used most recently.  Contains the entire tags$ output, but in order of use.
-  recentTags$: Observable<Tag[]>
   // Complete set of tags known to TagService.  Eventually catches up to Firestore.
-  tags$ = new BehaviorSubject<Tag[]>([])
+  tags = signal<Tag[]>([]);
   // Number of tags known to the TagService
-  tagsCount$ = new BehaviorSubject<number>(0)
+  tagsCount = computed(()=>this.tags().length);
   // Tags applied during the last operation.  Supplied externally.
-  appliedTags$ = new BehaviorSubject<Tag[]>([])
-  // Previous emission of recentTags$, which allows continuous updates.
+
   private lastRecentlyUsed$ = new BehaviorSubject<Tag[]>([])
 
   // Fake tags on which all operations will be carried out.
-  private tags: Tag[] = [
+  private defaultTags: Tag[] = [
     {name: 'tag-1', reference: {id: '1', path: 'tags/1'}} as Tag,
     {name: 'tag-2', reference: {id: '2', path: 'tags/2'}} as Tag,
     {name: 'tag-3', reference: {id: '3', path: 'tags/3'}} as Tag,
   ]
-  constructor() {
-    this.recentTags$ = this.appliedTags$.pipe(
-      withLatestFrom(this.lastRecentlyUsed$.pipe(startWith([])), this.tags$),
-      map(([applied, lastEmission, stored]) => {
-        const appliedIds = applied.map(t=>t.reference.id)
-        let ret: Tag[];
-        if ( stored.length > lastEmission.length ) {
-          ret = stored.filter(t=> !appliedIds.includes(t.reference.id))
-        } else {
-          ret = lastEmission.filter(t=> !appliedIds.includes(t.reference.id))
-        }
-        ret.unshift(...applied)
-        this.lastRecentlyUsed$.next(ret)
-        return ret;
-      }),
-      distinctUntilChanged(),
-      shareReplay(),
-    )
-  }
 
   async StoreTag(name: string): Promise<Tag> {
-    const tag = this.tags.filter(t=>t.name === name).pop()
+    const tag = this.defaultTags.filter(t=>t.name === name).pop()
     if ( !tag) {
-      this.tags.push({name: name, reference: {id: name, path: `tags/${name}`} as DocumentReference})
+      this.defaultTags.push({name: name, reference: {id: name, path: `tags/${name}`} as DocumentReference})
     }
     return Promise.reject(`Exists`);
   }
 
   async LoadTagByReference(ref: DocumentReference): Promise<Tag> {
-    const tag = this.tags.filter(t=>t.reference.id === ref.id).pop()
+    const tag = this.defaultTags.filter(t=>t.reference.id === ref.id).pop()
     if ( !tag) {
       return Promise.reject('Not found')
     }
@@ -284,7 +259,7 @@ export class FakeTagService {
   }
 
   async LoadTagByName(name: string): Promise<Tag> {
-    const tag = this.tags.filter(t=>t.name === name).pop()
+    const tag = this.defaultTags.filter(t=>t.name === name).pop()
     if ( !tag) {
       return Promise.reject('Not found')
     }
@@ -292,7 +267,7 @@ export class FakeTagService {
   }
 
   async DeleteTag(ref: DocumentReference): Promise<void> {
-    this.tags = this.tags.filter(t=> t.reference.id !== ref.id)
+    this.defaultTags = this.defaultTags.filter(t=> t.reference.id !== ref.id)
   }
 
 }

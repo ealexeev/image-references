@@ -74,29 +74,19 @@ describe('TagService', () => {
   })
 
   it('storing tags should increment count', async () => {
-    let latest = 0;
     const done$ = new Subject<void>();
-    service.tagsCount$.pipe(
-      takeUntil(done$)
-    ).subscribe(count => {latest = count})
     for (const tagName of ['a', 'b', 'c']) {
       await service.StoreTag(tagName)
     }
     done$.next()
-    expect(latest).toBe(3);
+    expect(service.tagsCount()).toBe(3);
   })
 
   it('storing tags should update tags$', async () => {
     let latest: Tag[] = [];
-    const done$ = new Subject<void>();
-    service.tags$.pipe(
-      takeUntil(done$)
-    ).subscribe(tags => {
-      latest = tags;
-    })
     await service.StoreTag('foobar')
-    expect(latest.length).toBe(1)
-    expect(latest.pop()!.name).toEqual('foobar')
+    expect(service.tags().length).toBe(1)
+    expect(service.tags().pop()!.name).toEqual('foobar')
   })
 
   it('stored tags are cached', async () => {

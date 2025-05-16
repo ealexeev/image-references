@@ -27,12 +27,11 @@ export class TagSelectComponent implements OnInit{
   selected: FormControl<string[]> = new FormControl();
   tagService: TagService = inject(TagService);
   imageTagService = inject(ImageTagService);
-  allTags = toSignal(this.tagService.tags$);
-  allTagsSorted = computed(()=> this.allTags()!.sort((a, b)=>a.name.localeCompare(b.name)));
+  allTagsSorted = computed(()=> this.tagService.tags().sort((a, b)=>a.name.localeCompare(b.name)));
 
   recentTagsFirst = computed(() => {
-    const byId: Map<string, Tag> = new Map(this.allTags()!.map(t=> [t.reference.id, t]));
-    const byName: Map<string, Tag> = new Map(this.allTags()!.map(t=> [t.name, t]));
+    const byId: Map<string, Tag> = new Map(this.tagService.tags().map(t=> [t.reference.id, t]));
+    const byName: Map<string, Tag> = new Map(this.tagService.tags().map(t=> [t.name, t]));
     
     const idsInOrderOfUse: Array<string> = [];
 

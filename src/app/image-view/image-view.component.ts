@@ -9,6 +9,7 @@ import {
   inject,
   ViewChild,
   ElementRef,
+  computed,
 } from '@angular/core';
 import {Image, ImageData} from '../../lib/models/image.model';
 import {ImageService} from '../image.service';
@@ -75,7 +76,7 @@ export class ImageViewComponent implements OnInit, OnDestroy {
   separatorKeysCodes: number[] = [ENTER, COMMA];
   itemCtrl = new FormControl('');
   filteredItems: Observable<string[]>;
-  items: WritableSignal<string[]> = signal([]);
+  items = computed(() => this.tagService.tags().map(t => t.name));
   selectedItems: WritableSignal<string[]> = signal([]);
   @ViewChild('itemInput') itemInput!: ElementRef;
 
@@ -97,19 +98,13 @@ export class ImageViewComponent implements OnInit, OnDestroy {
       )
     );
 
-    this.tagService.tags$.pipe(
-      takeUntilDestroyed(),
-    ).subscribe((tags: Tag[]) => {
-      this.items.set(tags.map(t=>t.name))
-    })
-
     effect(async ()=>{
       const tagsRefs = this.bundle()?.image.tags;
       if (!tagsRefs) {return}
       const tags = await Promise.all(tagsRefs.map(tRef=>
         this.tagService.LoadTagByReference(tRef)))
       this.selectedItems.set(tags.map(t=>t.name).sort())
-    })
+    }, {allowSignalWrites: true})
   }
 
   async ngOnInit(): Promise<void> {

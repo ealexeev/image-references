@@ -2,10 +2,10 @@
 <mat-dialog-content>
   <mat-form-field>
     <mat-label>Passphrase</mat-label>
-    <input matInput type="password" [(ngModel)]="passphrase">
+    <input matInput type="password" [(ngModel)]="passphrase" (keyup.enter)="onEnterKey()" cdkFocusInitial>
   </mat-form-field>
 </mat-dialog-content>
 <mat-dialog-actions align="end">
   <button mat-button mat-dialog-close>Cancel</button>
-  <button mat-button [mat-dialog-close]="passphrase" [disabled]="!passphrase">Enable</button>
+  <button mat-button color="primary" [mat-dialog-close]="passphrase" [disabled]="!passphrase">Enable</button>
 </mat-dialog-actions>

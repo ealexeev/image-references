@@ -6,8 +6,8 @@ import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { HarnessLoader } from '@angular/cdk/testing';
 
 import { ImageCardComponent } from './image-card.component';
-import {DocumentReference} from '@angular/fire/firestore';
-import {Image} from '../../lib/models/image.model';
+import { DocumentReference } from '@angular/fire/firestore';
+import { Image } from '../../lib/models/image.model';
 import { DefaultProviders } from '../test-providers';
 
 describe('ImageCardComponent', () => {
@@ -20,7 +20,7 @@ describe('ImageCardComponent', () => {
   beforeEach(async () => {
     providers = new DefaultProviders();
     imageSource = {
-      reference: {id: "1"} as DocumentReference,
+      reference: { id: "1" } as DocumentReference,
       tags: [] as DocumentReference[],
     } as Image;
 
@@ -28,7 +28,7 @@ describe('ImageCardComponent', () => {
       imports: [ImageCardComponent, NoopAnimationsModule],
       providers: providers.getProviders(),
     })
-    .compileComponents();
+      .compileComponents();
 
     fixture = TestBed.createComponent(ImageCardComponent);
     component = fixture.componentInstance;
@@ -47,7 +47,7 @@ describe('ImageCardComponent', () => {
 
   it('should emit imageDeleted event with image id when delete button is clicked', async () => {
     spyOn(component.imageDeleted, 'emit');
-    const deleteButton = await loader.getHarness(MatButtonHarness.with({selector: '[mattooltip="Delete this image"]'}));
+    const deleteButton = await loader.getHarness(MatButtonHarness.with({ selector: '[mattooltip="Delete this image"]' }));
     await deleteButton.click();
     expect(component.imageDeleted.emit).toHaveBeenCalledWith(imageSource.reference.id);
   });
@@ -55,7 +55,7 @@ describe('ImageCardComponent', () => {
   it('should call DownloadService.download when download button is clicked', async () => {
     component.fullUrlAvailable.set(true);
     fixture.detectChanges();
-    const downloadButton = await loader.getHarness(MatButtonHarness.with({selector: '[mattooltip="Download this image"]'}));
+    const downloadButton = await loader.getHarness(MatButtonHarness.with({ selector: '[mattooltip="Download this image"]' }));
     await downloadButton.click();
     expect(providers.DownloadService.download).toHaveBeenCalledWith({
       fileName: imageSource.reference.id,
@@ -65,29 +65,24 @@ describe('ImageCardComponent', () => {
   });
 
   it('should call ImageTagService.performLastOperation when "Add last operation" button is clicked', async () => {
-    // Ensure the button is visible by mocking recentOperations
-    (providers.ImageTagService.recentOperations as unknown as WritableSignal<any[]>).set([{ type: 'add', tags: [{ name: 'testtag' }] }]);
-    fixture.detectChanges(); // To render the button
 
-    const addLastButton = await loader.getHarness(MatButtonHarness.with({ selector: 'button[mattooltipclass="multiline-tooltip"]' })); // Select by class as tooltip is dynamic
+    (providers.ImageTagService.recentOperations as unknown as WritableSignal<any[]>).set([{ type: 'add', tags: [{ name: 'testtag' }] }]);
+    fixture.detectChanges();
+    const addLastButton = await loader.getHarness(MatButtonHarness.with({ selector: 'button[mattooltipclass="multiline-tooltip"]' }));
     await addLastButton.click();
 
     expect(providers.ImageTagService.performLastOperation).toHaveBeenCalledWith(component.imageSource.reference);
   });
 
   it('should navigate to full image view when "Show full size" button is clicked', async () => {
-    const fullSizeButton = await loader.getHarness(MatButtonHarness.with({selector: '[mattooltip="Show full size"]'}));
+    const fullSizeButton = await loader.getHarness(MatButtonHarness.with({ selector: '[mattooltip="Show full size"]' }));
     await fullSizeButton.click();
     expect(providers.Router.navigateByUrl).toHaveBeenCalledWith(`/image/${imageSource.reference.id}`);
   });
 
   it('should call ImageTagService.performLastOperation when "Add last operation" button is clicked', async () => {
-    // Ensure the button is visible by setting recentOperations in the mock
     (providers.ImageTagService.recentOperations as WritableSignal<any[]>).set([{ type: 'add', tags: [{ name: 'testtag' }] }]);
-    fixture.detectChanges(); // To render the button based on the signal update
-
-    // Attempt to find the button. The tooltip text is dynamic (lastOpText()), so we use the icon or a more stable attribute.
-    // The button has a mat-icon with fontIcon="post_add" and matTooltipClass="multiline-tooltip"
+    fixture.detectChanges();
     const addLastButton = await loader.getHarness(MatButtonHarness.with({ selector: 'button[mattooltipclass="multiline-tooltip"]' }));
     await addLastButton.click();
 
@@ -121,13 +116,12 @@ describe('ImageCardComponent', () => {
     const mockTagNames = mockTags.map(t => t.name);
 
     beforeEach(() => {
-      // Reset spies and component state before each test in this describe block
+
       (providers.TagService.LoadTagByName as jasmine.Spy).calls.reset();
       (providers.ImageTagService.replaceTags as jasmine.Spy).calls.reset();
       (providers.MessageService.Error as jasmine.Spy).calls.reset();
-      component.showTagSelection.set(true); // Assume it's open before selection change
+      component.showTagSelection.set(true);
 
-      // Mock LoadTagByName to resolve with corresponding mock tags
       mockTags.forEach(tag => {
         (providers.TagService.LoadTagByName as jasmine.Spy).withArgs(tag.name).and.returnValue(Promise.resolve(tag));
       });
@@ -152,7 +146,7 @@ describe('ImageCardComponent', () => {
 
       await component.onSelectionChange(mockTagNames);
 
-      expect(component.showTagSelection()).toBe(false); // Should still close
+      expect(component.showTagSelection()).toBe(false);
       expect(providers.ImageTagService.replaceTags).not.toHaveBeenCalled();
       expect(providers.MessageService.Error).toHaveBeenCalledWith(jasmine.stringContaining(`Error updating tags on image ${imageSource.reference.id}: ${error}`));
     });
@@ -163,7 +157,7 @@ describe('ImageCardComponent', () => {
 
       await component.onSelectionChange(mockTagNames);
 
-      expect(component.showTagSelection()).toBe(false); // Should still close
+      expect(component.showTagSelection()).toBe(false);
       expect(providers.MessageService.Error).toHaveBeenCalledWith(jasmine.stringContaining(`Error updating tags on image ${imageSource.reference.id}: ${error}`));
     });
   });

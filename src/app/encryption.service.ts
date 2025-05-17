@@ -84,14 +84,14 @@ export class EncryptionService implements OnDestroy {
   crypto: Crypto | null = null;
   wrap_key: CryptoKey | null = null;
   encryption_key: LiveKey | null = null;
-  readyStateChanged$ = new ReplaySubject<State>(State.NotReady);
-  state = toSignal(this.readyStateChanged$);
+  private _state = signal<State>(State.NotReady);
+  state: Signal<State> = this._state.asReadonly();
   enabled = computed(()=>!!(this.state() === State.Ready));
 
   constructor() {
     if ( !this.windowRef.nativeWindow?.crypto.subtle ) {
       this.messageService.Error("Encryption service init error: Could not get crypto reference!");
-      this.readyStateChanged$.next(State.Error);
+      this._state.set(State.Error);
       return;
     }
     this.subtle = this.windowRef!.nativeWindow!.crypto.subtle;
@@ -104,14 +104,14 @@ export class EncryptionService implements OnDestroy {
   }
 
   async Enable(passphrase: string): Promise<State> {
-    this.readyStateChanged$.next(State.Initializing)
+    this._state.set(State.Initializing)
 
     try {
       const passKey = await this.subtle!.importKey("raw", stringToArrayBuffer(passphrase), {name: "PBKDF2"}, false, ["deriveKey"]);
       this.wrap_key = await this.subtle!.deriveKey(pbkdf2Params, passKey, aesKWParams, true, ['wrapKey', 'unwrapKey']);
     } catch (err: unknown) {
       this.messageService.Error(err as Error)
-      this.readyStateChanged$.next(State.Error)
+      this._state.set(State.Error)
       return State.Error;
     }
 
@@ -119,22 +119,22 @@ export class EncryptionService implements OnDestroy {
       const latest = await this.LoadLatestKey()
       if ( latest ) {
         this.encryption_key = latest
-        this.readyStateChanged$.next(State.Ready);
+        this._state.set(State.Ready);
         return State.Ready;
       }
     } catch (err: unknown) {
       this.messageService.Error(err as Error)
-      this.readyStateChanged$.next(State.Error)
+      this._state.set(State.Error)
       return State.Error;
     }
 
     try {
       this.encryption_key = await this.GenerateEncryptionKey();
-      this.readyStateChanged$.next(State.Ready);
+      this._state.set(State.Ready);
       return State.Ready;
     } catch (err: unknown) {
       this.messageService.Error(err as Error)
-      this.readyStateChanged$.next(State.Error)
+      this._state.set(State.Error)
       return State.Error;
     }
   }
@@ -143,7 +143,7 @@ export class EncryptionService implements OnDestroy {
   Disable() {
     this.wrap_key = null;
     this.encryption_key = null;
-    this.readyStateChanged$.next(State.NotReady);
+    this._state.set(State.NotReady);
   }
 
   ngOnDestroy() {
@@ -276,16 +276,28 @@ export class EncryptionService implements OnDestroy {
     return this.subtle!.decrypt(gcmOpts, key, input.ciphertext)
   }
 
-  async BlockUntilReady(timeoutMs: number): Promise<void> {
-    let state = await firstValueFrom(this.readyStateChanged$);
-    if ( state !== State.Ready ) {
-      try {
-        state = await firstValueFrom(this.readyStateChanged$.pipe(timeout(timeoutMs)))
-      } catch (e) {
-        return Promise.reject(`EncryptionService not ready after ${timeoutMs}`);
-      }
-    }
+async BlockUntilReady(timeoutMs: number): Promise<void> {
+  if (this._state() === State.Ready) {
+    return Promise.resolve();
   }
+
+  return new Promise<void>((resolve, reject) => {
+    let effectRef: import('@angular/core').EffectRef | undefined;
+
+    const timeoutId = setTimeout(() => {
+      effectRef?.destroy();
+      reject(new Error(`EncryptionService not ready after ${timeoutMs}ms`));
+    }, timeoutMs);
+
+    effectRef = effect(() => {
+      if (this._state() === State.Ready) {
+        clearTimeout(timeoutId);
+        effectRef?.destroy();
+        resolve();
+      }
+    });
+  });
+}
 
   async forTestOnlyClearAllKeys() {
     return getDocs(collection(this.firestore, keysCollectionPath))
@@ -299,13 +311,9 @@ export class FakeEncryptionService {
   iv: Uint8Array = new Uint8Array(16)
   keyRef = {id: "123", path: "keys/123"} as DocumentReference
   enabled: WritableSignal<boolean> = signal(false);
-  currentState$ = new ReplaySubject<State>(State.NotReady);
-  state = signal<State>(State.NotReady);
+  _state = signal<State>(State.NotReady);
+  state = this._state.asReadonly();
   ready = computed(()=>this.state() === State.Ready);
-
-  constructor() {
-    this.currentState$.pipe(distinctUntilChanged()).subscribe(state=>this.state.set(state as State));
-  }
 
   async Disable(){
     this.enabled.set(false);

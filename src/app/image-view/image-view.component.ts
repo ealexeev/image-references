@@ -10,6 +10,7 @@ import {
   ViewChild,
   ElementRef,
   computed,
+  Signal,
 } from '@angular/core';
 import {Image, ImageData} from '../../lib/models/image.model';
 import {ImageService} from '../image.service';
@@ -25,7 +26,7 @@ import {MatButtonModule} from '@angular/material/button';
 import {MatTooltipModule} from '@angular/material/tooltip';
 import {MatDividerModule} from '@angular/material/divider';
 import {Tag, TagService} from '../tag.service';
-import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
+import {takeUntilDestroyed, toSignal} from '@angular/core/rxjs-interop';
 import {MatDialog} from '@angular/material/dialog';
 import {ConfirmationDialogComponent} from '../confirmation-dialog/confirmation-dialog.component';
 import {DownloadService} from '../download.service';
@@ -75,7 +76,11 @@ export class ImageViewComponent implements OnInit, OnDestroy {
 
   separatorKeysCodes: number[] = [ENTER, COMMA];
   itemCtrl = new FormControl('');
-  filteredItems: Observable<string[]>;
+  itemCtrlValue = toSignal(this.itemCtrl.valueChanges);
+  filteredItems: Signal<Array<string>> = computed(() => {
+    const item = this.itemCtrlValue();
+    return item ? this._filter(item) : this.items().slice()
+  });
   items = computed(() => this.tagService.tags().map(t => t.name));
   selectedItems: WritableSignal<string[]> = signal([]);
   @ViewChild('itemInput') itemInput!: ElementRef;
@@ -90,13 +95,6 @@ export class ImageViewComponent implements OnInit, OnDestroy {
       this.imgURL.set(URL.createObjectURL(b));
       this.imgExtension.set(extFromMime(b.type));
     });
-
-    this.filteredItems = this.itemCtrl.valueChanges.pipe(
-      startWith(null),
-      map((item: string | null) =>
-        item ? this._filter(item) : this.items().slice()
-      )
-    );
 
     effect(async ()=>{
       const tagsRefs = this.bundle()?.image.tags;
@@ -132,7 +130,7 @@ export class ImageViewComponent implements OnInit, OnDestroy {
 
   createTag(event: MatChipInputEvent): void {
     const value = (event.value || '').trim();
-    if (!value) {return}
+    if (!value || this.addTagIfOnlyOneRemains()) {return}
     this.openCreateTagConfirmation(value);
     event.chipInput!.clear();
     this.itemCtrl.setValue(null);
@@ -186,6 +184,28 @@ export class ImageViewComponent implements OnInit, OnDestroy {
       .catch((err: unknown) => {console.error(`addTagToImage(${event.option.viewValue}): ${err}`)});
     this.itemInput.nativeElement.value = '';
     this.itemCtrl.setValue(null);
+  }
+
+  handleTabKey(event: Event): void {
+    if (this.addTagIfOnlyOneRemains()) event.preventDefault();
+  }
+
+  private addTagIfOnlyOneRemains(): boolean {
+    const currentFiltered = this.filteredItems();
+    if (currentFiltered && currentFiltered.length === 1) {
+      const itemToSelect = currentFiltered[0];
+      if (!this.selectedItems().includes(itemToSelect)) {
+        this.addTagToImage(itemToSelect)
+          .catch((err: unknown) => { console.error(`addTagToImage(${itemToSelect}) on Tab: ${err}`); });
+
+        if (this.itemInput && this.itemInput.nativeElement) {
+          this.itemInput.nativeElement.value = '';
+        }
+        this.itemCtrl.setValue(null);
+        return true;
+      } 
+    }
+    return false;
   }
 
   private async addTagToImage(tagName: string): Promise<void> {

@@ -18,10 +18,11 @@
             [matAutocomplete]="auto"
             [matChipInputFor]="chipList"
             (matChipInputTokenEnd)="createTag($event)"
+            (keydown.tab)="handleTabKey($event)"
           />
         </mat-chip-grid>
         <mat-autocomplete #auto="matAutocomplete" (optionSelected)="selectTag($event)">
-          @for (item of filteredItems | async; track item) {
+          @for (item of filteredItems(); track item) {
             <mat-option [value]="item">
               {{ item }}
             </mat-option>

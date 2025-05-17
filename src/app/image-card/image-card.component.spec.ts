@@ -2,17 +2,17 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { ImageCardComponent } from './image-card.component';
 import {DocumentReference} from '@angular/fire/firestore';
-import {FakeTagService, TagService} from '../tag.service';
-import {FakeImageService, ImageService} from '../image.service';
 import {Image} from '../../lib/models/image.model';
-import { getDefaultProviders } from '../test-providers';
+import { DefaultProviders } from '../test-providers';
 
 describe('ImageCardComponent', () => {
   let component: ImageCardComponent;
   let fixture: ComponentFixture<ImageCardComponent>;
   let imageSource: Image;
+  let providers: DefaultProviders
 
   beforeEach(async () => {
+    providers = new DefaultProviders();
     imageSource = {
       reference: {id: "1"} as DocumentReference,
       tags: [] as DocumentReference[],
@@ -20,7 +20,7 @@ describe('ImageCardComponent', () => {
 
     await TestBed.configureTestingModule({
       imports: [ImageCardComponent],
-      providers: getDefaultProviders(),
+      providers: providers.getProviders(),
     })
     .compileComponents();
 

@@ -81,4 +81,90 @@ describe('ImageCardComponent', () => {
     expect(providers.Router.navigateByUrl).toHaveBeenCalledWith(`/image/${imageSource.reference.id}`);
   });
 
+  it('should call ImageTagService.performLastOperation when "Add last operation" button is clicked', async () => {
+    // Ensure the button is visible by setting recentOperations in the mock
+    (providers.ImageTagService.recentOperations as WritableSignal<any[]>).set([{ type: 'add', tags: [{ name: 'testtag' }] }]);
+    fixture.detectChanges(); // To render the button based on the signal update
+
+    // Attempt to find the button. The tooltip text is dynamic (lastOpText()), so we use the icon or a more stable attribute.
+    // The button has a mat-icon with fontIcon="post_add" and matTooltipClass="multiline-tooltip"
+    const addLastButton = await loader.getHarness(MatButtonHarness.with({ selector: 'button[mattooltipclass="multiline-tooltip"]' }));
+    await addLastButton.click();
+
+    expect(providers.ImageTagService.performLastOperation).toHaveBeenCalledWith(component.imageSource.reference);
+  });
+
+  describe('updateSelected', () => {
+    it('should emit imageSelectedChange and call addToScope$ when selected is true', () => {
+      spyOn(component.imageSelectedChange, 'emit');
+      spyOn(providers.ImageTagService.addToScope$, 'next');
+
+      component.updateSelected(true);
+
+      expect(component.imageSelectedChange.emit).toHaveBeenCalledWith({ selected: true, reference: imageSource.reference.id });
+      expect(providers.ImageTagService.addToScope$.next).toHaveBeenCalledWith(imageSource.reference);
+    });
+
+    it('should emit imageSelectedChange and call removeFromScope$ when selected is false', () => {
+      spyOn(component.imageSelectedChange, 'emit');
+      spyOn(providers.ImageTagService.removeFromScope$, 'next');
+
+      component.updateSelected(false);
+
+      expect(component.imageSelectedChange.emit).toHaveBeenCalledWith({ selected: false, reference: imageSource.reference.id });
+      expect(providers.ImageTagService.removeFromScope$.next).toHaveBeenCalledWith(imageSource.reference);
+    });
+  });
+
+  describe('onSelectionChange', () => {
+    const mockTags = [{ id: 'tag1ref', name: 'tag1' }, { id: 'tag2ref', name: 'tag2' }];
+    const mockTagNames = mockTags.map(t => t.name);
+
+    beforeEach(() => {
+      // Reset spies and component state before each test in this describe block
+      (providers.TagService.LoadTagByName as jasmine.Spy).calls.reset();
+      (providers.ImageTagService.replaceTags as jasmine.Spy).calls.reset();
+      (providers.MessageService.Error as jasmine.Spy).calls.reset();
+      component.showTagSelection.set(true); // Assume it's open before selection change
+
+      // Mock LoadTagByName to resolve with corresponding mock tags
+      mockTags.forEach(tag => {
+        (providers.TagService.LoadTagByName as jasmine.Spy).withArgs(tag.name).and.returnValue(Promise.resolve(tag));
+      });
+      (providers.ImageTagService.replaceTags as jasmine.Spy).and.returnValue(Promise.resolve());
+    });
+
+    it('should set showTagSelection to false, load tags, and call replaceTags', async () => {
+      await component.onSelectionChange(mockTagNames);
+
+      expect(component.showTagSelection()).toBe(false);
+      expect(providers.TagService.LoadTagByName).toHaveBeenCalledTimes(mockTagNames.length);
+      mockTagNames.forEach(name => {
+        expect(providers.TagService.LoadTagByName).toHaveBeenCalledWith(name);
+      });
+      expect(providers.ImageTagService.replaceTags).toHaveBeenCalledWith(imageSource.reference, jasmine.arrayContaining(mockTags.map(t => jasmine.objectContaining(t))));
+      expect(providers.MessageService.Error).not.toHaveBeenCalled();
+    });
+
+    it('should call MessageService.Error if LoadTagByName fails', async () => {
+      const error = new Error('Failed to load tag');
+      (providers.TagService.LoadTagByName as jasmine.Spy).withArgs(mockTagNames[0]).and.returnValue(Promise.reject(error));
+
+      await component.onSelectionChange(mockTagNames);
+
+      expect(component.showTagSelection()).toBe(false); // Should still close
+      expect(providers.ImageTagService.replaceTags).not.toHaveBeenCalled();
+      expect(providers.MessageService.Error).toHaveBeenCalledWith(jasmine.stringContaining(`Error updating tags on image ${imageSource.reference.id}: ${error}`));
+    });
+
+    it('should call MessageService.Error if replaceTags fails', async () => {
+      const error = new Error('Failed to replace tags');
+      (providers.ImageTagService.replaceTags as jasmine.Spy).and.returnValue(Promise.reject(error));
+
+      await component.onSelectionChange(mockTagNames);
+
+      expect(component.showTagSelection()).toBe(false); // Should still close
+      expect(providers.MessageService.Error).toHaveBeenCalledWith(jasmine.stringContaining(`Error updating tags on image ${imageSource.reference.id}: ${error}`));
+    });
+  });
 });

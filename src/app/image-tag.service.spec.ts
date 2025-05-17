@@ -15,7 +15,10 @@ describe('ImageTagService', () => {
   beforeEach(() => {
     providers = new DefaultProviders();
     TestBed.configureTestingModule({
-      providers: providers.getProviders(),
+      providers: [
+        ...providers.getProviders({exclude: [ImageTagService]}),
+        { provide: ImageTagService, useClass: ImageTagService },
+      ]
     }).compileComponents();
     service = TestBed.inject(ImageTagService);
 

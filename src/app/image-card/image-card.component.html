@@ -49,7 +49,7 @@
         class="tag-list-selection"
         [selectedTags]="imageTagNames()"
         (selectionChange)="onSelectionChange($event)"
-        (opened)="onSelectionOpen()"
+        (opened)="clearTimer()"
       />
     }
 		<button mat-icon-button

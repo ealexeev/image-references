@@ -18,7 +18,7 @@ import {TagService} from '../tag.service';
 import {MessageService} from '../message.service';
 import {ImageService} from '../image.service';
 import {Image, ImageData, ImageSubscription} from '../../lib/models/image.model';
-import {first, Observable, of, raceWith, Subject, take, takeUntil, timer} from 'rxjs';
+import {Observable, of, Subject, take, takeUntil} from 'rxjs';
 import {MatTooltipModule} from '@angular/material/tooltip';
 import {Router} from '@angular/router';
 import {ConfirmationDialogComponent} from '../confirmation-dialog/confirmation-dialog.component';
@@ -66,8 +66,6 @@ export class ImageCardComponent implements OnInit, OnDestroy{
   private dataSub: ImageSubscription<ImageData> | undefined = undefined;
 
   showTagSelection = signal(false);
-  tagSelectionFired$: Subject<void> = new Subject();
-  tagSelectionOpened$: Subject<void> = new Subject();
   imageTagNames: WritableSignal<string[]> = signal([]);
   thumbnailUrl: WritableSignal<string> = signal('');
   fullUrlAvailable: WritableSignal<Boolean> = signal(false);
@@ -80,6 +78,7 @@ export class ImageCardComponent implements OnInit, OnDestroy{
 
   private unsubscribe: () => void = () => {return};
   private destroy$: Subject<void> = new Subject<void>();
+  private tagSelectionTimeoutId: any = null;
 
   constructor() {
     effect(async () => {
@@ -96,6 +95,14 @@ export class ImageCardComponent implements OnInit, OnDestroy{
           this.loadComplete.emit()
         }
     })
+    effect(()=>{
+      if (this.showTagSelection()) {
+        this.tagSelectionTimeoutId = setTimeout(() => {
+          this.showTagSelection.set(false);
+          this.tagSelectionTimeoutId = null;
+        }, 5000);
+      }
+    }, {allowSignalWrites: true})
   }
 
   ngOnInit(): void {
@@ -115,9 +122,12 @@ export class ImageCardComponent implements OnInit, OnDestroy{
   }
 
   ngOnDestroy(): void{
-    this.unsubscribe()
-    this.destroy$.next()
-    this.destroy$.complete()
+    this.unsubscribe();
+    this.destroy$.next();
+    this.destroy$.complete();
+    if (this.tagSelectionTimeoutId) {
+      clearTimeout(this.tagSelectionTimeoutId);
+    }
   }
 
   startSubscriptions() {
@@ -173,24 +183,15 @@ export class ImageCardComponent implements OnInit, OnDestroy{
   }
 
   manageTags() {
+    this.clearTimer();
     this.showTagSelection.update(v => !v);
-    if ( this.showTagSelection() ) {
-      const unsub = timer(10000).pipe(
-        raceWith(this.tagSelectionOpened$),
-        first(),
-      ).subscribe({
-        next: (value) => {
-          if (value === 0) {
-            this.showTagSelection.set(false)
-          }
-          unsub.unsubscribe();
-        }
-      })
-    }
   }
 
-  onSelectionOpen() {
-    this.tagSelectionOpened$.next()
+  private clearTimer() {
+    if (this.tagSelectionTimeoutId) {
+      clearTimeout(this.tagSelectionTimeoutId);
+      this.tagSelectionTimeoutId = null;
+    }
   }
 
   onAddLast() {

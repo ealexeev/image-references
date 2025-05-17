@@ -130,7 +130,7 @@ export class ImageViewComponent implements OnInit, OnDestroy {
 
   createTag(event: MatChipInputEvent): void {
     const value = (event.value || '').trim();
-    if (!value || this.addTagIfOnlyOneRemains()) {return}
+    if (!value || this.addTagIfOnlyOneRemains() || this.filteredItems().length) {return}
     this.openCreateTagConfirmation(value);
     event.chipInput!.clear();
     this.itemCtrl.setValue(null);
@@ -179,7 +179,11 @@ export class ImageViewComponent implements OnInit, OnDestroy {
       this.itemCtrl.setValue(null);
       return;
     }
-    this.selectedItems.update(items=> {items.push(event.option.viewValue); return items});
+    this.selectedItems.update(items=> {
+      items.push(event.option.viewValue)
+      items.sort()
+      return items
+    })
     this.addTagToImage(event.option.viewValue)
       .catch((err: unknown) => {console.error(`addTagToImage(${event.option.viewValue}): ${err}`)});
     this.itemInput.nativeElement.value = '';
@@ -195,6 +199,11 @@ export class ImageViewComponent implements OnInit, OnDestroy {
     if (currentFiltered && currentFiltered.length === 1) {
       const itemToSelect = currentFiltered[0];
       if (!this.selectedItems().includes(itemToSelect)) {
+        this.selectedItems.update(items=> {
+          items.push(itemToSelect)
+          items.sort()
+          return items
+        })
         this.addTagToImage(itemToSelect)
           .catch((err: unknown) => { console.error(`addTagToImage(${itemToSelect}) on Tab: ${err}`); });
 

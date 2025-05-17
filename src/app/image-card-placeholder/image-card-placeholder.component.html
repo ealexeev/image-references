@@ -1,0 +1,25 @@
+<mat-card class="image-card-placeholder">
+    @if (encryptionService.state() !== encryptionState.Ready) {
+    <div class="thumbnail-lock">
+        <mat-icon fontIcon="lock"></mat-icon>
+    </div>
+    } @else {
+    <div style="display: flex; height: 200px; width:200px; justify-content: center; align-items: center;">
+        <div class="lds-spinner">
+            <div></div>
+            <div></div>
+            <div></div>
+            <div></div>
+            <div></div>
+            <div></div>
+            <div></div>
+            <div></div>
+            <div></div>
+            <div></div>
+            <div></div>
+            <div></div>
+        </div>
+    </div>
+    }
+
+</mat-card>

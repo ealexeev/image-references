@@ -8,28 +8,29 @@ import {
   signal, ViewChildren,
   WritableSignal
 } from '@angular/core';
-import {Subject, Subscription} from 'rxjs';
-import {PreferenceService} from '../preference-service';
-import {ImageCardComponent, SelectionStatus} from '../image-card/image-card.component';
-import {DragDropDirective, FileHandle} from '../drag-drop.directive';
-import {MessageService} from '../message.service';
-import {Tag, TagService} from '../tag.service';
-import {ImageService} from '../image.service';
-import {Image, ImageSubscription} from '../../lib/models/image.model';
-import {EncryptionService, State as EncryptionState} from '../encryption.service';
-import {MatProgressBarModule} from '@angular/material/progress-bar';
-import {DownloadService, BatchedStrategy} from '../download.service';
-import {MatButtonModule} from '@angular/material/button';
-import {MatIconModule} from '@angular/material/icon';
-import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
-import {ImageReport, IntegrityService} from '../integrity.service';
-import {MatTooltipModule} from '@angular/material/tooltip';
-import {NgClass} from '@angular/common';
-import {UploadService} from '../upload.service';
-import {Router} from '@angular/router';
-import {TagDeleteDialogComponent} from '../tag-delete-dialog/tag-delete-dialog.component';
-import {MatDialog} from '@angular/material/dialog';
-import {where} from '@angular/fire/firestore';
+import { Subject, Subscription } from 'rxjs';
+import { PreferenceService } from '../preference-service';
+import { ImageCardComponent, SelectionStatus } from '../image-card/image-card.component';
+import { ImageCardPlaceholderComponent } from '../image-card-placeholder/image-card-placeholder.component';
+import { DragDropDirective, FileHandle } from '../drag-drop.directive';
+import { MessageService } from '../message.service';
+import { Tag, TagService } from '../tag.service';
+import { ImageService } from '../image.service';
+import { Image, ImageSubscription } from '../../lib/models/image.model';
+import { EncryptionService, State as EncryptionState } from '../encryption.service';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { DownloadService, BatchedStrategy } from '../download.service';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { ImageReport, IntegrityService } from '../integrity.service';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { NgClass } from '@angular/common';
+import { UploadService } from '../upload.service';
+import { Router } from '@angular/router';
+import { TagDeleteDialogComponent } from '../tag-delete-dialog/tag-delete-dialog.component';
+import { MatDialog } from '@angular/material/dialog';
+import { where } from '@angular/fire/firestore';
 
 
 @Component({
@@ -44,6 +45,7 @@ import {where} from '@angular/fire/firestore';
     MatProgressSpinnerModule,
     MatTooltipModule,
     NgClass,
+    ImageCardPlaceholderComponent
   ],
   templateUrl: './image-gallery.component.html',
   styleUrls: [
@@ -53,11 +55,11 @@ import {where} from '@angular/fire/firestore';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ImageGalleryComponent implements OnInit, OnDestroy, OnChanges {
-  @Input({required: true}) mode: "tag" | "latest" | "inbox" = "latest";
+  @Input({ required: true }) mode: "tag" | "latest" | "inbox" = "latest";
   @Input()
   set tagName(value: string) {
-    if  ( value === undefined ) {return}
-    if ( value !== this.optTagName() ) {
+    if (value === undefined) { return }
+    if (value !== this.optTagName()) {
       this.optTagName.set(value);
     }
   }
@@ -91,34 +93,34 @@ export class ImageGalleryComponent implements OnInit, OnDestroy, OnChanges {
   imagesSub: Subscription = new Subscription();
 
   constructor() {
-    effect(()=>this.onMaxCountChanged(this.preferences.showImageCount()))
+    effect(() => this.onMaxCountChanged(this.preferences.showImageCount()))
 
-    effect(()=> {
+    effect(() => {
       this.encryptionService.state();
       this.images.set([]);
       this.ngOnDestroy();
       this.ngOnInit();
-    }, {allowSignalWrites: true});
+    }, { allowSignalWrites: true });
 
-    effect(()=> {
+    effect(() => {
       const tagName = this.optTagName();
-      if (tagName === '') {return};
+      if (tagName === '') { return };
       this.tagService.LoadTagByName(tagName)
         .then(tag => {
           this.tag = tag
         })
         .catch(err => {
           this.messageService.Error(`LoadTagByName(${tagName}): ${err}`);
-          if (this.mode ==='tag') {
+          if (this.mode === 'tag') {
             this.router.navigateByUrl('/tags');
           }
         })
       this.ngOnChanges();
-    }, {allowSignalWrites: true})
+    }, { allowSignalWrites: true })
   }
 
   ngOnInit() {
-    switch(this.mode) {
+    switch (this.mode) {
       case 'tag':
         this.title.set(this.optTagName())
         break
@@ -133,7 +135,7 @@ export class ImageGalleryComponent implements OnInit, OnDestroy, OnChanges {
         break
     }
     this.startSubscriptions()
-      .catch((err: unknown) => {this.messageService.Error(`<image-gallery> startSubscriptions(): ${err}`)})
+      .catch((err: unknown) => { this.messageService.Error(`<image-gallery> startSubscriptions(): ${err}`) })
   }
 
   ngOnChanges() {
@@ -147,7 +149,7 @@ export class ImageGalleryComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   onLoadComplete() {
-    const notStarted = this.imageCards.filter(img=>!img.loadImmediately)
+    const notStarted = this.imageCards.filter(img => !img.loadImmediately)
     if (notStarted.length > 0) {
       notStarted[0].startLoading()
     }
@@ -159,20 +161,20 @@ export class ImageGalleryComponent implements OnInit, OnDestroy, OnChanges {
 
   async startSubscriptions() {
     let subscription: ImageSubscription<Image[]>;
-    switch(this.mode) {
+    switch (this.mode) {
       case 'latest':
-        this.imageService.CountAllImages().then(cnt=>this.totalImageCount.set(cnt))
+        this.imageService.CountAllImages().then(cnt => this.totalImageCount.set(cnt))
         subscription = this.imageService.SubscribeToLatestImages(this.preferences.showImageCount())
         break
       case 'inbox':
-        this.imageService.CountUntaggedImages().then(cnt=>this.totalImageCount.set(cnt))
+        this.imageService.CountUntaggedImages().then(cnt => this.totalImageCount.set(cnt))
         subscription = this.imageService.SubscribeToUntaggedImages(this.preferences.showImageCount())
         break;
       case 'tag':
         const tag = await this.tagService.LoadTagByName(this.optTagName())
         this.imageService.CountTagImages(tag.reference)
           .then(cnt => this.totalImageCount.set(cnt))
-          .catch(err => {this.messageService.Error(`<image-gallery> fetching tag image count: ${err}`)})
+          .catch(err => { this.messageService.Error(`<image-gallery> fetching tag image count: ${err}`) })
         subscription = this.imageService.SubscribeToTag(tag.reference, this.preferences.showImageCount())
         break;
       default:
@@ -194,11 +196,11 @@ export class ImageGalleryComponent implements OnInit, OnDestroy, OnChanges {
         }
         return this.imageService.RemoveTags(img.reference, [(await this.tagService.LoadTagByName(this.optTagName())).reference]);
       case 'latest':
-        return this.imageService.DeleteImage(this.imageService.GetImageReferenceFromId(id)).then(()=>this.totalImageCount.update(v=>v-1))
+        return this.imageService.DeleteImage(this.imageService.GetImageReferenceFromId(id)).then(() => this.totalImageCount.update(v => v - 1))
       case 'inbox':
-        return this.imageService.DeleteImage(this.imageService.GetImageReferenceFromId(id)).then(()=>this.totalImageCount.update(v=>v-1))
+        return this.imageService.DeleteImage(this.imageService.GetImageReferenceFromId(id)).then(() => this.totalImageCount.update(v => v - 1))
       default:
-        return this.imageService.DeleteImage(this.imageService.GetImageReferenceFromId(id)).then(()=>this.totalImageCount.update(v=>v-1))
+        return this.imageService.DeleteImage(this.imageService.GetImageReferenceFromId(id)).then(() => this.totalImageCount.update(v => v - 1))
     }
   }
 
@@ -209,7 +211,7 @@ export class ImageGalleryComponent implements OnInit, OnDestroy, OnChanges {
     }
     this.ngOnDestroy()
     this.startSubscriptions()
-      .catch((err: unknown) => {this.messageService.Error(`<image-gallery> startSubscriptions(): ${err}`)})
+      .catch((err: unknown) => { this.messageService.Error(`<image-gallery> startSubscriptions(): ${err}`) })
   }
 
   filesDropped(files: FileHandle[]) {
@@ -227,14 +229,15 @@ export class ImageGalleryComponent implements OnInit, OnDestroy, OnChanges {
   onIntegrity() {
     const strategy = this.mode === 'latest' ? new BatchedStrategy(this.imageService) : new BatchedStrategy(this.imageService, where("tags", "array-contains", this.tag?.reference))
     const sub = this.integrityService.getImagesReportStrategy(strategy, true).subscribe({
-      next: (res: ImageReport[]) => {res.map(r=> console.log(r))},
-      complete: () => {sub.unsubscribe()},
+      next: (res: ImageReport[]) => { res.map(r => console.log(r)) },
+      complete: () => { sub.unsubscribe() },
     })
   }
 
   onDelete() {
     const dialogRef = this.dialog.open(TagDeleteDialogComponent, {
-      data: {tag: this.tag?.name, newName: ''}});
+      data: { tag: this.tag?.name, newName: '' }
+    });
 
     dialogRef.afterClosed().subscribe(result => {
       switch (result) {
@@ -242,10 +245,10 @@ export class ImageGalleryComponent implements OnInit, OnDestroy, OnChanges {
           console.log('delete cancelled')
           break;
         case '':
-          this.deleteTag().catch((err: unknown) => {console.error(err)})
+          this.deleteTag().catch((err: unknown) => { console.error(err) })
           break;
         default:
-          this.deleteTag(result).catch((err: unknown) => {console.error(err)})
+          this.deleteTag(result).catch((err: unknown) => { console.error(err) })
       }
     })
   }
@@ -260,10 +263,11 @@ export class ImageGalleryComponent implements OnInit, OnDestroy, OnChanges {
       next: (images: Image[]) => {
         for (const image of images) {
           const updated = image.tags
-            .filter(t=>t != this.tag!.reference)
-            .concat( newTag ? [newTag.reference] : []);
+            .filter(t => t != this.tag!.reference)
+            .concat(newTag ? [newTag.reference] : []);
           this.imageService.ReplaceTags(image.reference, updated)
-            .catch((err: unknown) => {console.error(`Replacing tags: ${err}`)})}
+            .catch((err: unknown) => { console.error(`Replacing tags: ${err}`) })
+        }
       },
       complete: () => {
         this.tagService.DeleteTag(this.tag!.reference);
@@ -277,7 +281,7 @@ export class ImageGalleryComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   onSelectedChange(value: SelectionStatus) {
-    this.selectedCount.update(v=> v + (value.selected ? 1 : -1) < 0 ? 0 : v + (value.selected ? 1 : -1));
+    this.selectedCount.update(v => v + (value.selected ? 1 : -1) < 0 ? 0 : v + (value.selected ? 1 : -1));
   }
 
 }

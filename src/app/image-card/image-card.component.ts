@@ -14,16 +14,16 @@ import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatChipsModule } from '@angular/material/chips';
 import { TagSelectComponent } from '../tag-select/tag-select.component';
-import {TagService} from '../tag.service';
-import {MessageService} from '../message.service';
-import {ImageService} from '../image.service';
-import {Image, ImageData, ImageSubscription} from '../../lib/models/image.model';
-import {Observable, of, Subject, take, takeUntil} from 'rxjs';
-import {MatTooltipModule} from '@angular/material/tooltip';
-import {Router} from '@angular/router';
-import {ConfirmationDialogComponent} from '../confirmation-dialog/confirmation-dialog.component';
-import {DownloadService} from '../download.service';
-import {SelectableDirective} from './selectable.directive';
+import { TagService } from '../tag.service';
+import { MessageService } from '../message.service';
+import { ImageService } from '../image.service';
+import { Image, ImageData, ImageSubscription } from '../../lib/models/image.model';
+import { Observable, of, Subject, take, takeUntil } from 'rxjs';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { Router } from '@angular/router';
+import { ConfirmationDialogComponent } from '../confirmation-dialog/confirmation-dialog.component';
+import { DownloadService } from '../download.service';
+import { SelectableDirective } from './selectable.directive';
 import { ImageTagService } from '../image-tag.service';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
@@ -47,8 +47,8 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
   ],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class ImageCardComponent implements OnInit, OnDestroy{
-  @Input({required: true}) imageSource!: Image;
+export class ImageCardComponent implements OnInit, OnDestroy {
+  @Input({ required: true }) imageSource!: Image;
   @Input() tagCountFrom: number = 2;
   @Input() loadImmediately: boolean = true;
   @Input() deselect$: Subject<void> = new Subject<void>();
@@ -76,52 +76,52 @@ export class ImageCardComponent implements OnInit, OnDestroy{
   encryptionPresent = signal(false);
   encryptionDecrypted = signal(false);
 
-  private unsubscribe: () => void = () => {return};
+  private unsubscribe: () => void = () => { return };
   private destroy$: Subject<void> = new Subject<void>();
   private tagSelectionTimeoutId: any = null;
 
   constructor() {
     effect(async () => {
-        const recentOps = this.imageTagService.recentOperations();
-        if (recentOps.length < 1) {
-          return;
-        }
-        const lastOp = recentOps[0];
-        this.lastOpText.set(lastOp.type + '\n' + lastOp.tags.map(t => `- ${t.name}`).join('\n'));
+      const recentOps = this.imageTagService.recentOperations();
+      if (recentOps.length < 1) {
+        return;
+      }
+      const lastOp = recentOps[0];
+      this.lastOpText.set(lastOp.type + '\n' + lastOp.tags.map(t => `- ${t.name}`).join('\n'));
 
-    }, { allowSignalWrites: true})
-    effect(()=>{
-        if (this.loaded()) {
-          this.loadComplete.emit()
-        }
+    }, { allowSignalWrites: true })
+    effect(() => {
+      if (this.loaded()) {
+        this.loadComplete.emit()
+      }
     })
-    effect(()=>{
+    effect(() => {
       if (this.showTagSelection()) {
         this.tagSelectionTimeoutId = setTimeout(() => {
           this.showTagSelection.set(false);
           this.tagSelectionTimeoutId = null;
         }, 5000);
       }
-    }, {allowSignalWrites: true})
+    }, { allowSignalWrites: true })
   }
 
   ngOnInit(): void {
-    if ( this.loadImmediately ) {
+    if (this.loadImmediately) {
       this.startSubscriptions()
     }
     this.resolveTags();
     this.imageTagService.operationComplete$.pipe(
       takeUntil(this.destroy$)
-    ).subscribe(scope=>{
-      if (scope.filter(ref=>ref.id==this.imageSource.reference.id).length>0) {
-          this.deselect$.next()
-          this.operationComplete.set(true);
-          setTimeout(()=>this.operationComplete.set(false), 3000);
+    ).subscribe(scope => {
+      if (scope.filter(ref => ref.id == this.imageSource.reference.id).length > 0) {
+        this.deselect$.next()
+        this.operationComplete.set(true);
+        setTimeout(() => this.operationComplete.set(false), 3000);
       }
     })
   }
 
-  ngOnDestroy(): void{
+  ngOnDestroy(): void {
     this.unsubscribe();
     this.destroy$.next();
     this.destroy$.complete();
@@ -168,7 +168,7 @@ export class ImageCardComponent implements OnInit, OnDestroy{
 
   resolveTags() {
     Promise.all(this.imageSource.tags.map(ref => this.tagService.LoadTagByReference(ref)))
-      .then(tags => {this.imageTagNames.set(tags.map(t=>t.name))})
+      .then(tags => { this.imageTagNames.set(tags.map(t => t.name)) })
       .catch((err: unknown) => this.messages.Error(`Error resolving tag names: ${err}`))
   }
 
@@ -178,8 +178,9 @@ export class ImageCardComponent implements OnInit, OnDestroy{
       fileName: this.imageSource.reference.id,
       maxZipContentFiles: 1,
       strategy: {
-        Fetch() {return of([img]);}
-      }})
+        Fetch() { return of([img]); }
+      }
+    })
   }
 
   manageTags() {
@@ -187,7 +188,7 @@ export class ImageCardComponent implements OnInit, OnDestroy{
     this.showTagSelection.update(v => !v);
   }
 
-  private clearTimer() {
+  protected clearTimer() {
     if (this.tagSelectionTimeoutId) {
       clearTimeout(this.tagSelectionTimeoutId);
       this.tagSelectionTimeoutId = null;
@@ -196,14 +197,14 @@ export class ImageCardComponent implements OnInit, OnDestroy{
 
   onAddLast() {
     this.imageTagService.performLastOperation(this.imageSource.reference)
-      .catch((err: unknown) => {this.messages.Error(`Error performing last operation: ${err}`)})
+      .catch((err: unknown) => { this.messages.Error(`Error performing last operation: ${err}`) })
   }
 
   async onSelectionChange(tags: string[]) {
     this.showTagSelection.set(false);
     Promise.all(tags.map(name => this.tagService.LoadTagByName(name)))
       .then(tags => this.imageTagService.replaceTags(this.imageSource.reference, tags))
-      .catch(e=>this.messages.Error(`Error updating tags on image ${this.imageSource.reference}: ${e}`))
+      .catch(e => this.messages.Error(`Error updating tags on image ${this.imageSource.reference}: ${e}`))
   }
 
   onFullSize() {
@@ -211,7 +212,7 @@ export class ImageCardComponent implements OnInit, OnDestroy{
   }
 
   updateSelected(selected: boolean) {
-    this.imageSelectedChange.emit({selected, reference: this.imageSource.reference.id});
+    this.imageSelectedChange.emit({ selected, reference: this.imageSource.reference.id });
     if (selected) {
       this.imageTagService.addToScope$.next(this.imageSource.reference);
     } else {

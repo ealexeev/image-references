@@ -3,72 +3,52 @@
     <div class="header">
       <span class="text">{{ title() }}</span>
       @if (totalImageCount()) {
-        <span class="spacer"></span>
-        ({{totalImageCount()}}) images
+      <span class="spacer"></span>
+      ({{totalImageCount()}}) images
       }
       <span class="spacer"></span>
-      <button mat-icon-button
-              (click)="onDownload()"
-              class="dl-button"
-              matTooltip="Download images"
-      >
+      <button mat-icon-button (click)="onDownload()" class="dl-button" matTooltip="Download images">
         <mat-icon fontIcon="download"></mat-icon>
       </button>
       @if (downloadService.busy()) {
-        <mat-spinner class="spinner"></mat-spinner>
+      <mat-spinner class="spinner"></mat-spinner>
       }
-      <button mat-icon-button
-              (click)="onIntegrity()"
-              class="integrity-button"
-              matTooltip="Run an integrity check"
-      >
-        <mat-icon fontIcon="verified"
-                  [ngClass]="{
+      <button mat-icon-button (click)="onIntegrity()" class="integrity-button" matTooltip="Run an integrity check">
+        <mat-icon fontIcon="verified" [ngClass]="{
                       'no-errors': integrityService.completed() && integrityService.errorCount() === 0,
                       'errors-present': integrityService.completed() && integrityService.errorCount() > 0,
-                      }"
-        ></mat-icon>
+                      }"></mat-icon>
       </button>
       @if (integrityService.busy()) {
-        <mat-spinner class="integrity-spinner"></mat-spinner>
+      <mat-spinner class="integrity-spinner"></mat-spinner>
       }
-      <button mat-icon-button
-              (click)="onDelete()"
-              class="delete-button"
-              matTooltip="Delete or rename this tag">
+      <button mat-icon-button (click)="onDelete()" class="delete-button" matTooltip="Delete or rename this tag">
         <mat-icon fontIcon="delete"></mat-icon>
       </button>
       @if (selectedCount() > 0) {
-        <span class="spacer"></span>
-        <button 
-              class="select-count-button"
-              matTooltip="Number of selected images"
-              (click)="deselectAll$.next()">
-          {{selectedCount()}}
-        </button>
+      <span class="spacer"></span>
+      <button class="select-count-button" matTooltip="Number of selected images" (click)="deselectAll$.next()">
+        {{selectedCount()}}
+      </button>
       }
-      
+
     </div>
     @if ( uploadService.uploading()) {
-      <h3 class="upload-heading">Uploading {{uploadService.uploadedCount()}} / {{uploadService.toUploadCount()}} Images</h3>
-      <mat-progress-bar mode="determinate"
-                        [value]="uploadService.uploadPercentage()"
-                        class="upload-progress"
-      />
+    <h3 class="upload-heading">Uploading {{uploadService.uploadedCount()}} / {{uploadService.toUploadCount()}} Images
+    </h3>
+    <mat-progress-bar mode="determinate" [value]="uploadService.uploadPercentage()" class="upload-progress" />
     } @else {
-      <div class="image-grid">
-        @for (liveImage of images(); track liveImage.reference.id; let index = $index) {
-          <app-image-card #img
-                          [imageSource]=liveImage
-                          [tagCountFrom]="mode === 'tag' ? 2 : 1"
-                          [loadImmediately]="index < loadBudget || countLoading() < loadBudget"
-                          [deselect$]="deselectAll$"
-                          (imageDeleted)="deleteImageOrTag($event)"
-                          (loadComplete)="onLoadComplete()"
-                          (imageSelectedChange)="onSelectedChange($event)"
-          />
-        }
-      </div>
+    <div class="image-grid">
+      @for (liveImage of images(); track liveImage.reference.id; let index = $index) {
+      @defer (on viewport) {
+      <app-image-card #img [imageSource]=liveImage [tagCountFrom]="mode === 'tag' ? 2 : 1" [deselect$]="deselectAll$"
+        (imageDeleted)="deleteImageOrTag($event)" (loadComplete)="onLoadComplete()"
+        (imageSelectedChange)="onSelectedChange($event)" />
+      } @placeholder {
+      <app-image-card-placeholder />
+      }
+      }
+    </div>
     }
   </div>
 </div>

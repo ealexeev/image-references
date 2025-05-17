@@ -1,7 +1,7 @@
-import {Auth, connectAuthEmulator, getAuth} from '@angular/fire/auth';
-import {connectFirestoreEmulator, Firestore, getFirestore, provideFirestore, DocumentReference} from '@angular/fire/firestore';
-import {ValueProvider, WritableSignal, signal} from '@angular/core';
-import {connectStorageEmulator, getStorage, provideStorage} from '@angular/fire/storage';
+import { Auth, connectAuthEmulator, getAuth } from '@angular/fire/auth';
+import { connectFirestoreEmulator, Firestore, getFirestore, provideFirestore, DocumentReference } from '@angular/fire/firestore';
+import { ValueProvider, WritableSignal, signal } from '@angular/core';
+import { connectStorageEmulator, getStorage, provideStorage } from '@angular/fire/storage';
 import { provideFirebaseApp, initializeApp } from '@angular/fire/app';
 import { environment } from './environments/environment.prod';
 import { FakeImageService, ImageService } from './image.service';
@@ -22,30 +22,34 @@ export function getDefaultProviders() {
     provideFirebaseApp(() => initializeApp(environment)),
     provideFirestore(() => EmulatedFirestore()),
     provideStorage(() => EmulatedStorage()),
-    {provide: EncryptionService, useClass: FakeEncryptionService},
-    {provide: ImageService, useClass: FakeImageService},
-    {provide: TagService, useClass: FakeTagService},
-    {provide: MessageService, useValue: jasmine.createSpyObj<MessageService>('MessageService', ['Info', 'Error'])},
-    {provide: FirestoreWrapperService, useValue: jasmine.createSpyObj<FirestoreWrapperService>('FirestoreWrapperService', ['updateDoc', 'arrayUnion', 'arrayRemove'])},
-    {provide: StorageWrapperService, useValue: jasmine.createSpyObj<StorageWrapperService>('StorageWrapperService', ['ref', 'getMetadata'])},
-    {provide: DownloadService, useValue: {
-      download: jasmine.createSpy('download'),
-      busy: signal(false),
-      imageCount: signal(0),
-      zipFileCount: signal(0),
-    } as unknown as DownloadService },
-    {provide: Router, useValue: jasmine.createSpyObj<Router>('Router', ['navigateByUrl'])},
-    {provide: ImageTagService, useValue: {
-      performLastOperation: jasmine.createSpy('performLastOperation').and.returnValue(Promise.resolve()),
-      recentOperations: signal([]),
-      operationComplete$: of([]), // or new Subject() if more control is needed
-      addToScope$: new Subject<DocumentReference>(),
-      removeFromScope$: new Subject<DocumentReference>(),
-      addTags: jasmine.createSpy('addTags').and.returnValue(Promise.resolve()),
-      removeTags: jasmine.createSpy('removeTags').and.returnValue(Promise.resolve()),
-      replaceTags: jasmine.createSpy('replaceTags').and.returnValue(Promise.resolve()),
-      recentTagIds: signal([]),
-    } as unknown as ImageTagService },
+    { provide: EncryptionService, useClass: FakeEncryptionService },
+    { provide: ImageService, useClass: FakeImageService },
+    { provide: TagService, useClass: FakeTagService },
+    { provide: MessageService, useValue: jasmine.createSpyObj<MessageService>('MessageService', ['Info', 'Error']) },
+    { provide: FirestoreWrapperService, useValue: jasmine.createSpyObj<FirestoreWrapperService>('FirestoreWrapperService', ['updateDoc', 'arrayUnion', 'arrayRemove']) },
+    { provide: StorageWrapperService, useValue: jasmine.createSpyObj<StorageWrapperService>('StorageWrapperService', ['ref', 'getMetadata']) },
+    {
+      provide: DownloadService, useValue: {
+        download: jasmine.createSpy('download'),
+        busy: signal(false),
+        imageCount: signal(0),
+        zipFileCount: signal(0),
+      } as unknown as DownloadService
+    },
+    { provide: Router, useValue: jasmine.createSpyObj<Router>('Router', ['navigateByUrl']) },
+    {
+      provide: ImageTagService, useValue: {
+        performLastOperation: jasmine.createSpy('performLastOperation').and.returnValue(Promise.resolve()),
+        recentOperations: signal([]),
+        operationComplete$: of([]), // or new Subject() if more control is needed
+        addToScope$: new Subject<DocumentReference>(),
+        removeFromScope$: new Subject<DocumentReference>(),
+        addTags: jasmine.createSpy('addTags').and.returnValue(Promise.resolve()),
+        removeTags: jasmine.createSpy('removeTags').and.returnValue(Promise.resolve()),
+        replaceTags: jasmine.createSpy('replaceTags').and.returnValue(Promise.resolve()),
+        recentTagIds: signal([]),
+      } as unknown as ImageTagService
+    },
   ]
 }
 
@@ -62,7 +66,7 @@ export function EmulatedFirestore(): Firestore {
   const firestore = getFirestore()
   // Hack to get around "already started" errors from https://stackoverflow.com/questions/71574102/firebase-error-firestore-has-already-been-started-and-its-settings-can-no-lon
   // @ts-ignore
-  if ( !firestore._settingsFrozen ) {
+  if (!firestore._settingsFrozen) {
     connectFirestoreEmulator(firestore, 'localhost', 8080, {})
   }
   return firestore;
@@ -70,7 +74,7 @@ export function EmulatedFirestore(): Firestore {
 
 export function EmulatedStorage() {
   const storage = getStorage();
-  if ( storage ) {
+  if (storage) {
     connectStorageEmulator(storage, "127.0.0.1", 9199);
   }
   return storage
@@ -80,23 +84,23 @@ export class DefaultProviders {
   EncryptionService = new FakeEncryptionService() as unknown as EncryptionService;
   ImageService = new FakeImageService() as unknown as ImageService;
   ImageConversionService = jasmine.createSpyObj<ImageConversionService>(
-    'ImageConversionService', 
+    'ImageConversionService',
     [
-      'snapshotToImageData', 
+      'snapshotToImageData',
       'snapshotToImage',
-      'imageConverter', 
-      'imageToFirestore', 
+      'imageConverter',
+      'imageToFirestore',
     ]);
 
   TagService = new FakeTagService() as unknown as TagService;
   MessageService = jasmine.createSpyObj<MessageService>('MessageService', ['Info', 'Error']);
   FirestoreWrapperService = jasmine.createSpyObj<FirestoreWrapperService>(
-    'FirestoreWrapperService', 
+    'FirestoreWrapperService',
     [
-      'updateDoc', 
-      'arrayUnion', 
-      'arrayRemove', 
-      'doc', 
+      'updateDoc',
+      'arrayUnion',
+      'arrayRemove',
+      'doc',
       'getDoc',
       'collection',
       'onSnapshot',
@@ -144,48 +148,48 @@ export class DefaultProviders {
     include?: unknown[];
     exclude?: unknown[];
   } = {}): ValueProvider[] {
-   return [
-    {
-      provide: this.EncryptionService,
-      useValue: this.EncryptionService
-    },
-    {
-      provide: StorageWrapperService,
-      useValue: this.StorageWrapperService
-    },
-    {
-      provide: ImageService,
-      useValue: this.ImageService
-    },
-    {
-      provide: TagService,
-      useValue: this.TagService
-    },
-    {
-      provide: MessageService,
-      useValue: this.MessageService
-    },
-    {
-      provide: FirestoreWrapperService,
-      useValue: this.FirestoreWrapperService
-    },
-    {
-      provide: ImageConversionService,
-      useValue: this.ImageConversionService
-    },
-    {
-      provide: DownloadService,
-      useValue: this.DownloadService
-    },
-    {
-      provide: Router,
-      useValue: this.Router
-    },
-    {
-      provide: ImageTagService,
-      useValue: this.ImageTagService
-    }
-   ].filter((provider) => {
+    return [
+      {
+        provide: EncryptionService,
+        useValue: this.EncryptionService
+      },
+      {
+        provide: StorageWrapperService,
+        useValue: this.StorageWrapperService
+      },
+      {
+        provide: ImageService,
+        useValue: this.ImageService
+      },
+      {
+        provide: TagService,
+        useValue: this.TagService
+      },
+      {
+        provide: MessageService,
+        useValue: this.MessageService
+      },
+      {
+        provide: FirestoreWrapperService,
+        useValue: this.FirestoreWrapperService
+      },
+      {
+        provide: ImageConversionService,
+        useValue: this.ImageConversionService
+      },
+      {
+        provide: DownloadService,
+        useValue: this.DownloadService
+      },
+      {
+        provide: Router,
+        useValue: this.Router
+      },
+      {
+        provide: ImageTagService,
+        useValue: this.ImageTagService
+      }
+    ].filter((provider) => {
       if (include && !include.includes(provider.provide)) {
         return false;
       }

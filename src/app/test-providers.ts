@@ -1,8 +1,8 @@
-import { Auth, connectAuthEmulator, getAuth } from '@angular/fire/auth';
+import { Auth, connectAuthEmulator, getAuth, provideAuth } from '@angular/fire/auth';
 import { connectFirestoreEmulator, Firestore, getFirestore, provideFirestore, DocumentReference } from '@angular/fire/firestore';
 import { ValueProvider, WritableSignal, signal } from '@angular/core';
 import { connectStorageEmulator, getStorage, provideStorage } from '@angular/fire/storage';
-import { provideFirebaseApp, initializeApp } from '@angular/fire/app';
+import { provideFirebaseApp, initializeApp, getApps } from '@angular/fire/app';
 import { environment } from './environments/environment.prod';
 import { FakeImageService, ImageService } from './image.service';
 import { FakeTagService, TagService } from './tag.service';
@@ -15,42 +15,33 @@ import { DownloadService } from './download.service';
 import { Router } from '@angular/router';
 import { ImageTagService } from './image-tag.service';
 import { Subject, of } from 'rxjs';
+import { FakeImageScaleService, ImageScaleService } from './image-scale.service';
 
-// Get default providers commonly needed for testing.
-export function getDefaultProviders() {
-  return [
-    provideFirebaseApp(() => initializeApp(environment)),
-    provideFirestore(() => EmulatedFirestore()),
-    provideStorage(() => EmulatedStorage()),
-    { provide: EncryptionService, useClass: FakeEncryptionService },
-    { provide: ImageService, useClass: FakeImageService },
-    { provide: TagService, useClass: FakeTagService },
-    { provide: MessageService, useValue: jasmine.createSpyObj<MessageService>('MessageService', ['Info', 'Error']) },
-    { provide: FirestoreWrapperService, useValue: jasmine.createSpyObj<FirestoreWrapperService>('FirestoreWrapperService', ['updateDoc', 'arrayUnion', 'arrayRemove']) },
-    { provide: StorageWrapperService, useValue: jasmine.createSpyObj<StorageWrapperService>('StorageWrapperService', ['ref', 'getMetadata']) },
-    {
-      provide: DownloadService, useValue: {
-        download: jasmine.createSpy('download'),
-        busy: signal(false),
-        imageCount: signal(0),
-        zipFileCount: signal(0),
-      } as unknown as DownloadService
-    },
-    { provide: Router, useValue: jasmine.createSpyObj<Router>('Router', ['navigateByUrl']) },
-    {
-      provide: ImageTagService, useValue: {
-        performLastOperation: jasmine.createSpy('performLastOperation').and.returnValue(Promise.resolve()),
-        recentOperations: signal([]),
-        operationComplete$: of([]), // or new Subject() if more control is needed
-        addToScope$: new Subject<DocumentReference>(),
-        removeFromScope$: new Subject<DocumentReference>(),
-        addTags: jasmine.createSpy('addTags').and.returnValue(Promise.resolve()),
-        removeTags: jasmine.createSpy('removeTags').and.returnValue(Promise.resolve()),
-        replaceTags: jasmine.createSpy('replaceTags').and.returnValue(Promise.resolve()),
-        recentTagIds: signal([]),
-      } as unknown as ImageTagService
-    },
-  ]
+export class DefaultEnvironmentProviders {
+  static connected: WritableSignal<boolean>;
+
+  constructor(private connected: WritableSignal<boolean>) {
+    DefaultEnvironmentProviders.connected = connected;
+  }
+
+  static FirebaseApp = provideFirebaseApp(() => {
+    if (getApps().length === 0) {
+      return initializeApp(environment);
+    }
+    return getApps()[0];
+  });
+  static FireStore = provideFirestore(() => EmulatedFirestore());
+  static Storage = provideStorage(() => EmulatedStorage());
+  static Auth = provideAuth(() => EmulatedAuth(DefaultEnvironmentProviders.connected));
+
+  getProviders() {
+    return [
+      DefaultEnvironmentProviders.FirebaseApp,
+      DefaultEnvironmentProviders.FireStore,
+      DefaultEnvironmentProviders.Storage,
+      DefaultEnvironmentProviders.Auth,
+    ];
+  }
 }
 
 export function EmulatedAuth(connected: WritableSignal<boolean>): Auth {
@@ -129,6 +120,7 @@ export class DefaultProviders {
     zipFileCount: signal(0),
   } as unknown as DownloadService;
   Router = jasmine.createSpyObj<Router>('Router', ['navigateByUrl']);
+  ImageScaleService = new FakeImageScaleService() as unknown as ImageScaleService;
   ImageTagService = {
     performLastOperation: jasmine.createSpy('performLastOperation').and.returnValue(Promise.resolve()),
     recentOperations: signal([]),
@@ -184,6 +176,10 @@ export class DefaultProviders {
       {
         provide: Router,
         useValue: this.Router
+      },
+      {
+        provide: ImageScaleService,
+        useValue: this.ImageScaleService
       },
       {
         provide: ImageTagService,

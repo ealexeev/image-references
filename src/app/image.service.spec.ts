@@ -1,8 +1,8 @@
 import { TestBed } from '@angular/core/testing';
 
 import { ImageService } from './image.service';
-import {initializeApp, provideFirebaseApp} from '@angular/fire/app';
-import {environment} from './environments/environment.dev';
+import { getApps, initializeApp, provideFirebaseApp } from '@angular/fire/app';
+import { environment } from './environments/environment.dev';
 import {
   collection,
   deleteDoc,
@@ -13,14 +13,14 @@ import {
   provideFirestore
 } from '@angular/fire/firestore';
 import { FirebaseStorage } from '@firebase/storage'
-import {EmulatedFirestore, EmulatedStorage} from './test-providers';
-import {EncryptionService, FakeEncryptionService} from './encryption.service';
-import {deleteObject, provideStorage, ref} from '@angular/fire/storage';
-import {FakeImageScaleService, ImageScaleService} from './image-scale.service';
-import {firstValueFrom} from 'rxjs';
+import { EmulatedFirestore, EmulatedStorage } from './test-providers';
+import { EncryptionService, FakeEncryptionService } from './encryption.service';
+import { deleteObject, provideStorage, ref } from '@angular/fire/storage';
+import { FakeImageScaleService, ImageScaleService } from './image-scale.service';
+import { firstValueFrom } from 'rxjs';
 
 describe('ImageService', () => {
-  jasmine.DEFAULT_TIMEOUT_INTERVAL=30000;
+  jasmine.DEFAULT_TIMEOUT_INTERVAL = 30000;
   let service: ImageService;
   let firestore: Firestore;
   let storage: FirebaseStorage;
@@ -31,11 +31,16 @@ describe('ImageService', () => {
 
     TestBed.configureTestingModule({
       providers: [
-        provideFirebaseApp(() => initializeApp(environment)),
-        provideFirestore(()=> EmulatedFirestore()),
+        provideFirebaseApp(() => {
+          if (getApps().length === 0) {
+            return initializeApp(environment);
+          }
+          return getApps()[0];
+        }),
+        provideFirestore(() => EmulatedFirestore()),
         provideStorage(() => EmulatedStorage()),
-        {provide: ImageScaleService, useClass: FakeImageScaleService},
-        {provide: EncryptionService, useValue: encryption},
+        { provide: ImageScaleService, useClass: FakeImageScaleService },
+        { provide: EncryptionService, useValue: encryption },
       ],
     });
     service = TestBed.inject(ImageService);
@@ -49,10 +54,10 @@ describe('ImageService', () => {
     // Delete everything in FireStore
     const snapshot = await getDocs(collection(firestore, 'images'))
     for (const image of snapshot.docs) {
-          // @ts-ignore
-          await deleteObject(ref(storage, `data/${image.id}`))
-          await deleteDoc(doc(firestore, 'images', image.id, 'data', 'thumbnail'));
-          await deleteDoc(image.ref)
+      // @ts-ignore
+      await deleteObject(ref(storage, `data/${image.id}`))
+      await deleteDoc(doc(firestore, 'images', image.id, 'data', 'thumbnail'));
+      await deleteDoc(image.ref)
     }
   })
 
@@ -61,14 +66,14 @@ describe('ImageService', () => {
   })
 
   it('should store an un-encrypted image', async () => {
-    const blob = new Blob(['stuff'], {type: 'image/png'});
-    const tags = [{id: "1"} as DocumentReference, {id: "2"} as DocumentReference]
+    const blob = new Blob(['stuff'], { type: 'image/png' });
+    const tags = [{ id: "1" } as DocumentReference, { id: "2" } as DocumentReference]
     await service.StoreImage(blob, tags);
     const snapshot = await getDocs(collection(firestore, 'images'))
     expect(snapshot.size).toEqual(1)
     const storedTags = snapshot.docs[0].get('tags')
     //@ts-ignore
-    expect(storedTags.map(t=>t['id'])).toEqual(tags.map(t=>t.id));
+    expect(storedTags.map(t => t['id'])).toEqual(tags.map(t => t.id));
     const imgDataSnap = await getDoc(doc(firestore, 'images', snapshot.docs[0].id, 'data', 'thumbnail'));
     expect(imgDataSnap.exists()).toEqual(true);
     const data = imgDataSnap.data();
@@ -91,14 +96,14 @@ describe('ImageService', () => {
   // This is broken, need to figure out why.
   it('should store an encrypted image', async () => {
     await encryption.Enable('test')
-    const blob = new Blob(['stuff'], {type: 'image/png'});
-    const tags = [{id: "1"} as DocumentReference, {id: "2"} as DocumentReference]
+    const blob = new Blob(['stuff'], { type: 'image/png' });
+    const tags = [{ id: "1" } as DocumentReference, { id: "2" } as DocumentReference]
     await service.StoreImage(blob, tags);
     const snapshot = await getDocs(collection(firestore, 'images'))
     expect(snapshot.size).toEqual(1)
     const storedTags = snapshot.docs[0].get('tags')
     //@ts-ignore
-    expect(storedTags.map(t=>t['id'])).toEqual(tags.map(t=>t.id));
+    expect(storedTags.map(t => t['id'])).toEqual(tags.map(t => t.id));
     const imgDataSnap = await getDoc(doc(firestore, 'images', snapshot.docs[0].id, 'data', 'thumbnail'));
     expect(imgDataSnap.exists()).toEqual(true);
     const data = imgDataSnap.data()!;
@@ -168,21 +173,21 @@ describe('ImageService', () => {
   // })
 
   it('should delete image', async () => {
-    const blob = new Blob(['stuff'], {type: 'image/png'});
-    const ref = doc(firestore, 'images',  await service['hmac'].getHmacHex(blob))
-    const tags = [{id: "1"} as DocumentReference, {id: "2"} as DocumentReference]
+    const blob = new Blob(['stuff'], { type: 'image/png' });
+    const ref = doc(firestore, 'images', await service['hmac'].getHmacHex(blob))
+    const tags = [{ id: "1" } as DocumentReference, { id: "2" } as DocumentReference]
     await service.StoreImage(blob, tags)
     await service.DeleteImage(ref)
     const snapshot = await getDoc(ref)
     expect(snapshot.exists()).toBeFalse()
-    const dataSnap = await getDoc(doc(firestore, 'images',  ref.id, 'data', 'thumbnail'))
+    const dataSnap = await getDoc(doc(firestore, 'images', ref.id, 'data', 'thumbnail'))
     expect(dataSnap.exists()).toBeFalse()
   })
 
   it('it should subscribe to plain image data', async () => {
-    const blob = new Blob(['stuff'], {type: 'image/png'});
-    const ref = doc(firestore, 'images',  await service['hmac'].getHmacHex(blob))
-    const tags = [{id: "1"} as DocumentReference, {id: "2"} as DocumentReference]
+    const blob = new Blob(['stuff'], { type: 'image/png' });
+    const ref = doc(firestore, 'images', await service['hmac'].getHmacHex(blob))
+    const tags = [{ id: "1" } as DocumentReference, { id: "2" } as DocumentReference]
     await service.StoreImage(blob, tags)
     const subscription = service.SubscribeToImageData(ref.id)
     const data = await firstValueFrom(subscription.results$)
@@ -196,9 +201,9 @@ describe('ImageService', () => {
 
   it('it should subscribe to encrypted image data', async () => {
     await encryption.Enable('test')
-    const blob = new Blob(['stuff'], {type: 'image/png'});
-    const ref = doc(firestore, 'images',  await service['hmac'].getHmacHex(blob))
-    const tags = [{id: "1"} as DocumentReference, {id: "2"} as DocumentReference]
+    const blob = new Blob(['stuff'], { type: 'image/png' });
+    const ref = doc(firestore, 'images', await service['hmac'].getHmacHex(blob))
+    const tags = [{ id: "1" } as DocumentReference, { id: "2" } as DocumentReference]
     await service.StoreImage(blob, tags)
     const subscription = service.SubscribeToImageData(ref.id)
     const data = await firstValueFrom(subscription.results$)
@@ -212,9 +217,9 @@ describe('ImageService', () => {
 
   it('it should indicate encryption present but not decrypted', async () => {
     await encryption.Enable('test')
-    const blob = new Blob(['stuff'], {type: 'image/png'});
-    const ref = doc(firestore, 'images',  await service['hmac'].getHmacHex(blob))
-    const tags = [{id: "1"} as DocumentReference, {id: "2"} as DocumentReference]
+    const blob = new Blob(['stuff'], { type: 'image/png' });
+    const ref = doc(firestore, 'images', await service['hmac'].getHmacHex(blob))
+    const tags = [{ id: "1" } as DocumentReference, { id: "2" } as DocumentReference]
     await service.StoreImage(blob, tags)
     await encryption.Disable()
     const subscription = service.SubscribeToImageData(ref.id)
@@ -228,7 +233,7 @@ describe('ImageService', () => {
   })
 
   it('it should subscribe to images associated with tag', async () => {
-    const blob = new Blob(['stuff'], {type: 'image/png'});
+    const blob = new Blob(['stuff'], { type: 'image/png' });
     const tags = [doc(firestore, 'tags', '1'), doc(firestore, 'tags', '2')]
     await service.StoreImage(blob, tags)
     const subscription = service.SubscribeToTag(tags[0], 5)
@@ -238,9 +243,9 @@ describe('ImageService', () => {
     subscription.unsubscribe()
   })
 
-  it('should subscribe to latest', async ()=> {
-    const blob1 = new Blob(['stuff'], {type: 'image/png'});
-    const blob2 = new Blob(['stuff2'], {type: 'image/png'});
+  it('should subscribe to latest', async () => {
+    const blob1 = new Blob(['stuff'], { type: 'image/png' });
+    const blob2 = new Blob(['stuff2'], { type: 'image/png' });
     const tags = [doc(firestore, 'tags', '1'), doc(firestore, 'tags', '2')]
     await service.StoreImage(blob1, tags)
     await service.StoreImage(blob2, [])
@@ -253,8 +258,8 @@ describe('ImageService', () => {
 
   it('should load image data', async () => {
     await encryption.Enable('test')
-    const blob = new Blob(['stuff'], {type: 'image/png'});
-    const ref = doc(firestore, 'images',  await service['hmac'].getHmacHex(blob))
+    const blob = new Blob(['stuff'], { type: 'image/png' });
+    const ref = doc(firestore, 'images', await service['hmac'].getHmacHex(blob))
     await service.StoreImage(blob, [])
     const data = await service.LoadImageData(ref.id)
     expect(data.thumbnail).toBeTruthy()

@@ -1,23 +1,26 @@
-import {EncryptionService} from './encryption.service';
-import {Firestore, provideFirestore} from '@angular/fire/firestore';
-import {WindowRef} from './window-ref.service';
-import {FirebaseApp, initializeApp, provideFirebaseApp} from '@angular/fire/app';
-import {environment} from './environments/environment.dev';
-import {TestBed} from '@angular/core/testing';
-import {EmulatedFirestore} from './test-providers';
-import {signal} from '@angular/core';
+import { EncryptionService } from './encryption.service';
+import { Firestore, provideFirestore } from '@angular/fire/firestore';
+import { WindowRef } from './window-ref.service';
+import { FirebaseApp, initializeApp, provideFirebaseApp } from '@angular/fire/app';
+import { environment } from './environments/environment.dev';
+import { TestBed } from '@angular/core/testing';
+import { DefaultEnvironmentProviders, DefaultProviders, EmulatedFirestore } from './test-providers';
+import { signal } from '@angular/core';
+import { D } from '@angular/cdk/keycodes';
 
 describe('EncryptionService', () => {
+  let environmentProviders = new DefaultEnvironmentProviders(signal(false));
+  let defaultProviders = new DefaultProviders();
   let service: EncryptionService;
   jasmine.DEFAULT_TIMEOUT_INTERVAL = 20000;
 
   beforeEach(() => {
     TestBed.configureTestingModule({
       providers: [
-        provideFirebaseApp(() => initializeApp(environment)),
-        provideFirestore(()=> EmulatedFirestore()),
-        {provide: EncryptionService},
-        {provide: WindowRef},
+        ...environmentProviders.getProviders(),
+        ...defaultProviders.getProviders({ exclude: [EncryptionService] }),
+        EncryptionService,
+        WindowRef,
       ]
     }).compileComponents()
 
@@ -51,8 +54,8 @@ describe('EncryptionService', () => {
   it('should generate and wrap encryption key', async () => {
     await service.Enable('test');
     expect(service.enabled()).toBeTrue();
-    expect( await service.GenerateEncryptionKey()
-      .then(k=> service.WrapKey(k.key))
+    expect(await service.GenerateEncryptionKey()
+      .then(k => service.WrapKey(k.key))
       .then(w => service.UnwrapKey(w))
     ).toBeTruthy()
   })
@@ -81,9 +84,9 @@ describe('EncryptionService', () => {
   it('should not unwrap with different phrase', async () => {
     await service.Enable('test')
     return service.Enable('test-123')
-      .then(()=> expect(service.enabled()).toBeFalse())
-      .catch(r=> expect(r).toContain('OperationError')
-    )
+      .then(() => expect(service.enabled()).toBeFalse())
+      .catch(r => expect(r).toContain('OperationError')
+      )
   })
 })
 

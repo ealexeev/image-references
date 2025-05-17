@@ -1,7 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import {ImageService,FakeImageService} from './image.service';
-import {TagService, FakeTagService} from './tag.service';
-import { getDefaultProviders } from './test-providers';
+import { defaultProviders } from './test-providers';
 import { DownloadService } from './download.service';
 
 describe('DownloadService', () => {
@@ -9,7 +7,7 @@ describe('DownloadService', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      providers: getDefaultProviders(),
+      providers: defaultProviders(),
     });
     service = TestBed.inject(DownloadService);
   });

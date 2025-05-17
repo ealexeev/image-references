@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { ImageGalleryComponent } from './image-gallery.component';
-import { getDefaultProviders } from '../test-providers';
+import { defaultProviders } from '../test-providers';
 
 describe('ImageGalleryComponent', () => {
   let component: ImageGalleryComponent;
@@ -10,9 +10,9 @@ describe('ImageGalleryComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [ImageGalleryComponent],
-      providers: getDefaultProviders(),
+      providers: defaultProviders(),
     })
-    .compileComponents();
+      .compileComponents();
 
     fixture = TestBed.createComponent(ImageGalleryComponent);
     component = fixture.componentInstance;
